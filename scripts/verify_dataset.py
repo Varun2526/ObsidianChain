@@ -5,8 +5,9 @@ Read-only and offline: this script downloads nothing and opens no sockets.
 It only inspects whatever is already on disk. Standard library only, so it
 runs on the host as well as inside the air-gapped container.
 
-Dataset: https://github.com/git-disl/EllipticPlusPlus  (fetch it yourself,
-on a networked machine, then copy it into data/raw/).
+Dataset: https://github.com/git-disl/EllipticPlusPlus - the CSVs live in the
+Google Drive folder linked from that repo's README, not in git itself. Fetch
+them yourself on a networked machine, then copy them into data/raw/.
 
 Exit code 0 = PASS, 1 = FAIL.
 """
@@ -22,28 +23,42 @@ from pathlib import Path
 
 # Basename -> (required?, why it matters)
 EXPECTED: dict[str, tuple[bool, str]] = {
-    "AddrAddr_edgelist.csv": (
-        True,
-        "address-to-address edges; co-spend clustering is impossible without it",
-    ),
     "AddrTx_edgelist.csv": (
         True,
-        "address -> transaction edges; needed to attribute inputs to addresses",
+        "input-side address-to-transaction edges; co-spend relationships are "
+        "derived from this by grouping on txId",
     ),
     "TxAddr_edgelist.csv": (
         True,
         "transaction -> address edges; the output side of the same mapping",
     ),
-    "wallets_features_classes_combined.csv": (
+    "wallets_features.csv": (
         True,
-        "address-level features and licit/illicit labels",
+        "address-level features",
+    ),
+    "wallets_classes.csv": (
+        True,
+        "address-level licit/illicit labels; merged with wallets_features.csv "
+        "on the address column",
+    ),
+    "AddrAddr_edgelist.csv": (
+        False,
+        "address interaction graph (money flow) - used for graph features, "
+        "never for merging",
     ),
     "txs_features.csv": (False, "transaction-level features (tx graph baseline)"),
     "txs_classes.csv": (False, "transaction-level labels"),
     "txs_edgelist.csv": (False, "transaction-to-transaction edges"),
 }
 
-CRITICAL = "AddrAddr_edgelist.csv"
+# Co-spend is the one signal the whole prototype rests on, and AddrTx is the
+# only file it can come from: group its rows by txId and every input_address
+# sharing a txId is co-spending, hence probably one wallet.
+#
+# AddrAddr is NOT a substitute. Its header is (input_address, output_address),
+# meaning "A paid B" - money flow, not shared ownership. Clustering on it
+# would merge every payer with every payee.
+CRITICAL = "AddrTx_edgelist.csv"
 
 _READ_CHUNK = 8 * 1024 * 1024
 _SNIFF_ROWS = 2000
@@ -215,11 +230,14 @@ def main() -> int:
     critical_report = reports.get(CRITICAL)
     if critical_report is not None and critical_report.error is None and critical_report.rows:
         print(f"  [PASS] {CRITICAL} is present with {critical_report.rows:,} edges.")
-        print("         Address-level co-spend clustering is possible.")
+        print("         Co-spend clustering is possible: group these rows by")
+        print("         txId and the input addresses sharing a txId co-spend.")
     else:
         print(f"  [FAIL] {CRITICAL} is absent or empty.")
-        print("         Co-spend clustering is IMPOSSIBLE without address-level")
-        print("         data - the transaction-only Elliptic dataset is not enough.")
+        print("         Co-spend clustering is IMPOSSIBLE without input-side")
+        print("         address-to-transaction edges. AddrAddr_edgelist.csv is")
+        print("         NOT a substitute - it is the money-flow interaction")
+        print("         graph, so merging on it would union payers with payees.")
     print()
 
     if unexpected:
@@ -252,10 +270,17 @@ def main() -> int:
 
 def print_hint() -> None:
     print("How to fix (do this on a networked machine, not in the container):")
-    print("  1. git clone https://github.com/git-disl/EllipticPlusPlus")
-    print("  2. Follow that repo's instructions to obtain the dataset CSVs.")
-    print("  3. Copy them into ./data/raw/ on the host.")
-    print("  4. Re-run: make verify")
+    print("  1. Open https://github.com/git-disl/EllipticPlusPlus")
+    print("  2. Follow the Google Drive link in that repo's README - the CSVs")
+    print("     are hosted on Drive, NOT committed to git, so cloning the")
+    print("     repository alone will not give you the dataset.")
+    print("  3. Download the actors (wallets) and transactions dataset files.")
+    print("  4. Copy them into ./data/raw/ on the host (a subdirectory is fine).")
+    print("  5. Re-run: make verify")
+    print()
+    print("Note: wallets_features_classes_combined.csv is not a download. The")
+    print("tutorial notebooks derive it by merging wallets_features.csv and")
+    print("wallets_classes.csv on the address column.")
     print()
 
 

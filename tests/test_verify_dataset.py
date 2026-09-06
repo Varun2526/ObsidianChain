@@ -15,12 +15,19 @@ import pytest
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "verify_dataset.py"
 
 REQUIRED = [
-    "AddrAddr_edgelist.csv",
     "AddrTx_edgelist.csv",
     "TxAddr_edgelist.csv",
-    "wallets_features_classes_combined.csv",
+    "wallets_features.csv",
+    "wallets_classes.csv",
 ]
-OPTIONAL = ["txs_features.csv", "txs_classes.csv", "txs_edgelist.csv"]
+# AddrAddr is the money-flow interaction graph, useful for features but never
+# for merging, so its absence must not block.
+OPTIONAL = [
+    "AddrAddr_edgelist.csv",
+    "txs_features.csv",
+    "txs_classes.csv",
+    "txs_edgelist.csv",
+]
 
 
 def run_script(data_root: Path) -> subprocess.CompletedProcess[str]:
@@ -51,13 +58,34 @@ def test_fails_on_empty_raw_dir(data_root: Path) -> None:
     assert "SUMMARY: FAIL" in result.stdout
 
 
-def test_fails_when_addraddr_missing(data_root: Path) -> None:
+def test_fails_when_addrtx_missing(data_root: Path) -> None:
+    """AddrTx is the only source of co-spend, so its absence must block."""
     for name in REQUIRED[1:] + OPTIONAL:
         write_csv(data_root / "raw" / name, 5)
     result = run_script(data_root)
     assert result.returncode == 1
-    assert "AddrAddr_edgelist.csv is missing" in result.stdout
+    assert "AddrTx_edgelist.csv is missing" in result.stdout
     assert "Co-spend clustering is IMPOSSIBLE" in result.stdout
+
+
+def test_passes_when_only_addraddr_missing(data_root: Path) -> None:
+    """AddrAddr is a money-flow graph, not ownership evidence - non-blocking."""
+    for name in REQUIRED + [n for n in OPTIONAL if n != "AddrAddr_edgelist.csv"]:
+        write_csv(data_root / "raw" / name, 5)
+    result = run_script(data_root)
+    assert result.returncode == 0, result.stdout
+    assert "SUMMARY: PASS" in result.stdout
+
+
+def test_never_claims_addraddr_enables_cospend(data_root: Path) -> None:
+    """Guard the corrected semantics: AddrAddr must not be sold as co-spend."""
+    for name in REQUIRED + OPTIONAL:
+        write_csv(data_root / "raw" / name, 5)
+    result = run_script(data_root)
+    assert "money flow" in result.stdout
+    assert "never for merging" in result.stdout
+    # The co-spend PASS line must name AddrTx and its txId grouping.
+    assert "txId" in result.stdout
 
 
 def test_passes_on_complete_dataset(data_root: Path) -> None:
@@ -81,7 +109,7 @@ def test_reports_row_and_column_counts(data_root: Path) -> None:
 def test_fails_on_header_only_file(data_root: Path) -> None:
     for name in REQUIRED + OPTIONAL:
         write_csv(data_root / "raw" / name, 3)
-    write_csv(data_root / "raw" / "AddrAddr_edgelist.csv", 0)
+    write_csv(data_root / "raw" / "AddrTx_edgelist.csv", 0)
     result = run_script(data_root)
     assert result.returncode == 1
     assert "no data rows" in result.stdout

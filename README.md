@@ -167,19 +167,29 @@ beforehand, or `docker save`/`docker load` it the same way.
 The dataset is **not** in this repo and is never downloaded by the code.
 Fetch it yourself on a networked machine:
 
-1. Get the Elliptic++ dataset from
-   <https://github.com/git-disl/EllipticPlusPlus> — follow that repo's
-   instructions for the dataset download links.
+1. Open <https://github.com/git-disl/EllipticPlusPlus> and follow the
+   **Google Drive** link in its README. The CSVs are hosted on Drive, not
+   committed to git — cloning the repo alone does not give you the data.
 2. Copy the CSVs into `./data/raw/` on the host (a subdirectory is fine;
    the verifier searches recursively).
 3. Run `make verify`.
 
 `make verify` lists what it finds, reports row and column counts per CSV,
 and prints a PASS/FAIL summary (exiting non-zero on FAIL, so it can gate a
-pipeline). It specifically insists on
-**`AddrAddr_edgelist.csv`** — without address-level edges there is no
-co-spend clustering to do, and the transaction-only Elliptic dataset is
-not a substitute.
+pipeline). It blocks on **`AddrTx_edgelist.csv`** — that is the input-side
+address-to-transaction edge list, and co-spend is derived from it by
+grouping on `txId`: the input addresses sharing a `txId` are co-spending,
+hence probably one wallet.
+
+`AddrAddr_edgelist.csv` is deliberately **not** blocking. Its header is
+`(input_address, output_address)` — "A paid B" — so it is a money-flow
+interaction graph, useful for graph features but never a merge signal.
+Clustering on it would union every payer with every payee.
+
+`wallets_features_classes_combined.csv` is not a download either: the
+tutorial notebooks derive it by merging `wallets_features.csv` and
+`wallets_classes.csv` on the address column, so the verifier requires
+those two instead.
 
 `./data` is bind-mounted to `/data` in the container. Both `data/raw/` and
 `data/processed/` are gitignored.
