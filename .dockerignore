@@ -1,0 +1,18 @@
+# vendor/ IS needed by the build - do not ignore it.
+# The whole tree is in the build context, but the Dockerfile only
+# COPYs the one architecture named by the VENDOR_PATH build arg.
+data/
+.git/
+.gitignore
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.DS_Store
+.idea/
+.vscode/
+README.md

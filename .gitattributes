@@ -1,0 +1,24 @@
+# Normalise line endings.
+#
+# Team members build from Windows via WSL2 / Docker Desktop. A CRLF
+# checkout would break Makefile recipes and the Dockerfile's RUN line
+# continuations inside the Linux container, so these files are pinned to
+# LF regardless of the checkout platform.
+* text=auto eol=lf
+
+Makefile        text eol=lf
+Dockerfile      text eol=lf
+*.py            text eol=lf
+*.toml          text eol=lf
+*.txt           text eol=lf
+*.md            text eol=lf
+*.sh            text eol=lf
+.gitignore      text eol=lf
+.dockerignore   text eol=lf
+
+# Never touch data or binary artifacts.
+*.csv           binary
+*.parquet       binary
+*.pkl           binary
+*.whl           binary
+*.deb           binary

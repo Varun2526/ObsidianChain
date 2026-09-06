@@ -1,0 +1,45 @@
+# obsidianchain runtime + test dependencies
+#
+# Every version is pinned exactly, including transitive dependencies, so
+# that `make vendor` produces a byte-identical wheel set and the image
+# builds reproducibly. All of these install from wheels only - no
+# compilers, no CUDA, no runtime network access.
+#
+# These pins are architecture-neutral: every package below publishes both
+# manylinux x86_64 and aarch64 wheels, so the same file serves linux/amd64
+# (the primary team/SIH target) and linux/arm64 (Apple silicon dev).
+# The architecture is chosen by PLATFORM at vendor time, not here.
+#
+# Resolved against python:3.11-slim.
+# Regenerate with: make vendor && make freeze
+
+# ---- direct dependencies ----
+duckdb==1.5.5
+lightgbm==4.7.0
+numpy==2.4.6
+pandas==3.0.5
+pyarrow==25.0.1
+pytest==9.1.1
+python-igraph==1.0.0
+scikit-learn==1.9.0
+typer==0.27.2
+
+# ---- transitive dependencies (pinned for reproducibility) ----
+annotated-doc==0.0.5
+cloudpickle==3.1.2
+igraph==1.0.0
+iniconfig==2.3.0
+joblib==1.6.0
+markdown-it-py==4.2.0
+mdurl==0.1.2
+narwhals==2.25.0
+packaging==26.3
+pluggy==1.6.0
+pygments==2.21.0
+python-dateutil==2.9.0.post0
+rich==15.0.0
+scipy==1.17.1
+shellingham==1.5.4
+six==1.17.0
+texttable==1.7.0
+threadpoolctl==3.6.0

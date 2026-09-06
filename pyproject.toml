@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "obsidianchain"
+version = "0.1.0"
+description = "Offline Bitcoin forensics prototype (NTRO PS 26146)"
+requires-python = ">=3.11"
+# Dependencies are declared in requirements.txt and installed from the
+# vendored wheel directory before this package is installed. They are
+# deliberately not repeated here so the offline install cannot trigger
+# a resolver pass that would want the network.
+dependencies = []
+
+[project.scripts]
+obsidianchain = "obsidianchain.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.setuptools.package-data]
+"*" = ["py.typed"]
