@@ -1,0 +1,40 @@
+{
+  "fixture": "reach-stress",
+  "reach_stress_version": "1.0.0",
+  "regime": "E",
+  "regime_name": "NOISY AFFINITY",
+  "regime_seed": 2505,
+  "base_seed": 3000,
+  "dataset_sha256": "67b179b5a30fe9a4767b9f53f73db3865a695b1e74a5664d9941caa04ea7e688",
+  "record_count": 470348,
+  "transaction_count": 60000,
+  "observer_count": 8,
+  "record_columns": [
+    "txid",
+    "observer_id",
+    "peer_ip",
+    "peer_port",
+    "peer_asn",
+    "timestamp_ms"
+  ],
+  "sigma": 1.1505604174104382,
+  "production_min_pooled": 25,
+  "sticky_address_origins": false,
+  "configuration": {
+    "n_components": 300,
+    "addresses_per_component": 20,
+    "transactions_per_component": 200,
+    "inputs_per_transaction": 3,
+    "n_entities": 40,
+    "split_probability": 0.35,
+    "split_fraction": 0.5,
+    "n_observers": 8,
+    "n_origins": 64,
+    "broadcaster_fraction": 0.15,
+    "missing_observation_rate": 0.02,
+    "base_seed": 3000,
+    "sigma": 1.1505604174104382,
+    "production_min_pooled": 25,
+    "note": "threshold NOT lowered; evidence raised to meet it"
+  }
+}

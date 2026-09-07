@@ -562,6 +562,60 @@ def world_generate(
     )
 
 
+@app.command("reach-stress-build")
+def reach_stress_build(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    fixture_root: Path = typer.Option(
+        None, "--fixture-root",
+        help="[default: <data-root>/reach_stress]",
+    ),
+    components: int = typer.Option(300, "--components"),
+    addresses: int = typer.Option(20, "--addresses-per-component"),
+    transactions: int = typer.Option(200, "--transactions-per-component"),
+) -> None:
+    """Build the reach-stress fixture: dense chain, all five regimes.
+
+    The production threshold of 25 is NOT lowered. This fixture raises the
+    available evidence so the rule is actually forced to decide, which the
+    normal worlds could not do - only 47 of 253,429 unions reached 25 there.
+    """
+    from obsidianchain.network import reach_stress
+
+    started = time.perf_counter()
+    root = fixture_root or (data_root / "reach_stress")
+    config = reach_stress.ReachStressConfig(
+        n_components=components,
+        addresses_per_component=addresses,
+        transactions_per_component=transactions,
+    )
+    written = reach_stress.build_fixture(root, config)
+
+    typer.echo("=" * 74)
+    typer.echo("obsidianchain :: reach-stress fixture")
+    typer.echo("=" * 74)
+    typer.echo("  SYNTHETIC. Threshold stays at 25; evidence is raised to meet it.")
+    typer.echo(f"  components {config.n_components:,}   "
+               f"addresses {config.n_addresses:,}   "
+               f"transactions {config.n_transactions:,}")
+    typer.echo(f"  expected pooled per component ~{config.expected_pooled_per_component}"
+               f"  (production minimum 25)")
+    typer.echo("")
+    for key in ("A", "B", "C", "D", "E"):
+        entry = written[key]
+        manifest = entry["manifest"]
+        typer.echo(f"  {key}  {manifest['regime_name']}")
+        typer.echo(f"      records {entry['rows']:,}   "
+                   f"sha256 {manifest['dataset_sha256'][:24]}   "
+                   f"sticky-origins {manifest['sticky_address_origins']}")
+    typer.echo("=" * 74)
+    typer.echo("")
+    typer.echo(f"fixture root -> {root}")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
 @app.command("world-diagnostics")
 def world_diagnostics_cmd(
     data_root: Path = typer.Option(DATA_ROOT, "--data-root"),

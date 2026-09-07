@@ -1,0 +1,40 @@
+{
+  "fixture": "reach-stress",
+  "reach_stress_version": "1.0.0",
+  "regime": "D",
+  "regime_name": "MULTI-ORIGIN ENTITY",
+  "regime_seed": 2504,
+  "base_seed": 3000,
+  "dataset_sha256": "16876d3957a1d3a972413d4a74e5f3f5006c201e57f5f45c93e0d78c7beb6777",
+  "record_count": 470348,
+  "transaction_count": 60000,
+  "observer_count": 8,
+  "record_columns": [
+    "txid",
+    "observer_id",
+    "peer_ip",
+    "peer_port",
+    "peer_asn",
+    "timestamp_ms"
+  ],
+  "sigma": 1.1505604174104382,
+  "production_min_pooled": 25,
+  "sticky_address_origins": true,
+  "configuration": {
+    "n_components": 300,
+    "addresses_per_component": 20,
+    "transactions_per_component": 200,
+    "inputs_per_transaction": 3,
+    "n_entities": 40,
+    "split_probability": 0.35,
+    "split_fraction": 0.5,
+    "n_observers": 8,
+    "n_origins": 64,
+    "broadcaster_fraction": 0.15,
+    "missing_observation_rate": 0.02,
+    "base_seed": 3000,
+    "sigma": 1.1505604174104382,
+    "production_min_pooled": 25,
+    "note": "threshold NOT lowered; evidence raised to meet it"
+  }
+}

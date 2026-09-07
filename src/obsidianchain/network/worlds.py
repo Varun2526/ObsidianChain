@@ -134,6 +134,22 @@ class WorldConfig:
     #: Regime E: share drawn from the entity's preferred distribution.
     affinity_share: float = 0.90
 
+    #: Probability that an eligible component is split between two hidden
+    #: entities. This is what makes constraint precision measurable: a
+    #: component holding two entities means some co-spend edges genuinely
+    #: connect different owners, so a block can be correct rather than
+    #: necessarily a false split.
+    split_probability: float = 0.35
+
+    #: Components smaller than this are never split. Splitting a two-address
+    #: component leaves one address per entity, which cannot pool evidence
+    #: and only adds noise to the ground truth.
+    min_split_size: int = 4
+
+    #: Share of a split component's addresses handed to the second entity,
+    #: taken in address-code order so the partition is deterministic.
+    split_fraction: float = 0.5
+
     #: Base seed for everything held constant across regimes: node topology,
     #: observers, clock offsets, and the entity assignment itself.
     base_seed: int = 1000
@@ -175,31 +191,87 @@ class WorldData:
 def assign_entities(
     graph, config: WorldConfig
 ) -> tuple[np.ndarray, pd.DataFrame]:
-    """Map every address code to a synthetic entity, via its co-spend component.
+    """Map every address code to a hidden entity, at SUB-COMPONENT granularity.
 
-    Entities are defined over baseline components rather than individual
-    addresses because that is what an entity is: a wallet controls a set of
-    addresses that co-spend together. Assigning at address level would make
-    the ground truth contradict the chain evidence, and every regime would
-    then be a test of that contradiction rather than of origin structure.
+    Why not one entity per component
+    --------------------------------
+    The first version of this function gave each baseline co-spend component
+    exactly one entity. That seemed natural - a wallet is a set of addresses
+    that co-spend together - but it made the central measurement impossible:
+    a co-spend edge never leaves its component, so *every* edge was
+    within-entity, the engine was never asked to separate two genuine
+    entities, and any block it emitted was a false split by construction.
+    Measured on the frozen graph: zero of 274,313 edges crossed an entity.
+    Constraint precision could not be evaluated at all.
 
-    Derived from ``base_seed`` alone, so the same transaction belongs to the
-    same entity in all five regimes. That is what makes the regimes
-    comparable.
+    So a share of components now hold two entities. That is also the more
+    honest model: co-spend is a heuristic, and a component containing two
+    owners is exactly the false merge this project exists to prevent. A
+    proposed merge can now genuinely be either:
+
+        same entity      -> a legitimate merge the engine must not block
+        different entity -> a false merge the engine should block
+
+    Splitting is deterministic given ``base_seed``, and the seed is shared
+    across regimes, so the same address belongs to the same entity in all
+    five worlds. Only the entity-to-origin distribution differs between them.
+
+    Small components are left whole: splitting a two-address component gives
+    each entity a single address, which can never pool enough evidence to be
+    judged and only adds noise to the ground truth.
     """
     from obsidianchain.cluster.pipeline import run_clustering
 
     run = run_clustering(graph, "entity-assignment")
     roots = run.roots
-    unique_roots = np.unique(roots)
+    unique_roots, sizes = np.unique(roots, return_counts=True)
+    n_components = unique_roots.size
 
     rng = np.random.default_rng([config.base_seed, 11])
-    entity_of_root = rng.integers(0, config.n_entities, size=unique_roots.size)
-    lookup = pd.Series(entity_of_root, index=unique_roots)
-    entity_of_address = lookup.reindex(roots).to_numpy().astype(np.int32)
+    primary = rng.integers(0, config.n_entities, size=n_components)
+
+    # A distinct second entity for split components: offsetting by 1..n-1
+    # modulo n guarantees it differs from the primary without a rejection
+    # loop, so the draw count stays fixed and the assignment reproducible.
+    offset = 1 + rng.integers(0, config.n_entities - 1, size=n_components)
+    secondary = (primary + offset) % config.n_entities
+
+    eligible = sizes >= config.min_split_size
+    is_split = eligible & (rng.random(n_components) < config.split_probability)
+
+    # Within a split component, the later half in address-code order goes to
+    # the second entity. Deterministic, and independent of edge ordering.
+    root_index = np.searchsorted(unique_roots, roots)
+    codes = np.arange(roots.size)
+    order = np.lexsort((codes, root_index))
+    sorted_root = root_index[order]
+
+    starts_mask = np.empty(sorted_root.size, dtype=bool)
+    starts_mask[0] = True
+    np.not_equal(sorted_root[1:], sorted_root[:-1], out=starts_mask[1:])
+    group_start = np.flatnonzero(starts_mask)
+    group_id = np.cumsum(starts_mask) - 1
+    rank_in_component = np.arange(sorted_root.size) - group_start[group_id]
+    component_size = sizes[sorted_root]
+
+    take_secondary_sorted = is_split[sorted_root] & (
+        rank_in_component >= component_size * config.split_fraction
+    )
+    take_secondary = np.empty(roots.size, dtype=bool)
+    take_secondary[order] = take_secondary_sorted
+
+    entity_of_address = np.where(
+        take_secondary, secondary[root_index], primary[root_index]
+    ).astype(np.int32)
 
     entity_map = pd.DataFrame(
-        {"component_root": unique_roots, "true_entity_id": entity_of_root}
+        {
+            "component_root": unique_roots,
+            "component_size": sizes,
+            "primary_entity": primary,
+            "secondary_entity": np.where(is_split, secondary, -1),
+            "is_split": is_split,
+        }
     )
     return entity_of_address, entity_map
 
