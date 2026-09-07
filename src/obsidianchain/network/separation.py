@@ -333,6 +333,7 @@ def build_oracle(
     processed_root: Path | None = None,
     data_root: Path | None = None,
     config: SeparationConfig | None = None,
+    world: str | None = None,
 ) -> SeparationOracle:
     """Load network evidence and accumulate it per address.
 
@@ -347,7 +348,10 @@ def build_oracle(
         root = Path(data_root) if data_root is not None else elliptic.DEFAULT_DATA_ROOT
         processed_root = root / "processed"
 
-    inputs = boundary.load_phase3_inputs(processed_root)
+    # ``world`` selects WHICH dataset to read - the frozen production set by
+    # default, or a controlled-world regime. It does not affect how evidence
+    # is judged: the thresholds live in SeparationConfig and are unchanged.
+    inputs = boundary.load_phase3_inputs(processed_root, world=world)
     observer_ids = sorted(inputs.observers["observer_id"].tolist()) or sorted(
         inputs.observations["observer_id"].unique().tolist()
     )
