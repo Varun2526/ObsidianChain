@@ -448,6 +448,55 @@ def fusion_summary(
     )
 
 
+@app.command("world-experiment")
+def world_experiment(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    regimes: str = typer.Option("all", "--regimes", help="A,B,C,D,E or all."),
+    out: Path = typer.Option(
+        None, "--out", help="[default: <data-root>/processed/phase33.csv]"
+    ),
+) -> None:
+    """Phase 3.3: run the UNCHANGED engine across all five controlled worlds.
+
+    The production rule is fixed - 25 pooled per side, alpha 1e-4, effect
+    floor 0.05 - and identical in every regime. Tuning per world would make
+    the experiment meaningless.
+    """
+    from obsidianchain.eval import phase33
+    from obsidianchain.io import elliptic
+    from obsidianchain.network import separation, worlds
+
+    started = time.perf_counter()
+    config = separation.SeparationConfig()  # production defaults, untouched
+    selected = (
+        tuple(worlds.Regime)
+        if regimes.lower() == "all"
+        else tuple(
+            worlds.Regime(p.strip().upper())
+            for p in regimes.split(",") if p.strip()
+        )
+    )
+
+    graph = elliptic.load_cospend_graph(data_root, keep_labels=True)
+    outcomes: dict[str, phase33.RegimeOutcome] = {}
+    for regime in selected:
+        typer.echo(f"running regime {regime.value} ...", err=True)
+        outcomes[regime.value] = phase33.run_regime(
+            regime, graph, data_root, config
+        )
+
+    typer.echo(phase33.format_experiment(outcomes, config))
+    destination = out or (data_root / "processed" / "phase33.csv")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    phase33.to_frame(outcomes).to_csv(destination, index=False)
+    typer.echo("")
+    typer.echo(f"wrote per-regime outcomes -> {destination}")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
 @app.command("world-generate")
 def world_generate(
     data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
