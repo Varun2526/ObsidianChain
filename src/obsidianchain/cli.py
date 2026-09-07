@@ -448,6 +448,121 @@ def fusion_summary(
     )
 
 
+@app.command("world-generate")
+def world_generate(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    regime: str = typer.Option(
+        "all", "--regime", help="A, B, C, D, E, or all."
+    ),
+    entities: int = typer.Option(40, "--entities"),
+    limit: int = typer.Option(0, "--limit", help="First N transactions (0=all)."),
+    fmt: str = typer.Option("parquet", "--format"),
+) -> None:
+    """Generate the controlled-world regimes in a separate namespace.
+
+    Writes to processed/worlds/<regime>/ and processed/worlds_truth/<regime>/.
+    Does not touch FROZEN_SEPTEMBER_2026, its hash, or network_truth/.
+
+    Still SYNTHETIC: these worlds inject a known entity-origin relationship
+    so Phase 3 has something to find. They demonstrate mechanism and
+    validate nothing.
+    """
+    from obsidianchain.io import elliptic
+    from obsidianchain.network import worlds
+
+    started = time.perf_counter()
+    config = worlds.WorldConfig(n_entities=entities)
+
+    if regime.lower() == "all":
+        selected = tuple(worlds.Regime)
+    else:
+        selected = tuple(
+            worlds.Regime(part.strip().upper())
+            for part in regime.split(",")
+            if part.strip()
+        )
+
+    graph = elliptic.load_cospend_graph(data_root, keep_labels=True)
+    generated = worlds.generate_all(
+        graph, config, data_root, limit=limit, regimes=selected
+    )
+
+    typer.echo("=" * 74)
+    typer.echo("obsidianchain :: controlled world generation")
+    typer.echo("=" * 74)
+    typer.echo("  SYNTHETIC. Demonstrates mechanism, validates nothing.")
+    typer.echo(f"  sigma fixed at {worlds.synthetic.DECKER_WATTENHOFER_SIGMA:.4f} "
+               f"in every regime; only entity->origin differs.")
+    typer.echo("")
+    for reg, world in generated.items():
+        written = worlds.write_world(world, data_root / "processed", fmt=fmt)
+        manifest = written["manifest_data"]
+        typer.echo(f"  {reg.value}  {worlds.REGIME_NAMES[reg]}")
+        typer.echo(f"      seed {manifest['regime_seed']}   "
+                   f"records {written['rows']:,}   "
+                   f"entities {manifest['entity_count']}   "
+                   f"{written['bytes'] / 1e6:.1f} MB")
+        typer.echo(f"      sha256 {manifest['dataset_sha256'][:32]}")
+        typer.echo(f"      observations -> {written['observations']}")
+        typer.echo(f"      TRUTH (quarantined) -> {written['ground_truth']}")
+    typer.echo("=" * 74)
+    typer.echo("")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
+@app.command("world-diagnostics")
+def world_diagnostics_cmd(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    entities: int = typer.Option(40, "--entities"),
+    sample: int = typer.Option(4000, "--sample"),
+    out: Path = typer.Option(
+        None,
+        "--out",
+        help="[default: <data-root>/processed/world_diagnostics.csv]",
+    ),
+) -> None:
+    """Verify the five regimes produced the distributions intended.
+
+    Runs before any Phase 3 inference. Regime A is the control: if it shows
+    aggregate signal, this generator introduced structure the frozen dataset
+    lacks and no other regime can be trusted.
+    """
+    from obsidianchain.eval import world_diagnostics as wd
+    from obsidianchain.network import worlds
+
+    started = time.perf_counter()
+    config = worlds.WorldConfig(n_entities=entities)
+    processed = data_root / "processed"
+
+    reports: dict[str, wd.RegimeDiagnostics] = {}
+    for regime in worlds.Regime:
+        try:
+            reports[regime.value] = wd.diagnose_regime(
+                regime, processed, sample=sample
+            )
+        except FileNotFoundError as exc:
+            typer.secho(f"regime {regime.value}: {exc}", fg=typer.colors.RED)
+            raise typer.Exit(code=1) from None
+
+    checks = wd.check_expectations(reports, config)
+    typer.echo(wd.format_diagnostics(reports, config, checks))
+
+    destination = out or (processed / "world_diagnostics.csv")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    wd.to_frame(reports).to_csv(destination, index=False)
+    typer.echo("")
+    typer.echo(f"wrote diagnostics -> {destination}")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+    if any(not ok for _, _, ok, _ in checks):
+        raise typer.Exit(code=1)
+
+
 @app.command("evidence-funnel")
 def evidence_funnel(
     data_root: Path = typer.Option(DATA_ROOT, "--data-root"),

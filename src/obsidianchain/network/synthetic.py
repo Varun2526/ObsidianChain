@@ -104,6 +104,12 @@ GENERATOR_VERSION = "2.0.0"
 OBSERVATIONS_DIR = "network"
 TRUTH_DIR = "network_truth"
 
+#: Controlled-world namespace, kept entirely separate from the frozen
+#: production dataset above. Nothing here changes FROZEN_SEPTEMBER_2026, its
+#: hash, or network_truth/.
+WORLDS_DIR = "worlds"
+WORLDS_TRUTH_DIR = "worlds_truth"
+
 # ---- propagation model ------------------------------------------------
 
 #: Lognormal shape from Decker & Wattenhofer (2013); see module docstring.
@@ -296,6 +302,7 @@ def generate(
     config: NetworkConfig | None = None,
     nodes: pd.DataFrame | None = None,
     observers: pd.DataFrame | None = None,
+    origin_idx: np.ndarray | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Produce announcement records for every transaction.
 
@@ -326,7 +333,21 @@ def generate(
     prop = config.propagation
 
     # Each transaction gets an origin and a synthetic broadcast instant.
-    origin_idx = rng.integers(0, len(nodes), size=n_tx)
+    #
+    # ``origin_idx`` may be supplied by a caller that decides origins itself.
+    # The controlled worlds in network.worlds do, so that the entity-origin
+    # relationship is the only thing differing between their regimes while
+    # the propagation model, topology and clock behaviour stay identical.
+    # When it is None the draw happens here exactly as before, so the frozen
+    # dataset's random stream and its hash are untouched.
+    if origin_idx is None:
+        origin_idx = rng.integers(0, len(nodes), size=n_tx)
+    else:
+        origin_idx = np.asarray(origin_idx, dtype=np.int64)
+        if origin_idx.shape != (n_tx,):
+            raise ValueError(
+                f"origin_idx must have shape ({n_tx},), got {origin_idx.shape}"
+            )
     base_ms = config.base_epoch_ms + rng.integers(0, config.window_ms, size=n_tx)
 
     node_asn = nodes["asn"].to_numpy()
