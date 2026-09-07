@@ -115,7 +115,17 @@ class FusedRun:
     evaluated: int = 0
     abstained: int = 0
     contested_sizes: np.ndarray | None = None
-    blocked_examples: list = field(default_factory=list)
+    blocked_merges: list = field(default_factory=list)
+    """EVERY refused merge, not a sample.
+
+    This field was previously named ``blocked_examples`` and truncated to the
+    first twenty. Evaluation scored truth from it, so every precision and
+    false-split figure was computed on at most twenty decisions regardless of
+    how many were made - reporting D as 0 correct of 20 when the full set was
+    90 correct of 206. A refused merge is rare by construction, so keeping
+    all of them costs nothing and removes a silent sampling step from the
+    measurement path.
+    """
 
     @property
     def evaluable_fraction(self) -> float:
@@ -174,5 +184,5 @@ def run_fused(
         evaluated=counters.evaluated,
         abstained=counters.abstained,
         contested_sizes=forest.component_sizes_excluding_contested(),
-        blocked_examples=forest.blocked_merges()[:20],
+        blocked_merges=forest.blocked_merges(),
     )

@@ -181,6 +181,16 @@ class WorldData:
     observers: pd.DataFrame
     origin_distribution: np.ndarray
     entity_map: pd.DataFrame
+
+    entity_of_address: np.ndarray
+    """Hidden entity of every address code.
+
+    Entities are sub-component, so a component root no longer identifies an
+    entity and this array is the only correct address-to-entity mapping. It
+    is generated here and written to the quarantined truth directory; the
+    inference stage never sees it.
+    """
+
     config: WorldConfig = field(default_factory=WorldConfig)
     manifest: dict = field(default_factory=dict)
 
@@ -437,6 +447,7 @@ def generate_world(
         observers=observers,
         origin_distribution=distribution,
         entity_map=entity_map,
+        entity_of_address=entity_of_address,
         config=config,
     )
 
@@ -482,6 +493,16 @@ def write_world(
     world.ground_truth.to_csv(truth_path, index=False)
     world.nodes.to_csv(truth_dir / "origin_nodes.csv", index=False)
     world.entity_map.to_csv(truth_dir / "entity_map.csv", index=False)
+    # Address-level truth. entity_map is keyed by component root and cannot
+    # answer "which entity owns this address" now that a component may hold
+    # two: collapsing a split component to its primary entity would report
+    # zero cross-entity candidates and silently make precision unmeasurable.
+    pd.DataFrame(
+        {
+            "address_code": np.arange(world.entity_of_address.size, dtype=np.int32),
+            "true_entity_id": world.entity_of_address.astype(np.int32),
+        }
+    ).to_csv(truth_dir / "entity_assignment.csv", index=False)
     world.observers.loc[:, ["observer_id", "clock_bias_ms"]].to_csv(
         truth_dir / "observer_clocks.csv", index=False
     )

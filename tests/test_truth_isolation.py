@@ -100,26 +100,43 @@ def test_the_truth_accessor_exists_and_is_conspicuously_named() -> None:
     assert hasattr(boundary, "load_ground_truth_FOR_EVALUATION_ONLY")
 
 
-def test_phase33_reads_truth_only_after_inference() -> None:
-    """The scoring function must be separate from the inference call.
+#: Every truth read must go through an accessor whose name shouts, so that a
+#: call from an inference path is obvious in review and in a grep. There are
+#: now two truth artifacts - the origin map and the address-to-entity map -
+#: so the guarantee is enforced on the naming convention rather than on one
+#: function name.
+TRUTH_ACCESSOR_MARKER = "FOR_EVALUATION_ONLY"
 
-    Structural check: run_regime builds the oracle and clusters before
-    _score_against_truth is reachable, and the truth accessor appears only
-    inside the scoring function.
+
+def test_phase33_reads_truth_only_through_a_shouted_accessor() -> None:
+    """Truth must never be read by a bare file open in the scorer.
+
+    Regression: the decision-level rewrite briefly loaded
+    entity_assignment.csv with a plain pd.read_csv, bypassing the convention.
     """
     source = read("eval/phase33.py")
     executable = code_only(source)
-    assert "load_ground_truth_FOR_EVALUATION_ONLY" in executable
-    scoring_start = source.index("def _score_against_truth")
-    accessor_at = source.index(
-        "load_ground_truth_FOR_EVALUATION_ONLY", scoring_start
-    )
-    assert accessor_at > scoring_start, "truth must be read inside scoring"
+    assert TRUTH_ACCESSOR_MARKER in executable
 
+    scoring_start = source.index("def _score_against_truth")
+    scorer = source[scoring_start:]
+    assert TRUTH_ACCESSOR_MARKER in code_only(scorer), (
+        "the scorer must obtain truth through a shouted accessor"
+    )
+    assert "worlds_truth" not in code_only(scorer), (
+        "the scorer must not build a truth path itself"
+    )
+
+
+def test_phase33_does_not_read_truth_before_inference() -> None:
+    source = read("eval/phase33.py")
+    scoring_start = source.index("def _score_against_truth")
     run_body = source[source.index("def run_regime"):scoring_start]
-    assert "load_ground_truth" not in code_only(run_body), (
+    executable = code_only(run_body)
+    assert TRUTH_ACCESSOR_MARKER not in executable, (
         "run_regime must not read truth itself"
     )
+    assert "worlds_truth" not in executable
 
 
 def test_boundary_is_the_only_truth_path() -> None:

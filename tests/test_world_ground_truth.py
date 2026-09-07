@@ -255,3 +255,192 @@ def test_reach_stress_transactions_stay_inside_one_component() -> None:
         {"txId": addr_tx["txId"].to_numpy(), "component": component.to_numpy()}
     ).groupby("txId")["component"].nunique()
     assert (per_tx == 1).all()
+
+
+# ---- address-level truth is persisted and used -------------------------
+
+
+def _world_data(tmp_path, entity_of_address, n_addresses):
+    """A minimal WorldData, enough to exercise write_world."""
+    return worlds.WorldData(
+        regime=worlds.Regime.B_AFFINITY,
+        observations=pd.DataFrame(
+            {
+                "txid": [1], "observer_id": ["obs-00"], "peer_ip": ["192.0.2.1"],
+                "peer_port": [8333], "peer_asn": [64512], "timestamp_ms": [1.0],
+            }
+        ),
+        ground_truth=pd.DataFrame(
+            {
+                "txid": [1], "true_entity_id": [0],
+                "true_origin_id": ["origin-000"], "broadcaster_flag": [False],
+            }
+        ),
+        nodes=pd.DataFrame(
+            {
+                "node_id": ["origin-000"], "ip": ["192.0.2.1"], "port": [8333],
+                "asn": [64512], "region": ["eu-west"],
+                "is_known_broadcaster": [True],
+            }
+        ),
+        observers=pd.DataFrame(
+            {
+                "observer_id": ["obs-00"], "asn": [64513], "region": ["eu-west"],
+                "clock_bias_ms": [1.0],
+            }
+        ),
+        origin_distribution=np.array([[1.0]]),
+        entity_map=pd.DataFrame(
+            {
+                "component_root": [0], "component_size": [n_addresses],
+                "primary_entity": [0], "secondary_entity": [1], "is_split": [True],
+            }
+        ),
+        entity_of_address=entity_of_address,
+    )
+
+
+def test_write_world_persists_address_level_entities(tmp_path) -> None:
+    """entity_map is component-keyed and cannot answer 'who owns this address'."""
+    entity_of_address = np.array([0, 0, 1, 1, 2], dtype=np.int32)
+    world = _world_data(tmp_path, entity_of_address, entity_of_address.size)
+    worlds.write_world(world, tmp_path, fmt="csv")
+
+    path = tmp_path / "worlds_truth" / "B" / "entity_assignment.csv"
+    assert path.is_file(), "address-level truth was not written"
+    frame = pd.read_csv(path)
+    assert list(frame.columns) == ["address_code", "true_entity_id"]
+    assert frame["address_code"].tolist() == [0, 1, 2, 3, 4]
+    assert frame["true_entity_id"].tolist() == [0, 0, 1, 1, 2]
+
+
+def test_address_truth_is_quarantined_not_readable_by_inference(tmp_path) -> None:
+    entity_of_address = np.array([0, 1], dtype=np.int32)
+    world = _world_data(tmp_path, entity_of_address, 2)
+    worlds.write_world(world, tmp_path, fmt="csv")
+
+    observable = {p.name for p in (tmp_path / "worlds" / "B").iterdir()}
+    assert "entity_assignment.csv" not in observable
+    assert not any("entity" in name for name in observable)
+
+    from obsidianchain.network import boundary
+
+    with pytest.raises(boundary.GroundTruthLeakError):
+        boundary.load_observations(
+            tmp_path / "worlds_truth" / "B", filename="entity_assignment.csv"
+        )
+
+
+def test_split_component_keeps_two_entities_at_address_level() -> None:
+    """The property the component-keyed lookup destroyed."""
+    graph = chain_of_components(200, 8)
+    config = worlds.WorldConfig(n_entities=20, split_probability=1.0, base_seed=7)
+    entity, entity_map = worlds.assign_entities(graph, config)
+
+    from obsidianchain.cluster.pipeline import run_clustering
+
+    roots = run_clustering(graph, "t").roots
+    split_roots = set(entity_map.loc[entity_map["is_split"], "component_root"])
+    assert split_roots
+
+    per_component = pd.DataFrame({"root": roots, "e": entity}).groupby("root")["e"]
+    for root in list(split_roots)[:20]:
+        assert per_component.nunique()[root] == 2, (
+            f"split component {root} collapsed to one entity at address level"
+        )
+
+
+def test_component_lookup_would_lose_the_cross_entity_candidates() -> None:
+    """Guard against reintroducing the component-keyed lookup.
+
+    Mapping primary_entity through component_root reports zero cross-entity
+    edges, which is exactly the silent failure this fix removes.
+    """
+    graph = chain_of_components(200, 8)
+    config = worlds.WorldConfig(n_entities=20, split_probability=1.0, base_seed=7)
+    entity, entity_map = worlds.assign_entities(graph, config)
+
+    from obsidianchain.cluster.pipeline import run_clustering
+
+    roots = run_clustering(graph, "t").roots
+    naive = entity_map.set_index("component_root")["primary_entity"].reindex(
+        roots
+    ).to_numpy()
+
+    a, b = graph.edges[:, 0], graph.edges[:, 1]
+    assert int((entity[a] != entity[b]).sum()) > 0, "address-level sees candidates"
+    assert int((naive[a] != naive[b]).sum()) == 0, (
+        "component-level sees none - this is why the lookup had to go"
+    )
+
+
+# ---- the scorer reads address-level truth ------------------------------
+
+
+def _phase33_source() -> str:
+    import pathlib
+
+    return (
+        pathlib.Path(__file__).resolve().parents[1]
+        / "src" / "obsidianchain" / "eval" / "phase33.py"
+    ).read_text(encoding="utf-8")
+
+
+def test_scorer_reads_address_level_truth() -> None:
+    source = _phase33_source()
+    assert "entity_assignment.csv" in source
+    assert '["address_code"]' in source
+
+
+def test_scorer_no_longer_uses_the_component_root_lookup() -> None:
+    source = _phase33_source()
+    assert 'set_index("component_root")' not in source
+    assert "entity_map" not in source
+
+
+def test_scorer_no_longer_reclusters_for_truth_alignment() -> None:
+    """Re-deriving the baseline in the scorer was where the bug could return."""
+    source = _phase33_source()
+    assert "truth-alignment" not in source
+    assert "run_clustering" not in source
+
+
+# ---- no inference input changed ---------------------------------------
+
+
+def test_writing_address_truth_does_not_touch_observations(tmp_path) -> None:
+    """The fix adds a truth file; observations must be byte-identical."""
+    entity_of_address = np.array([0, 1, 1, 2], dtype=np.int32)
+    world = _world_data(tmp_path, entity_of_address, 4)
+
+    first = tmp_path / "one"
+    second = tmp_path / "two"
+    worlds.write_world(world, first, fmt="csv")
+    worlds.write_world(world, second, fmt="csv")
+
+    a = (first / "worlds" / "B" / "observations.csv").read_bytes()
+    b = (second / "worlds" / "B" / "observations.csv").read_bytes()
+    assert a == b
+
+
+def test_manifest_hashes_only_the_observations(tmp_path) -> None:
+    """Adding a truth file must not move the dataset hash."""
+    import hashlib
+
+    entity_of_address = np.array([0, 1], dtype=np.int32)
+    world = _world_data(tmp_path, entity_of_address, 2)
+    written = worlds.write_world(world, tmp_path, fmt="csv")
+
+    observations = (tmp_path / "worlds" / "B" / "observations.csv").read_bytes()
+    assert written["manifest_data"]["dataset_sha256"] == (
+        hashlib.sha256(observations).hexdigest()
+    )
+
+
+def test_production_thresholds_untouched() -> None:
+    from obsidianchain.network.separation import SeparationConfig
+
+    config = SeparationConfig()
+    assert config.min_pooled_observations == 25
+    assert config.alpha == 1e-4
+    assert config.min_effect == 0.05

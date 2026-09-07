@@ -341,11 +341,13 @@ def run_mode(
                    f"   below pooled minimum")
         typer.echo(f"  evaluable fraction       "
                    f"{fused.evaluable_fraction * 100:>13.2f}%")
-        if fused.blocked_examples:
+        if fused.blocked_merges:
             typer.echo("")
-            typer.echo(f"-- first {min(top, len(fused.blocked_examples))} blocked merges "
-                       + "-" * 40)
-            for blocked in fused.blocked_examples[:top]:
+            typer.echo(
+                f"-- first {min(top, len(fused.blocked_merges))} of "
+                f"{len(fused.blocked_merges):,} blocked merges " + "-" * 26
+            )
+            for blocked in fused.blocked_merges[:top]:
                 typer.echo(f"  {blocked.a:>8} x {blocked.b:<8} "
                            f"{blocked.evidence.describe()}")
     else:
@@ -452,8 +454,18 @@ def fusion_summary(
 def world_experiment(
     data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
     regimes: str = typer.Option("all", "--regimes", help="A,B,C,D,E or all."),
+    chain_root: Path = typer.Option(
+        None, "--chain-root",
+        help="Blockchain the graph is built from, holding raw/ "
+        "[default: --data-root].",
+    ),
+    network_root: Path = typer.Option(
+        None, "--network-root",
+        help="Network observations and truth, holding processed/worlds/ "
+        "[default: --data-root].",
+    ),
     out: Path = typer.Option(
-        None, "--out", help="[default: <data-root>/processed/phase33.csv]"
+        None, "--out", help="[default: <network-root>/processed/phase33.csv]"
     ),
 ) -> None:
     """Phase 3.3: run the UNCHANGED engine across all five controlled worlds.
@@ -464,7 +476,7 @@ def world_experiment(
     """
     from obsidianchain.eval import phase33
     from obsidianchain.io import elliptic
-    from obsidianchain.network import separation, worlds
+    from obsidianchain.network import boundary, separation, worlds
 
     started = time.perf_counter()
     config = separation.SeparationConfig()  # production defaults, untouched
@@ -477,20 +489,50 @@ def world_experiment(
         )
     )
 
-    graph = elliptic.load_cospend_graph(data_root, keep_labels=True)
-    outcomes: dict[str, phase33.RegimeOutcome] = {}
-    for regime in selected:
-        typer.echo(f"running regime {regime.value} ...", err=True)
-        outcomes[regime.value] = phase33.run_regime(
-            regime, graph, data_root, config
-        )
+    # The chain and the network dataset are named separately because a
+    # mismatched pair fails silently: unresolvable transactions are dropped,
+    # the oracle ends up empty, and the report reads as a clean 100%
+    # abstention. run_regime guards the pairing.
+    chain = chain_root or data_root
+    network = network_root or data_root
 
-    typer.echo(phase33.format_experiment(outcomes, config))
-    destination = out or (data_root / "processed" / "phase33.csv")
+    graph = elliptic.load_cospend_graph(chain, keep_labels=True)
+    outcomes: dict[str, phase33.RegimeOutcome] = {}
+    try:
+        for regime in selected:
+            typer.echo(f"running regime {regime.value} ...", err=True)
+            outcomes[regime.value] = phase33.run_regime(
+                regime, graph, chain, config, network_root=network
+            )
+    except phase33.DatasetMismatchError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED)
+        raise typer.Exit(code=2) from None
+
+    manifest = boundary.load_manifest(
+        network / "processed", world=selected[0].value
+    )
+    fixture = manifest.get("fixture", "controlled-world")
+    chain_description = (
+        f"{graph.n_addresses:,} addresses, {graph.n_edges:,} co-spend edges "
+        f"({'synthetic reach-stress chain' if fixture == 'reach-stress' else 'Elliptic++'})"
+    )
+    typer.echo(
+        phase33.format_experiment(
+            outcomes, config, fixture=fixture,
+            chain_description=chain_description,
+        )
+    )
+    destination = out or (network / "processed" / "phase33.csv")
     destination.parent.mkdir(parents=True, exist_ok=True)
     phase33.to_frame(outcomes).to_csv(destination, index=False)
+    decisions_path = destination.with_name(
+        destination.stem + "_decisions.csv"
+    )
+    blocked_only = phase33.decisions_to_frame(outcomes)
+    blocked_only.to_csv(decisions_path, index=False)
     typer.echo("")
     typer.echo(f"wrote per-regime outcomes -> {destination}")
+    typer.echo(f"wrote {len(blocked_only):,} decisions -> {decisions_path}")
     typer.echo(
         f"peak memory {_peak_rss_mb():.1f} MB   "
         f"wall time {time.perf_counter() - started:.2f} s"
