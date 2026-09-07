@@ -26,6 +26,13 @@ def synthetic_dir_name() -> str:
     return synthetic.OBSERVATIONS_DIR
 
 
+class Mode(str, Enum):
+    """Clustering mode. Same data, same seed, one flag between them."""
+
+    CHAIN_ONLY = "chain-only"
+    FUSED = "fused"
+
+
 class Heuristics(str, Enum):
     """Which merge evidence to cluster on."""
 
@@ -228,6 +235,272 @@ def network_generate(
         f"      GROUND TRUTH (quarantined, not for Phase 3) "
         f"-> {written['ground_truth']}"
     )
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
+def _mode_rows(label, run, fused=None) -> dict:
+    """Common row set for one mode, for the before/after table."""
+    return {
+        "label": label,
+        "clusters": run.n_clusters,
+        "largest": run.largest,
+        "coverage": run.coverage,
+        "singletons": run.singletons,
+        "merges": run.cospend_merges,
+        "blocked": fused.blocked if fused else 0,
+        "contested": fused.contested if fused else 0,
+        "evaluated": fused.evaluated if fused else 0,
+        "abstained": fused.abstained if fused else 0,
+    }
+
+
+def _run_mode(data_root: Path, mode: Mode, config=None):
+    """Cluster in one mode. Returns (graph, run, fused_or_None, oracle_or_None)."""
+    from obsidianchain.cluster.pipeline import run_clustering, run_fused
+    from obsidianchain.io import elliptic
+    from obsidianchain.network import separation
+
+    graph = elliptic.load_cospend_graph(data_root, keep_labels=True)
+    if mode is Mode.CHAIN_ONLY:
+        return graph, run_clustering(graph, mode.value), None, None
+
+    oracle = separation.build_oracle(
+        graph, processed_root=data_root / "processed", data_root=data_root,
+        config=config,
+    )
+    fused = run_fused(graph, oracle, label=mode.value)
+    return graph, fused.run, fused, oracle
+
+
+@app.command("run")
+def run_mode(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    mode: Mode = typer.Option(
+        Mode.CHAIN_ONLY, "--mode", help="chain-only or fused."
+    ),
+    min_pooled: int = typer.Option(
+        25, "--min-pooled", help="Pooled observations required on each side."
+    ),
+    alpha: float = typer.Option(1e-4, "--alpha", help="Significance floor."),
+    min_effect: float = typer.Option(0.05, "--min-effect", help="Effect floor."),
+    top: int = typer.Option(5, "--top", help="Blocked merges to show."),
+) -> None:
+    """Cluster addresses, optionally with network cannot-link constraints.
+
+    chain-only  co-spend union-find, nothing vetoes a merge
+    fused       the same edges, with network separation able to refuse one
+
+    Same data and same seed in both; the flag is the only difference.
+    """
+    from obsidianchain.network.separation import SeparationConfig
+
+    started = time.perf_counter()
+    config = SeparationConfig(
+        min_pooled_observations=min_pooled, alpha=alpha, min_effect=min_effect
+    )
+    typer.echo("=" * 70)
+    typer.echo(f"obsidianchain :: mode = {mode.value}")
+    typer.echo("=" * 70)
+    try:
+        graph, run, fused, oracle = _run_mode(data_root, mode, config)
+    except NotImplementedError as exc:
+        # Show that the evidence layer loaded before reporting the gap, so it
+        # is clear which half is missing.
+        from obsidianchain.io import elliptic
+        from obsidianchain.network import separation as sep
+
+        graph = elliptic.load_cospend_graph(data_root, keep_labels=True)
+        oracle = sep.build_oracle(
+            graph, processed_root=data_root / "processed",
+            data_root=data_root, config=config,
+        )
+        typer.echo(sep.format_oracle_summary(oracle))
+        typer.echo("")
+        typer.secho(str(exc), fg=typer.colors.RED)
+        raise typer.Exit(code=2) from None
+
+    if oracle is not None:
+        from obsidianchain.network import separation as sep
+
+        typer.echo(sep.format_oracle_summary(oracle))
+        typer.echo("")
+
+    typer.echo("-- results " + "-" * 58)
+    typer.echo(f"  cluster count            {run.n_clusters:>14,}")
+    typer.echo(f"  largest cluster          {run.largest:>14,}")
+    typer.echo(f"  coverage                 {run.coverage:>13.2f}%")
+    typer.echo(f"  merges applied           {run.cospend_merges:>14,}")
+    if fused is not None:
+        typer.echo(f"  merges BLOCKED           {fused.blocked:>14,}")
+        typer.echo(f"  contested clusters       {fused.contested:>14,}")
+        typer.echo(f"  unions with evidence     {fused.evaluated:>14,}")
+        typer.echo(f"  unions abstained         {fused.abstained:>14,}"
+                   f"   below pooled minimum")
+        typer.echo(f"  evaluable fraction       "
+                   f"{fused.evaluable_fraction * 100:>13.2f}%")
+        if fused.blocked_examples:
+            typer.echo("")
+            typer.echo(f"-- first {min(top, len(fused.blocked_examples))} blocked merges "
+                       + "-" * 40)
+            for blocked in fused.blocked_examples[:top]:
+                typer.echo(f"  {blocked.a:>8} x {blocked.b:<8} "
+                           f"{blocked.evidence.describe()}")
+    else:
+        typer.echo("  merges BLOCKED           " + f"{0:>14,}   (no constraints)")
+        typer.echo("  contested clusters       " + f"{0:>14,}")
+    typer.echo("=" * 70)
+    typer.echo("")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
+@app.command("fusion-summary")
+def fusion_summary(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    min_pooled: int = typer.Option(25, "--min-pooled"),
+    alpha: float = typer.Option(1e-4, "--alpha"),
+    min_effect: float = typer.Option(0.05, "--min-effect"),
+) -> None:
+    """Run both modes and print the before/after table.
+
+    This is the demo. Chain-only and fused see identical data; the only
+    difference is whether network evidence may veto a merge.
+    """
+    from obsidianchain.network.separation import SeparationConfig
+
+    started = time.perf_counter()
+    config = SeparationConfig(
+        min_pooled_observations=min_pooled, alpha=alpha, min_effect=min_effect
+    )
+    _, chain_run, _, _ = _run_mode(data_root, Mode.CHAIN_ONLY, config)
+    try:
+        _, fused_run, fused, oracle = _run_mode(data_root, Mode.FUSED, config)
+    except NotImplementedError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED)
+        typer.echo("")
+        typer.echo("The chain-only baseline ran; the fused column needs the")
+        typer.echo("constrained union-find implemented before this table can")
+        typer.echo("be produced.")
+        raise typer.Exit(code=2) from None
+
+    width = 70
+    e = typer.echo
+    e("=" * width)
+    e("OBSIDIANCHAIN - CHAIN-ONLY vs NETWORK-FUSED CLUSTERING")
+    e("=" * width)
+    e("  Same transactions, same seed, same co-spend edges in the same")
+    e("  order. The only difference is whether network separation evidence")
+    e("  may refuse a merge.")
+    e("")
+    e("  Network data is SYNTHETIC: this demonstrates the mechanism and")
+    e("  validates nothing. Real validation needs mainnet capture.")
+    e("")
+    e(f"  {'':<28}{'chain-only':>13}{'fused':>13}{'delta':>14}")
+    e("  " + "-" * (width - 4))
+
+    def row(name, a, b, fmt=",", suffix=""):
+        delta = b - a
+        e(f"  {name:<28}{a:>13{fmt}}{b:>13{fmt}}{delta:>+14{fmt}}{suffix}")
+
+    row("cluster count", chain_run.n_clusters, fused_run.n_clusters)
+    row("largest cluster", chain_run.largest, fused_run.largest)
+    e(f"  {'largest as % of addresses':<28}"
+      f"{chain_run.largest / chain_run.n_addresses * 100:>12.2f}%"
+      f"{fused_run.largest / fused_run.n_addresses * 100:>12.2f}%"
+      f"{(fused_run.largest - chain_run.largest) / chain_run.n_addresses * 100:>+13.2f} pp")
+    e(f"  {'coverage':<28}{chain_run.coverage:>12.2f}%"
+      f"{fused_run.coverage:>12.2f}%"
+      f"{fused_run.coverage - chain_run.coverage:>+13.2f} pp")
+    row("singletons", chain_run.singletons, fused_run.singletons)
+    row("merges applied", chain_run.cospend_merges, fused_run.cospend_merges)
+    row("merges BLOCKED", 0, fused.blocked)
+    row("contested clusters", 0, fused.contested)
+    e("")
+    e("-- constraint reach " + "-" * (width - 21))
+    e(f"  unions with enough evidence   {fused.evaluated:>12,}")
+    e(f"  unions abstained (NO_EVIDENCE){fused.abstained:>12,}")
+    e(f"  evaluable fraction            {fused.evaluable_fraction * 100:>11.2f}%")
+    e("")
+    if fused.blocked == 0:
+        e("  READING: no merge was blocked. On this dataset that is the")
+        e("  expected outcome and not a bug - the Phase 2 audit measured")
+        e("  per-transaction separability at 1.003, and only a small share of")
+        e("  components accumulate enough pooled observations for the")
+        e("  centroid difference to clear its own noise. The mechanism is")
+        e("  wired end to end and abstains honestly; demonstrating a blocked")
+        e("  merge needs either a longer capture per origin or a generator")
+        e("  whose sigma is not borrowed from block propagation.")
+    else:
+        e(f"  READING: {fused.blocked:,} merge(s) refused on network evidence.")
+        e("  Each is a super-cluster link prevented rather than cleaned up")
+        e("  afterwards. Contested clusters are contradictions that arrived")
+        e("  too late to prevent and are flagged, not silently resolved.")
+    e("=" * width)
+    typer.echo("")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
+@app.command("evidence-funnel")
+def evidence_funnel(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    min_pooled: int = typer.Option(
+        25, "--min-pooled", help="Production pooled minimum, for the headline."
+    ),
+    alpha: float = typer.Option(1e-4, "--alpha"),
+    min_effect: float = typer.Option(0.05, "--min-effect"),
+    thresholds: str = typer.Option(
+        "1,2,5,10,25", "--thresholds", help="Comma-separated pooled minimums."
+    ),
+    out: Path = typer.Option(
+        None,
+        "--out",
+        help="Per-union records "
+        "[default: <data-root>/processed/evidence_funnel.parquet]",
+    ),
+) -> None:
+    """Diagnose where network evidence disappears across proposed unions.
+
+    Records, for every proposed union and before any evidence test, the
+    pooled observations available on each side, then reports the funnel at
+    several pooled minimums and the distribution of the statistic where it
+    could be computed.
+
+    Adds no mechanism and changes nothing: the frozen generator, the
+    production observations, network_truth, the Phase 1 baseline and the
+    merge-time constraint logic are all untouched.
+    """
+    from obsidianchain.eval import evidence_funnel as funnel
+    from obsidianchain.io import elliptic
+    from obsidianchain.network import separation
+
+    started = time.perf_counter()
+    config = separation.SeparationConfig(
+        min_pooled_observations=min_pooled, alpha=alpha, min_effect=min_effect
+    )
+    levels = tuple(int(t) for t in thresholds.split(",") if t.strip())
+
+    graph = elliptic.load_cospend_graph(data_root, keep_labels=True)
+    oracle = separation.build_oracle(
+        graph, processed_root=data_root / "processed", data_root=data_root,
+        config=config,
+    )
+    result = funnel.build_funnel(
+        graph, oracle, thresholds=levels, production_config=config
+    )
+    typer.echo(funnel.format_funnel(result))
+
+    destination = out or (data_root / "processed" / "evidence_funnel.parquet")
+    rows = funnel.write_records(result, destination)
+    typer.echo("")
+    typer.echo(f"wrote {rows:,} per-union records -> {destination}")
     typer.echo(
         f"peak memory {_peak_rss_mb():.1f} MB   "
         f"wall time {time.perf_counter() - started:.2f} s"

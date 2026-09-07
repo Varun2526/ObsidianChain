@@ -14,7 +14,7 @@ ways, all of which this module enforces:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -102,4 +102,77 @@ def run_clustering(
         change_edges=change_count,
         change_merges=int(change_merges),
         change_confidence_mean=mean_confidence,
+    )
+
+
+@dataclass
+class FusedRun:
+    """A constrained clustering run, with what the constraints actually did."""
+
+    run: ClusterRun
+    blocked: int = 0
+    contested: int = 0
+    evaluated: int = 0
+    abstained: int = 0
+    contested_sizes: np.ndarray | None = None
+    blocked_examples: list = field(default_factory=list)
+
+    @property
+    def evaluable_fraction(self) -> float:
+        total = self.evaluated + self.abstained
+        return self.evaluated / total if total else 0.0
+
+
+def run_fused(
+    graph: CoSpendGraph,
+    oracle,
+    label: str = "fused",
+    change_edges: np.ndarray | None = None,
+) -> FusedRun:
+    """Cluster with network cannot-link constraints able to veto a merge.
+
+    Co-spend edges are applied in the same order as the unconstrained
+    baseline, so the two runs differ only in whether the veto exists. Any
+    difference in the output is therefore attributable to the constraints and
+    not to edge ordering.
+    """
+    from obsidianchain.cluster.constrained import ConstrainedUnionFind
+
+    # Probe a throwaway instance so the real run's counters stay clean.
+    if ConstrainedUnionFind(2).union(0, 1) is None:
+        raise NotImplementedError(
+            "ConstrainedUnionFind.union() returned None - the merge decision "
+            "is not yet implemented in src/obsidianchain/cluster/constrained.py."
+        )
+
+    forest = ConstrainedUnionFind(graph.n_addresses, oracle=oracle)
+    cospend_merges = forest.add_edges(graph.edges)
+    change_count = change_merges = 0
+    if change_edges is not None and len(change_edges):
+        change_count = int(len(change_edges))
+        change_merges = forest.add_edges(change_edges)
+
+    forest.audit_existing_constraints()
+    roots = forest.roots()
+    sizes = forest.component_sizes()
+    counters = forest.counters
+
+    run = ClusterRun(
+        label=label,
+        roots=roots,
+        sizes=sizes,
+        n_addresses=int(graph.n_addresses),
+        cospend_edges=int(graph.n_edges),
+        cospend_merges=int(cospend_merges),
+        change_edges=change_count,
+        change_merges=int(change_merges),
+    )
+    return FusedRun(
+        run=run,
+        blocked=counters.blocked,
+        contested=forest.n_contested_clusters(),
+        evaluated=counters.evaluated,
+        abstained=counters.abstained,
+        contested_sizes=forest.component_sizes_excluding_contested(),
+        blocked_examples=forest.blocked_merges()[:20],
     )
