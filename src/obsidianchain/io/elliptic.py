@@ -64,6 +64,16 @@ class CoSpendGraph:
     edges: np.ndarray
     """(m, 2) int32 array of co-spend edges."""
 
+    edge_tx_ids: np.ndarray
+    """Raw txId behind each row of ``edges``, for replaying in time order."""
+
+    universe_codes: np.ndarray
+    """Address code for each row of wallets_classes.csv, in file order.
+
+    This is what lets a per-address column from that file (the class label,
+    say) be reindexed into code space without re-hashing the strings.
+    """
+
     n_transactions: int
     """Distinct transactions contributing at least one input edge."""
 
@@ -166,12 +176,24 @@ def star_edges(
 
     Returns ``(edges, n_transactions)`` where ``edges`` is (m, 2) int32.
     """
+    edges, n_transactions, _ = _star_edges_impl(addr_codes, tx_codes)
+    return edges, n_transactions
+
+
+def _star_edges_impl(
+    addr_codes: np.ndarray, tx_codes: np.ndarray
+) -> tuple[np.ndarray, int, np.ndarray]:
+    """As :func:`star_edges`, plus the transaction code behind each edge.
+
+    The extra array is what lets a caller replay the edge list in
+    transaction-time order, which the cumulative timestep analysis needs.
+    """
     if addr_codes.shape != tx_codes.shape:
         raise ValueError("addr_codes and tx_codes must be the same length")
 
     dtype = addr_codes.dtype
     if addr_codes.size == 0:
-        return np.empty((0, 2), dtype=dtype), 0
+        return np.empty((0, 2), dtype=dtype), 0, np.empty(0, dtype=tx_codes.dtype)
 
     # Stable sort groups equal transaction ids into contiguous runs while
     # keeping input order within each transaction, so the star centre is
@@ -199,7 +221,7 @@ def star_edges(
     edges = np.empty((int(followers.sum()), 2), dtype=dtype)
     edges[:, 0] = centres[followers]
     edges[:, 1] = addrs[followers]
-    return edges, n_transactions
+    return edges, n_transactions, txs[followers]
 
 
 def load_cospend_graph(
@@ -235,11 +257,13 @@ def load_cospend_graph(
         )
 
     addr_codes = codes[n_universe_rows:].astype(CodeDType, copy=False)
+    universe_codes = codes[:n_universe_rows].astype(CodeDType, copy=True)
     labels = np.asarray(uniques) if keep_labels else None
     del combined, universe, codes, uniques
 
     tx_codes_raw, tx_uniques = pd.factorize(input_frame["txId"])
     tx_codes = tx_codes_raw.astype(CodeDType, copy=False)
+    tx_ids = np.asarray(tx_uniques)
     n_input_rows = int(len(input_frame))
     del input_frame, tx_codes_raw, tx_uniques
 
@@ -253,11 +277,14 @@ def load_cospend_graph(
     n_input_pairs = int(len(pairs))
     del pairs
 
-    edges, n_transactions = star_edges(addr_codes, tx_codes)
+    edges, n_transactions, edge_tx_codes = _star_edges_impl(addr_codes, tx_codes)
+    edge_tx_ids = tx_ids[edge_tx_codes]
 
     return CoSpendGraph(
         n_addresses=n_addresses,
         edges=edges,
+        edge_tx_ids=edge_tx_ids,
+        universe_codes=universe_codes,
         n_transactions=n_transactions,
         n_input_rows=n_input_rows,
         n_input_pairs=n_input_pairs,

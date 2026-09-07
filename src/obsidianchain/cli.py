@@ -11,11 +11,26 @@ import resource
 import socket
 import sys
 import time
+from enum import Enum
 from pathlib import Path
 
 import typer
 
 from obsidianchain import __version__
+
+
+def synthetic_dir_name() -> str:
+    """Directory under processed/ that holds Phase-3-visible network data."""
+    from obsidianchain.network import synthetic
+
+    return synthetic.OBSERVATIONS_DIR
+
+
+class Heuristics(str, Enum):
+    """Which merge evidence to cluster on."""
+
+    MULTI_INPUT = "multi-input"
+    MULTI_INPUT_CHANGE = "multi-input+change"
 
 app = typer.Typer(
     add_completion=False,
@@ -66,12 +81,485 @@ def isolation() -> None:
     typer.secho("PASS: air-gapped", fg=typer.colors.GREEN)
 
 
+def _cluster(
+    data_root: Path,
+    heuristics: Heuristics,
+    threshold: float,
+    use_features: bool = True,
+    need_labels: bool = False,
+):
+    """Load and cluster under the chosen heuristics.
+
+    Returns (graph, run, candidates|None, selected|None).
+    """
+    from obsidianchain.cluster import change as change_mod
+    from obsidianchain.cluster.pipeline import run_clustering
+    from obsidianchain.io import elliptic
+
+    wants_change = heuristics is Heuristics.MULTI_INPUT_CHANGE
+    # keep_labels only controls whether address strings are retained; it has
+    # no effect on edges or clustering.
+    graph = elliptic.load_cospend_graph(
+        data_root, keep_labels=wants_change or need_labels
+    )
+
+    if not wants_change:
+        return graph, run_clustering(graph, heuristics.value), None, None
+
+    candidates = change_mod.build_candidates(
+        graph, data_root, use_features=use_features
+    )
+    selected = change_mod.select_change_rows(candidates, threshold)
+    if selected is None:
+        typer.secho(
+            "change.select_change_rows() returned None - the merge decision is "
+            "not yet implemented in src/obsidianchain/cluster/change.py.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
+
+    edges = change_mod.edges_from_selection(selected)
+    run = run_clustering(
+        graph,
+        heuristics.value,
+        change_edges=edges,
+        change_confidences=selected["confidence"].to_numpy(),
+    )
+    return graph, run, candidates, selected
+
+
+@app.command()
+def compare(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    threshold: float = typer.Option(
+        0.7, "--threshold", min=0.0, max=1.0, help="Minimum change confidence."
+    ),
+    top: int = typer.Option(10, "--top"),
+    features: bool = typer.Option(
+        True,
+        "--features/--no-features",
+        help="Use wallets_features.csv for the finer freshness signal.",
+    ),
+) -> None:
+    """Compare multi-input clustering against multi-input + change detection."""
+    from obsidianchain.eval import compare as compare_mod
+
+    started = time.perf_counter()
+    result = compare_mod.run_comparison(
+        data_root, threshold=threshold, use_features=features
+    )
+    typer.echo(compare_mod.format_comparison(result, top=top))
+    typer.echo("")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
+@app.command("network-generate")
+def network_generate(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    observers: int = typer.Option(8, "--observers", min=1, help="Vantage points."),
+    origins: int = typer.Option(64, "--origins", min=1, help="Simulated origin nodes."),
+    broadcaster_fraction: float = typer.Option(
+        0.15, "--broadcaster-fraction", min=0.0, max=1.0,
+        help="Share of origins that are known broadcasters.",
+    ),
+    median_ms: float = typer.Option(
+        1200.0, "--median-ms", help="Median propagation delay (ASSUMPTION)."
+    ),
+    seed: int = typer.Option(0, "--seed"),
+    limit: int = typer.Option(
+        0, "--limit", help="Only the first N transactions (0 = all)."
+    ),
+    fmt: str = typer.Option("parquet", "--format", help="parquet or csv."),
+    frozen: bool = typer.Option(
+        True,
+        "--frozen/--custom",
+        help="Use the frozen September configuration, ignoring the tuning "
+        "options above. Phase 3 must consume the frozen dataset.",
+    ),
+) -> None:
+    """Generate SYNTHETIC network announcements for the Elliptic++ transactions.
+
+    This data demonstrates the mechanism. It validates nothing: no packet was
+    captured and the generator contains the structure the analysis looks for.
+    Real validation needs mainnet capture plus controlled ground truth.
+    """
+    from obsidianchain.network import synthetic
+
+    from dataclasses import replace
+
+    started = time.perf_counter()
+    config = synthetic.FROZEN_SEPTEMBER_2026
+    if not frozen:
+        config = replace(
+            config,
+            n_observers=observers,
+            n_origins=origins,
+            broadcaster_fraction=broadcaster_fraction,
+            seed=seed,
+            propagation=synthetic.PropagationModel(median_ms=median_ms),
+        )
+    txids = synthetic.load_transaction_ids(data_root)
+    if limit > 0:
+        txids = txids[:limit]
+
+    observations, nodes, observer_table, ground_truth = synthetic.generate(
+        txids, config
+    )
+    typer.echo(
+        synthetic.format_summary(observations, nodes, observer_table, config)
+    )
+
+    written = synthetic.write_outputs(
+        observations, nodes, observer_table, ground_truth,
+        data_root / "processed", config, fmt=fmt,
+    )
+    typer.echo("")
+    typer.echo(
+        f"wrote {written['rows']:,} records "
+        f"({written['bytes'] / 1e6:,.1f} MB) -> {written['observations']}"
+    )
+    typer.echo(f"      observers             -> {written['observers']}")
+    typer.echo(f"      broadcaster IP list   -> {written['broadcaster_ips']}")
+    typer.echo(f"      manifest              -> {written['manifest']}")
+    typer.echo(
+        f"      GROUND TRUTH (quarantined, not for Phase 3) "
+        f"-> {written['ground_truth']}"
+    )
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
+@app.command("network-audit")
+def network_audit(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    scenarios: bool = typer.Option(
+        True, "--scenarios/--no-scenarios", help="Run the stress scenarios."
+    ),
+    scenario_transactions: int = typer.Option(
+        4000, "--scenario-transactions", help="Transactions per stress scenario."
+    ),
+    sample: int = typer.Option(
+        4000, "--sample", help="Transactions sampled for the distance comparison."
+    ),
+) -> None:
+    """Audit the Phase 2 network layer before Phase 3 consumes it.
+
+    Checks the information boundary, measures how separable the synthetic
+    origins are, and runs the stress scenarios. Reads ground truth only for
+    the identifiability description, which is an evaluation activity, never
+    an inference one.
+    """
+    import numpy as np
+
+    from obsidianchain.network import arrivals, audit, boundary, synthetic
+
+    started = time.perf_counter()
+    processed = data_root / "processed"
+
+    leakage = audit.audit_leakage(processed)
+    manifest = boundary.load_manifest(processed)
+
+    identifiability = audit.IdentifiabilityReport()
+    checks: dict[str, bool] = {}
+    if leakage.boundary_error is None:
+        inputs = boundary.load_phase3_inputs(processed)
+        vectors = arrivals.build(
+            inputs.observations,
+            observer_ids=sorted(inputs.observers["observer_id"].tolist())
+            or sorted(inputs.observations["observer_id"].unique().tolist()),
+        )
+        truth = boundary.load_ground_truth_FOR_EVALUATION_ONLY(processed)
+        config = synthetic.FROZEN_SEPTEMBER_2026
+        identifiability = audit.audit_identifiability(
+            vectors, truth, config, sample=sample
+        )
+
+        # --- instrumentation checks -----------------------------------
+        bc = set(
+            inputs.observations.loc[
+                inputs.observations["peer_ip"].isin(inputs.broadcaster_ips), "txid"
+            ]
+        )
+        labels = arrivals.classify_evidence(vectors, bc)
+        blocked = set(
+            labels.loc[
+                labels["evidence"] == arrivals.Evidence.NO_EVIDENCE.value, "txid"
+            ]
+        )
+        checks["broadcaster_exclusion"] = bc.issubset(blocked)
+        checks["vector_reconstruction"] = (
+            vectors.n_transactions == inputs.observations["txid"].nunique()
+        )
+        checks["missing_observer_handling"] = bool(
+            np.isnan(vectors.absolute_ms).any()
+        ) or config.missing_observation_rate == 0.0
+        checks["config_frozen"] = manifest.get("configuration", {}).get(
+            "seed"
+        ) == synthetic.FROZEN_SEPTEMBER_2026.seed
+        checks["manifest_present"] = bool(manifest)
+        checks["ground_truth_separated"] = bool(leakage.truth_files_present)
+
+    scenario_results = []
+    if scenarios and leakage.boundary_error is None:
+        txids = synthetic.load_transaction_ids(data_root)[:scenario_transactions]
+        scenario_results = audit.run_stress_scenarios(txids)
+        checks["stress_scenarios_ran"] = len(scenario_results) > 0
+        checks["broadcaster_excluded_under_stress"] = all(
+            s.reasons.get("known_broadcaster", 0) > 0
+            for s in scenario_results
+            if s.name in {"baseline", "broadcaster-heavy"}
+        )
+
+    typer.echo(
+        audit.format_audit(
+            leakage, identifiability, scenario_results, manifest, checks
+        )
+    )
+    typer.echo("")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+    if not (leakage.clean and all(checks.values())):
+        raise typer.Exit(code=1)
+
+
+@app.command("network-arrivals")
+def network_arrivals(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    observations: Path = typer.Option(
+        None,
+        "--observations",
+        help="[default: <data-root>/processed/network_observations.parquet]",
+    ),
+    out: Path = typer.Option(
+        None, "--out", help="[default: <data-root>/processed/arrival_vectors.parquet]"
+    ),
+    flat_threshold_ms: float = typer.Option(
+        250.0, "--flat-threshold-ms", help="Spread at or below this carries no ordering."
+    ),
+    fmt: str = typer.Option("parquet", "--format", help="parquet or csv."),
+) -> None:
+    """Build per-transaction arrival-time vectors from announcement records.
+
+    Instrumentation only: reshapes observations and describes them. It infers
+    nothing and produces no constraints.
+    """
+    from obsidianchain.network import arrivals, boundary
+
+    started = time.perf_counter()
+    processed = data_root / "processed"
+
+    # Read through the boundary: this path structurally cannot reach truth.
+    if observations is not None:
+        records = arrivals.read_observations(observations)
+        boundary.assert_no_leakage(records, context=str(observations))
+        observer_ids = sorted(records["observer_id"].unique().tolist())
+        broadcaster_ips = boundary.load_broadcaster_ips(processed)
+    else:
+        inputs = boundary.load_phase3_inputs(processed)
+        records = inputs.observations
+        observer_ids = sorted(inputs.observers["observer_id"].tolist()) or sorted(
+            records["observer_id"].unique().tolist()
+        )
+        broadcaster_ips = inputs.broadcaster_ips
+
+    broadcaster_txids = set(
+        records.loc[records["peer_ip"].isin(broadcaster_ips), "txid"].unique()
+    )
+
+    vectors = arrivals.build(records, observer_ids=observer_ids)
+    typer.echo(
+        arrivals.summarise(
+            vectors, broadcaster_txids=broadcaster_txids,
+            threshold_ms=flat_threshold_ms,
+        )
+    )
+
+    labels = arrivals.classify_evidence(
+        vectors, broadcaster_txids, threshold_ms=flat_threshold_ms
+    )
+    typer.echo("")
+    typer.echo("-- evidence classification " + "-" * 51)
+    for name, count in sorted(labels["evidence"].value_counts().items()):
+        typer.echo(f"  {name:<24}{count:>12,}")
+    for reason, count in labels.loc[
+        labels["no_evidence_reason"] != "", "no_evidence_reason"
+    ].value_counts().items():
+        typer.echo(f"    reason: {reason:<16}{count:>12,}")
+
+    suffix = ".parquet" if fmt == "parquet" else ".csv"
+    destination = out or (
+        processed / synthetic_dir_name() / f"arrival_vectors{suffix}"
+    )
+    frame = vectors.with_evidence(broadcaster_txids, threshold_ms=flat_threshold_ms)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if fmt == "parquet":
+        frame.to_parquet(destination, index=False)
+    else:
+        frame.to_csv(destination, index=False)
+    rows = len(frame)
+    typer.echo("")
+    typer.echo(f"wrote {rows:,} arrival vectors -> {destination}")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
+@app.command("entity-resolution")
+def entity_resolution(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    heuristics: Heuristics = typer.Option(
+        Heuristics.MULTI_INPUT, "--heuristics", help="Merge evidence to use."
+    ),
+    threshold: float = typer.Option(
+        0.7, "--threshold", min=0.0, max=1.0, help="Minimum change confidence."
+    ),
+    top: int = typer.Option(15, "--top", help="Entities to list."),
+    permutations: int = typer.Option(
+        1000, "--permutations", help="Label shuffles for the random baseline."
+    ),
+    seed: int = typer.Option(0, "--seed", help="Baseline seed."),
+    out: Path = typer.Option(
+        None,
+        "--out",
+        help="Per-entity CSV "
+        "[default: <data-root>/processed/entity_resolution_<mode>.csv].",
+    ),
+) -> None:
+    """Score cluster assignments against external entity labels.
+
+    Requires 'entity-labels' to have been run first. Reports macro metrics as
+    the headline, micro alongside, and a shuffled-label baseline.
+    """
+    from obsidianchain.eval import entity_resolution as er
+
+    started = time.perf_counter()
+    graph, run, _, _ = _cluster(
+        data_root, heuristics, threshold, need_labels=True
+    )
+    result = er.evaluate(
+        graph, run, data_root, n_permutations=permutations, seed=seed
+    )
+    typer.echo(er.format_report(result, top=top))
+
+    destination = out or (
+        data_root / "processed" / f"entity_resolution_{heuristics.value}.csv"
+    )
+    rows = er.write_per_entity_csv(result, destination)
+    typer.echo("")
+    typer.echo(f"wrote {rows:,} entity rows -> {destination}")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
+@app.command("entity-labels")
+def entity_labels(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    out: Path = typer.Option(
+        None,
+        "--out",
+        help="[default: <data-root>/processed/entity_labels.csv]",
+    ),
+    elliptic_flag: bool = typer.Option(
+        True,
+        "--elliptic/--no-elliptic",
+        help="Flag which labelled addresses fall inside the Elliptic++ universe.",
+    ),
+) -> None:
+    """Validate and normalise the entity-label dataset for entity resolution.
+
+    Reads raw/address_labels/addresses.csv, drops malformed addresses and
+    addresses claimed by more than one entity, folds entity-name case, and
+    writes a small processed table. Computes no metrics.
+    """
+    from obsidianchain.io import entity_labels as el
+
+    started = time.perf_counter()
+    frame, report = el.build(data_root, check_elliptic=elliptic_flag)
+    destination = out or (data_root / "processed" / "entity_labels.csv")
+    typer.echo(el.format_report(report, destination))
+
+    rows = el.write(frame, destination)
+    size_kb = destination.stat().st_size / 1024
+    typer.echo("")
+    typer.echo(f"wrote {rows:,} rows ({size_kb:,.0f} KB) -> {destination}")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+    if not report.accounted():
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def evolution(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    threshold: float = typer.Option(
+        0.7, "--threshold", min=0.0, max=1.0, help="Minimum change confidence."
+    ),
+    timesteps: int = typer.Option(49, "--timesteps", help="Number of timesteps."),
+    out_csv: Path = typer.Option(
+        None, "--out-csv", help="[default: <data-root>/processed/evolution.csv]"
+    ),
+    out_png: Path = typer.Option(
+        None, "--out-png", help="[default: <data-root>/processed/largest_cluster.png]"
+    ),
+    dpi: int = typer.Option(200, "--dpi", help="Chart resolution."),
+    features: bool = typer.Option(True, "--features/--no-features"),
+) -> None:
+    """Cluster cumulatively over timesteps and chart how structure evolves.
+
+    Runs both heuristic modes, writes the full series as CSV and the largest
+    cluster trajectory as a PNG, and reports whether growth turns
+    super-linear.
+    """
+    from obsidianchain.eval import evolution as evo
+
+    started = time.perf_counter()
+    series = evo.run_evolution(
+        data_root,
+        threshold=threshold,
+        use_features=features,
+        n_timesteps=timesteps,
+    )
+    onsets = evo.detect_all(series)
+    typer.echo(evo.format_evolution(series, onsets))
+
+    csv_path = out_csv or (data_root / "processed" / "evolution.csv")
+    png_path = out_png or (data_root / "processed" / "largest_cluster.png")
+    rows = evo.write_series_csv(series, csv_path)
+    evo.plot_largest_cluster(series, png_path, onsets, dpi=dpi)
+
+    typer.echo("")
+    typer.echo(f"wrote {rows:,} rows -> {csv_path}")
+    typer.echo(f"wrote chart      -> {png_path}")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
 @app.command()
 def cospend(
     data_root: Path = typer.Option(
         DATA_ROOT, "--data-root", help="Directory containing raw/."
     ),
     top: int = typer.Option(10, "--top", help="How many largest clusters to list."),
+    heuristics: Heuristics = typer.Option(
+        Heuristics.MULTI_INPUT, "--heuristics", help="Merge evidence to use."
+    ),
+    threshold: float = typer.Option(
+        0.7, "--threshold", min=0.0, max=1.0, help="Minimum change confidence."
+    ),
 ) -> None:
     """Cluster addresses by co-spend and report the cluster statistics.
 
@@ -79,7 +567,6 @@ def cospend(
     input addresses sharing a transaction are controlled by one entity.
     AddrAddr_edgelist.csv is a money-flow graph and is never used here.
     """
-    from obsidianchain.cluster.unionfind import UnionFind
     from obsidianchain.io import elliptic
 
     started = time.perf_counter()
@@ -89,12 +576,15 @@ def cospend(
     typer.echo("=" * 68)
     typer.echo(f"source           {elliptic.COSPEND_SOURCE} (grouped on txId)")
     typer.echo(f"excluded         {elliptic.ADDR_ADDR_DO_NOT_CLUSTER} (money flow)")
+    typer.echo(f"heuristics       {heuristics.value}")
+    if heuristics is Heuristics.MULTI_INPUT_CHANGE:
+        typer.echo(f"change threshold {threshold:.2f}")
     typer.echo(f"data root        {data_root}")
     typer.echo("")
 
-    typer.echo("loading ...")
+    typer.echo("loading and clustering ...")
     load_started = time.perf_counter()
-    graph = elliptic.load_cospend_graph(data_root)
+    graph, run, candidates, selected = _cluster(data_root, heuristics, threshold)
     load_seconds = time.perf_counter() - load_started
 
     typer.echo(f"  input rows       {graph.n_input_rows:>14,}")
@@ -107,29 +597,33 @@ def cospend(
             f"  note: {graph.n_input_only_addresses:,} input addresses are absent "
             f"from wallets_classes.csv"
         )
+    if candidates is not None:
+        typer.echo("")
+        typer.echo(f"  change candidates{candidates.n_candidates:>14,}")
+        typer.echo(f"  above threshold  {len(candidates.above(threshold)):>14,}")
+        typer.echo(f"  selected as change{len(selected):>13,}")
     typer.echo("")
 
-    typer.echo("clustering ...")
-    union_started = time.perf_counter()
-    uf = UnionFind(graph.n_addresses)
-    _require_implemented(uf)
-    merges = uf.add_edges(graph.edges)
-    sizes = uf.component_sizes()
-    union_seconds = time.perf_counter() - union_started
-
-    n_clusters = int(sizes.size)
-    largest = int(sizes[0]) if n_clusters else 0
-    singletons = int((sizes == 1).sum())
-    clustered = int(sizes[sizes > 1].sum())
-    coverage = (clustered / graph.n_addresses * 100) if graph.n_addresses else 0.0
+    sizes = run.sizes
+    merges = run.cospend_merges
+    n_clusters = run.n_clusters
+    largest = run.largest
+    singletons = run.singletons
+    clustered = run.clustered
+    coverage = run.coverage
+    union_seconds = 0.0
     elapsed = time.perf_counter() - started
 
     typer.echo("")
     typer.echo("-- results " + "-" * 57)
     typer.echo(f"  total addresses          {graph.n_addresses:>14,}")
     typer.echo(f"  total edges processed    {graph.n_edges:>14,}")
-    typer.echo(f"  edges that merged        {merges:>14,}")
+    typer.echo(f"  merges from co-spend     {merges:>14,}")
     typer.echo(f"  redundant edges          {graph.n_edges - merges:>14,}")
+    if run.change_edges:
+        typer.echo(f"  change edges applied     {run.change_edges:>14,}")
+        typer.echo(f"  merges from change       {run.change_merges:>14,}")
+        typer.echo(f"  mean change confidence   {run.change_confidence_mean:>14.3f}")
     typer.echo(f"  number of clusters       {n_clusters:>14,}")
     typer.echo("")
     typer.secho(
@@ -158,24 +652,65 @@ def cospend(
 
     typer.echo("-- cost " + "-" * 60)
     typer.echo(f"  peak memory              {_peak_rss_mb():>13.1f} MB")
-    typer.echo(f"  load time                {load_seconds:>13.2f} s")
-    typer.echo(f"  union-find time          {union_seconds:>13.2f} s")
+    typer.echo(f"  load + cluster time      {load_seconds:>13.2f} s")
     typer.echo(f"  wall time                {elapsed:>13.2f} s")
     typer.echo("=" * 68)
 
 
-def _require_implemented(uf: object) -> None:
-    """Fail clearly while find()/union() are still stubs.
+@app.command()
+def purity(
+    data_root: Path = typer.Option(
+        DATA_ROOT, "--data-root", help="Directory containing raw/ and processed/."
+    ),
+    top: int = typer.Option(10, "--top", help="Contaminated clusters to list."),
+    out: Path = typer.Option(
+        None,
+        "--out",
+        help="CSV of contaminated clusters "
+        "[default: <data-root>/processed/contaminated_clusters.csv].",
+    ),
+    addresses: bool = typer.Option(
+        True,
+        "--addresses/--no-addresses",
+        help="Include a representative address per cluster in the CSV. "
+        "Costs ~75 MB of peak memory.",
+    ),
+    heuristics: Heuristics = typer.Option(
+        Heuristics.MULTI_INPUT, "--heuristics", help="Merge evidence to use."
+    ),
+    threshold: float = typer.Option(
+        0.7, "--threshold", min=0.0, max=1.0, help="Minimum change confidence."
+    ),
+) -> None:
+    """Measure co-spend cluster correctness against the Elliptic++ labels.
 
-    Remove once they are implemented; it is a scaffolding guard, not logic.
+    A cluster containing both an illicit and a licit address has provably
+    merged two entities. Unknown is never treated as licit.
     """
-    if uf.find(0) is None:  # type: ignore[attr-defined]
-        typer.secho(
-            "UnionFind.find() returned None - find() and union() are not yet "
-            "implemented in src/obsidianchain/cluster/unionfind.py.",
-            fg=typer.colors.RED,
+    from obsidianchain.eval import purity as purity_eval
+
+    started = time.perf_counter()
+    if heuristics is Heuristics.MULTI_INPUT:
+        report, graph = purity_eval.analyse(data_root, keep_addresses=addresses)
+    else:
+        graph, run, _, _ = _cluster(data_root, heuristics, threshold)
+        classes = purity_eval.load_classes_by_code(graph, data_root)
+        report = purity_eval.report_for_roots(
+            run.roots, classes, graph.n_addresses
         )
-        raise typer.Exit(code=2)
+    typer.echo(f"heuristics: {heuristics.value}")
+    typer.echo(purity_eval.format_summary(report, top=top))
+
+    destination = out or (data_root / "processed" / "contaminated_clusters.csv")
+    rows = purity_eval.write_contaminated_csv(
+        report, destination, graph if addresses else None
+    )
+    typer.echo("")
+    typer.echo(f"wrote {rows:,} contaminated clusters -> {destination}")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
 
 
 def _peak_rss_mb() -> float:
