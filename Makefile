@@ -52,7 +52,7 @@ DOCKER_RUN := docker run --rm $(OFFLINE) --platform $(PLATFORM) \
 	-v $(DATA_DIR):/data \
 	-e OBSIDIANCHAIN_DATA=/data
 
-.PHONY: help vendor build run shell test verify isolation arch freeze dirs clean \
+.PHONY: help vendor build run shell test verify isolation arch freeze dirs clean demo \
         clean-vendor clean-vendor-all check-vendor
 
 help: ## Show this help
@@ -134,6 +134,13 @@ shell: dirs ## Interactive shell in the container, air-gapped
 
 test: dirs ## Run pytest inside the container, air-gapped
 	$(DOCKER_RUN) --entrypoint pytest $(IMAGE):$(TAG) /app/tests
+
+# The demonstration is SYNTHETIC and confined to data/demo. It never reads or
+# writes data/processed, and a test asserts that.
+demo: dirs ## Run the five DEMO scenarios; writes data/demo/output/index.html
+	$(DOCKER_RUN) $(IMAGE):$(TAG) demo --rebuild
+	@echo ""
+	@echo ">> open $(DATA_DIR)/demo/output/index.html"
 
 verify: dirs ## Check data/raw for the Elliptic++ dataset
 	$(DOCKER_RUN) --entrypoint python $(IMAGE):$(TAG) /app/scripts/verify_dataset.py

@@ -1246,6 +1246,67 @@ def purity(
     )
 
 
+@app.command("demo")
+def demo(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    demo_root: Path = typer.Option(
+        None, "--demo-root",
+        help="Where the fixture and its outputs live "
+        "[default: <data-root>/demo]. Must end in 'demo'.",
+    ),
+    rebuild: bool = typer.Option(
+        False, "--rebuild", help="Regenerate the fixture from the seed."
+    ),
+    json_out: Path = typer.Option(
+        None, "--json-out", help="[default: <demo-root>/output/scenarios.json]"
+    ),
+    html_out: Path = typer.Option(
+        None, "--html-out", help="[default: <demo-root>/output/index.html]"
+    ),
+) -> None:
+    """Five DEMONSTRATION scenarios - SYNTHETIC, not a measurement.
+
+    Runs the unchanged constraint engine over a seeded fixture built so that
+    each of its five states is actually reached:
+
+      A  blockchain evidence proposes a merge          -> CANDIDATE
+      B  network evidence present but insufficient     -> merge proceeds
+      C  network evidence strong and separating        -> merge BLOCKED
+      D  contradiction after transitive clustering     -> CONTESTED
+      E  no usable network evidence                    -> abstain
+
+    Writes a DEMO-flagged JSON payload and a self-contained HTML page under
+    <demo-root>. Everything is confined to that namespace; the frozen
+    production dataset in processed/ is never read or written.
+    """
+    from obsidianchain.demo import api, report, runner, scenarios
+
+    started = time.perf_counter()
+    root = demo_root or scenarios.default_demo_root(data_root)
+    try:
+        result = runner.run(root, rebuild=rebuild)
+    except scenarios.DemoNamespaceError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED)
+        raise typer.Exit(code=2) from None
+    except (runner.DemoExpectationError, runner.DemoRuleError) as exc:
+        typer.secho(str(exc), fg=typer.colors.RED)
+        raise typer.Exit(code=3) from None
+
+    envelope = runner.to_envelope(result)
+    typer.echo(report.format_terminal(envelope))
+
+    output = Path(root) / "output"
+    json_path = api.write_json(envelope, json_out or output / "scenarios.json")
+    html_path = report.write_html(envelope, html_out or output / "index.html")
+    typer.echo("")
+    typer.echo(f"wrote DEMO-flagged payload -> {json_path}")
+    typer.echo(f"wrote DEMO-marked page     -> {html_path}")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
 def _peak_rss_mb() -> float:
     """Peak resident set size of this process, in megabytes.
 

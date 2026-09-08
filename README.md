@@ -56,6 +56,7 @@ make build    # builds the image, docker build --network none
 make verify   # checks data/raw for the dataset
 make test     # pytest, air-gapped
 make run      # runs the CLI, air-gapped
+make demo     # five SYNTHETIC demonstration scenarios -> data/demo/output/
 ```
 
 Only `make vendor` touches the network. After it, you can disconnect.
@@ -202,6 +203,7 @@ src/obsidianchain/
 ├── cluster/     union-find, constrained clustering
 ├── network/     synthetic generator, later the observer
 ├── eval/        metrics
+├── demo/        SYNTHETIC demonstration scenarios (fixtures, not results)
 └── cli.py       entry point
 scripts/verify_dataset.py   dataset presence check (stdlib only, offline)
 
