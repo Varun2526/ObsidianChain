@@ -1,6 +1,6 @@
 """Tests for the constrained union-find - the specification for your code.
 
-These FAIL until ConstrainedUnionFind.union() and _evaluate_cannot_link()
+These FAIL until ConstrainedUnionFind.union() and evaluate_cannot_link()
 are implemented. That is intentional: they are the contract, not a report.
 
 Hand-built graph used throughout:
@@ -64,7 +64,7 @@ def _implemented() -> None:
     if probe.union(0, 1) is None:
         pytest.fail(
             "ConstrainedUnionFind.union() returned None - implement union() "
-            "and _evaluate_cannot_link() in "
+            "and evaluate_cannot_link() in "
             "src/obsidianchain/cluster/constrained.py."
         )
 
@@ -92,7 +92,7 @@ def test_union_returns_true_only_on_a_real_merge() -> None:
 def test_no_oracle_means_no_evidence_not_a_block() -> None:
     """Absence of evidence must never be read as evidence of separation."""
     forest = ConstrainedUnionFind(4)
-    evidence = forest._evaluate_cannot_link(0, 1)
+    evidence = forest.evaluate_cannot_link(0, 1)
     assert evidence.verdict is Verdict.NO_EVIDENCE
     assert evidence.blocks_merge is False
 
@@ -123,7 +123,7 @@ def test_cannot_link_is_order_independent() -> None:
 def test_static_constraint_needs_no_statistic() -> None:
     forest = ConstrainedUnionFind(4)
     forest.add_cannot_link(0, 1)
-    evidence = forest._evaluate_cannot_link(forest.find(0), forest.find(1))
+    evidence = forest.evaluate_cannot_link(forest.find(0), forest.find(1))
     assert evidence.verdict is Verdict.SEPARATED
     assert "static" in evidence.reason
 
@@ -228,12 +228,12 @@ def test_evidence_accumulates_so_a_late_merge_can_be_judged() -> None:
     )
     forest = ConstrainedUnionFind(6, oracle=oracle)
 
-    assert forest._evaluate_cannot_link(0, 3).verdict is Verdict.NO_EVIDENCE
+    assert forest.evaluate_cannot_link(0, 3).verdict is Verdict.NO_EVIDENCE
     forest.union(0, 1)
     forest.union(1, 2)
     forest.union(3, 4)
     forest.union(4, 5)
-    verdict = forest._evaluate_cannot_link(forest.find(0), forest.find(3)).verdict
+    verdict = forest.evaluate_cannot_link(forest.find(0), forest.find(3)).verdict
     assert verdict is Verdict.SEPARATED, "pooled evidence should now suffice"
     assert forest.union(0, 3) is False
 

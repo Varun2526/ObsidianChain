@@ -48,6 +48,37 @@ app = typer.Typer(
 DATA_ROOT = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
 
 
+def _provenance(
+    kind: str,
+    dataset_id: str,
+    *,
+    world=None,
+    synthetic_network=None,
+    manifest=None,
+    config=None,
+    notes=(),
+):
+    """Provenance for one durable artifact.
+
+    Every artifact this CLI writes gets one. The terminal banner is not
+    enough: a CSV row detached from the run that produced it is
+    indistinguishable from a real-world measurement, which is exactly how a
+    synthetic decision ends up quoted as a result.
+    """
+    from obsidianchain import provenance as prov
+
+    return prov.Provenance(
+        provenance_type=prov.ProvenanceType(kind),
+        dataset_id=dataset_id,
+        dataset_sha256=prov.dataset_hash(manifest),
+        world=world,
+        synthetic_network=synthetic_network,
+        generator_version=(manifest or {}).get("generator_version"),
+        production_rule=prov.rule_config(config) if config is not None else None,
+        notes=tuple(notes),
+    )
+
+
 @app.command()
 def version() -> None:
     """Print the obsidianchain version."""
@@ -522,14 +553,32 @@ def world_experiment(
             chain_description=chain_description,
         )
     )
+    from obsidianchain import provenance as prov
+
+    # SYNTHETIC_CONTROL, not DEMO: these are controlled worlds, a real
+    # experiment on generated data. Calling them DEMO would misrepresent
+    # them, and calling them PRODUCTION would be far worse.
+    artifact_provenance = _provenance(
+        "SYNTHETIC_CONTROL",
+        dataset_id=f"{fixture}/{','.join(o for o in outcomes)}",
+        synthetic_network=True,
+        manifest=manifest,
+        config=config,
+        notes=(
+            "Controlled-world experiment. Generated to make the question "
+            "answerable; not a measurement of Bitcoin.",
+            chain_description,
+        ),
+    )
     destination = out or (network / "processed" / "phase33.csv")
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    phase33.to_frame(outcomes).to_csv(destination, index=False)
+    prov.write_frame(phase33.to_frame(outcomes), destination, artifact_provenance)
     decisions_path = destination.with_name(
         destination.stem + "_decisions.csv"
     )
     blocked_only = phase33.decisions_to_frame(outcomes)
-    blocked_only.to_csv(decisions_path, index=False)
+    # Per-decision rows are the ones most likely to be copied out on their
+    # own, so they carry the marker in the row as well as the sidecar.
+    prov.write_frame(blocked_only, decisions_path, artifact_provenance)
     typer.echo("")
     typer.echo(f"wrote per-regime outcomes -> {destination}")
     typer.echo(f"wrote {len(blocked_only):,} decisions -> {decisions_path}")
@@ -695,9 +744,23 @@ def world_diagnostics_cmd(
     checks = wd.check_expectations(reports, config)
     typer.echo(wd.format_diagnostics(reports, config, checks))
 
+    from obsidianchain import provenance as prov
+    from obsidianchain.network import boundary as _boundary
+
     destination = out or (processed / "world_diagnostics.csv")
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    wd.to_frame(reports).to_csv(destination, index=False)
+    prov.write_frame(
+        wd.to_frame(reports),
+        destination,
+        _provenance(
+            "SYNTHETIC_CONTROL",
+            dataset_id="worlds/" + ",".join(sorted(reports)),
+            synthetic_network=True,
+            manifest=_boundary.load_manifest(
+                processed, world=sorted(reports)[0] if reports else None
+            ),
+            notes=("Generator verification, not a result.",),
+        ),
+    )
     typer.echo("")
     typer.echo(f"wrote diagnostics -> {destination}")
     typer.echo(
@@ -757,8 +820,27 @@ def evidence_funnel(
     )
     typer.echo(funnel.format_funnel(result))
 
+    from obsidianchain.network import boundary as _boundary
+
     destination = out or (data_root / "processed" / "evidence_funnel.parquet")
-    rows = funnel.write_records(result, destination)
+    # PRODUCTION pipeline on the frozen dataset - but synthetic_network is
+    # true, because the chain is real Elliptic++ and the announcements
+    # behind every chi-square here are generated.
+    rows = funnel.write_records(
+        result,
+        destination,
+        provenance=_provenance(
+            "PRODUCTION",
+            dataset_id="elliptic++/frozen-september-2026",
+            synthetic_network=True,
+            manifest=_boundary.load_manifest(data_root / "processed"),
+            config=config,
+            notes=(
+                "Network announcements are SYNTHETIC. Demonstrates the "
+                "mechanism; validates nothing about Bitcoin.",
+            ),
+        ),
+    )
     typer.echo("")
     typer.echo(f"wrote {rows:,} per-union records -> {destination}")
     typer.echo(
@@ -931,11 +1013,22 @@ def network_arrivals(
         processed / synthetic_dir_name() / f"arrival_vectors{suffix}"
     )
     frame = vectors.with_evidence(broadcaster_txids, threshold_ms=flat_threshold_ms)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if fmt == "parquet":
-        frame.to_parquet(destination, index=False)
-    else:
-        frame.to_csv(destination, index=False)
+    from obsidianchain import provenance as prov
+
+    prov.write_frame(
+        frame,
+        destination,
+        _provenance(
+            "PRODUCTION",
+            dataset_id="elliptic++/frozen-september-2026",
+            synthetic_network=True,
+            manifest=boundary.load_manifest(processed),
+            notes=(
+                "Instrumentation over SYNTHETIC announcements. Infers "
+                "nothing and produces no constraints.",
+            ),
+        ),
+    )
     rows = len(frame)
     typer.echo("")
     typer.echo(f"wrote {rows:,} arrival vectors -> {destination}")
@@ -985,7 +1078,17 @@ def entity_resolution(
     destination = out or (
         data_root / "processed" / f"entity_resolution_{heuristics.value}.csv"
     )
-    rows = er.write_per_entity_csv(result, destination)
+    rows = er.write_per_entity_csv(
+        result,
+        destination,
+        provenance=_provenance(
+            "PRODUCTION",
+            dataset_id="elliptic++/address_labels",
+            notes=(
+                "Chain and entity labels only; no network layer is involved.",
+            ),
+        ),
+    )
     typer.echo("")
     typer.echo(f"wrote {rows:,} entity rows -> {destination}")
     typer.echo(
@@ -1021,7 +1124,15 @@ def entity_labels(
     destination = out or (data_root / "processed" / "entity_labels.csv")
     typer.echo(el.format_report(report, destination))
 
-    rows = el.write(frame, destination)
+    rows = el.write(
+        frame,
+        destination,
+        provenance=_provenance(
+            "PRODUCTION",
+            dataset_id="elliptic++/address_labels",
+            notes=("Normalised real address labels; no inference.",),
+        ),
+    )
     size_kb = destination.stat().st_size / 1024
     typer.echo("")
     typer.echo(f"wrote {rows:,} rows ({size_kb:,.0f} KB) -> {destination}")
@@ -1069,7 +1180,15 @@ def evolution(
 
     csv_path = out_csv or (data_root / "processed" / "evolution.csv")
     png_path = out_png or (data_root / "processed" / "largest_cluster.png")
-    rows = evo.write_series_csv(series, csv_path)
+    rows = evo.write_series_csv(
+        series,
+        csv_path,
+        provenance=_provenance(
+            "PRODUCTION",
+            dataset_id="elliptic++/cospend",
+            notes=("Chain only; no network layer is involved.",),
+        ),
+    )
     evo.plot_largest_cluster(series, png_path, onsets, dpi=dpi)
 
     typer.echo("")
@@ -1236,7 +1355,14 @@ def purity(
 
     destination = out or (data_root / "processed" / "contaminated_clusters.csv")
     rows = purity_eval.write_contaminated_csv(
-        report, destination, graph if addresses else None
+        report,
+        destination,
+        graph if addresses else None,
+        provenance=_provenance(
+            "PRODUCTION",
+            dataset_id="elliptic++/wallets_classes",
+            notes=("Chain and licit/illicit labels only; no network layer.",),
+        ),
     )
     typer.echo("")
     typer.echo(f"wrote {rows:,} contaminated clusters -> {destination}")

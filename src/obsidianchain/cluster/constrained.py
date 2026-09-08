@@ -30,7 +30,8 @@ a headline output, not a diagnostic.
 
 What is left for you
 --------------------
-:meth:`ConstrainedUnionFind.union` and :meth:`_evaluate_cannot_link`. The
+:meth:`ConstrainedUnionFind.union` and
+:meth:`~ConstrainedUnionFind.evaluate_cannot_link`. The
 bookkeeping around them - pooled statistics that merge in constant time, the
 blocked-merge ledger, contested tracking, reporting - is written. Signatures
 and contracts are below.
@@ -176,7 +177,7 @@ class ConstrainedUnionFind(UnionFind):
 
         # Ask the static constraints / network oracle whether this merge
         # is permitted.
-        evidence = self._evaluate_cannot_link(root_a, root_b)
+        evidence = self.evaluate_cannot_link(root_a, root_b)
 
         if evidence.verdict is Verdict.SEPARATED:
             self._record_blocked(
@@ -210,10 +211,25 @@ class ConstrainedUnionFind(UnionFind):
         self._record_outcome(MergeOutcome.MERGED)
         return True
 
-    def _evaluate_cannot_link(
+    def evaluate_cannot_link(
         self, root_a: int, root_b: int
     ) -> SeparationEvidence:
-        """Decide whether merging these two components is forbidden."""
+        """Decide whether merging these two components is forbidden.
+
+        Public because two callers outside this class need to observe a
+        decision without being the one to make it - the Phase 3.3 decision
+        replay and the demonstration runner. They previously reached into
+        this method while it was named ``_evaluate_cannot_link``; the name
+        is the only thing that changed.
+
+        NOT side-effect free: it calls :meth:`note_evidence`, so a caller
+        that invokes it and then calls :meth:`union` counts the same answer
+        twice in ``counters.evaluated`` / ``counters.abstained``. That is
+        long-standing behaviour and the reported figures are calibrated to
+        it, so it is preserved deliberately rather than quietly corrected.
+        The single-evaluation form is a behavioural change and belongs in
+        its own phase.
+        """
         # Static cannot-link constraints take precedence over the oracle.
         if self.has_cannot_link(root_a, root_b):
             evidence = SeparationEvidence(
@@ -282,6 +298,45 @@ class ConstrainedUnionFind(UnionFind):
             return GroupStats.empty(1)
         return self._stats.get(int(root), self._oracle.empty_stats())
 
+    def union_without_veto(self, a: int, b: int) -> bool:
+        """Merge unconditionally, still pooling the network evidence.
+
+        Exists for one caller: the Phase 3.1 evidence funnel, which must
+        follow the *baseline* merge trajectory. If the funnel blocked
+        merges, a lower threshold would refuse unions a higher one allowed,
+        the components would diverge, and "how many unions cleared 5"
+        and "how many cleared 25" would describe different clusterings
+        rather than the same sequence of events.
+
+        Before this method the funnel kept its own pooled-statistics dict
+        over a plain :class:`UnionFind` - a second implementation of the
+        aggregation this class performs, which is the duplication the Phase 4
+        audit found. Routing it through here leaves one aggregation.
+
+        The veto is absent, never overridden: no evidence is consulted, so
+        there is no decision to ignore. Production merging must always go
+        through :meth:`union`.
+        """
+        root_a = int(self.find(a))
+        root_b = int(self.find(b))
+        if root_a == root_b:
+            self._record_outcome(MergeOutcome.ALREADY_CONNECTED)
+            return False
+
+        # Identical union-by-rank to UnionFind.union and to union(): the
+        # surviving root is the higher-ranked one, ties keep root_a and
+        # raise its rank.
+        if self._rank[root_a] < self._rank[root_b]:
+            root_a, root_b = root_b, root_a
+        self._parent[root_b] = root_a
+        if self._rank[root_a] == self._rank[root_b]:
+            self._rank[root_a] += 1
+
+        self._merge_component_state(root_a, root_b)
+        self._inherit_contested(root_a, root_b)
+        self._record_outcome(MergeOutcome.MERGED)
+        return True
+
     def _merge_component_state(
         self, surviving_root: int, absorbed_root: int
     ) -> None:
@@ -349,7 +404,7 @@ class ConstrainedUnionFind(UnionFind):
     def note_evidence(self, evidence: SeparationEvidence) -> None:
         """Count an oracle answer as evaluated or abstained.
 
-        Call this from :meth:`_evaluate_cannot_link` if you want the
+        Call this from :meth:`evaluate_cannot_link` if you want the
         evaluable-fraction reported; it is safe to skip, in which case that
         figure reads zero.
         """

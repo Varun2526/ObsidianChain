@@ -221,10 +221,21 @@ def build(
     return out, report
 
 
-def write(frame: pd.DataFrame, path: Path) -> int:
-    """Write the processed table. Returns the row count."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_csv(path, index=False)
+def write(frame: pd.DataFrame, path: Path, provenance=None) -> int:
+    """Write the processed table. Returns the row count.
+
+    ``provenance`` attaches the record two ways - a marker column in every
+    row and a sibling ``.meta.json``. Optional so the function keeps working
+    for callers that only want the frame on disk; every CLI path passes it,
+    and ``tests/test_provenance.py`` reads the artifacts back to check.
+    """
+    if provenance is not None:
+        from obsidianchain import provenance as prov
+
+        prov.write_frame(frame, path, provenance)
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        frame.to_csv(path, index=False)
     return int(len(frame))
 
 

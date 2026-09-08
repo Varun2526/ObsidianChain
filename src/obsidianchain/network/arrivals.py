@@ -369,17 +369,33 @@ def summarise(
     return "\n".join(out)
 
 
-def write(vectors: ArrivalVectors, path: Path, fmt: str = "parquet") -> int:
-    """Write the wide arrival-vector table. Returns the row count."""
+def write(
+    vectors: ArrivalVectors,
+    path: Path,
+    fmt: str = "parquet",
+    provenance=None,
+) -> int:
+    """Write the wide arrival-vector table. Returns the row count.
+
+    ``provenance`` attaches the record two ways - a marker column in every
+    row and a sibling ``.meta.json``. Optional so the function keeps working
+    for callers that only want the frame on disk; every CLI path passes it,
+    and ``tests/test_provenance.py`` reads the artifacts back to check.
+    """
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    if fmt not in ("parquet", "csv"):
+        raise ValueError(f"unsupported format {fmt!r}; use 'parquet' or 'csv'")
     frame = vectors.to_frame()
+    if provenance is not None:
+        from obsidianchain import provenance as prov
+
+        prov.write_frame(frame, path, provenance)
+        return int(len(frame))
+    path.parent.mkdir(parents=True, exist_ok=True)
     if fmt == "parquet":
         frame.to_parquet(path, index=False)
-    elif fmt == "csv":
-        frame.to_csv(path, index=False)
     else:
-        raise ValueError(f"unsupported format {fmt!r}; use 'parquet' or 'csv'")
+        frame.to_csv(path, index=False)
     return int(len(frame))
 
 

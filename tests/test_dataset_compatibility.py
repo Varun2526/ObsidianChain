@@ -157,16 +157,96 @@ def test_run_regime_takes_explicit_roots() -> None:
     )
 
 
-def test_runner_guards_before_building_the_oracle() -> None:
+def test_build_oracle_refuses_a_mismatched_pair(tmp_path: Path) -> None:
+    """THE guard, on the production fusion path rather than beside it.
+
+    Behavioural, not a source-index check: the previous version of this test
+    asserted that ``assert_datasets_compatible`` appeared textually before
+    ``build_oracle`` inside ``run_regime``, which only ever protected the
+    evaluation harness. ``run --mode fused``, ``fusion-summary`` and
+    ``evidence-funnel`` all call ``build_oracle`` directly and were
+    unguarded. The check now lives inside ``build_oracle``, so this asserts
+    the outcome an operator would actually see.
+    """
+    from obsidianchain.io import elliptic
+    from obsidianchain.network import separation
+
+    write_chain(tmp_path, range(1, 101))
+    write_network(tmp_path, range(500_000, 500_100))
+    graph = elliptic.load_cospend_graph(tmp_path, keep_labels=True)
+
+    with pytest.raises(separation.DatasetMismatchError) as caught:
+        separation.build_oracle(
+            graph,
+            processed_root=tmp_path / "processed",
+            data_root=tmp_path,
+            world="A",
+        )
+    message = str(caught.value)
+    assert "not the same experiment" in message
+    assert "--chain-root" in message
+    assert "silent" in message or "no evidence" in message
+
+
+def test_the_mismatch_raises_instead_of_abstaining(tmp_path: Path) -> None:
+    """No oracle at all, rather than an empty one reporting 100% abstention.
+
+    This is the failure being prevented: an oracle with no statistics is
+    indistinguishable in every report from a genuine negative result.
+    """
+    from obsidianchain.io import elliptic
+    from obsidianchain.network import separation
+
+    write_chain(tmp_path, range(1, 101))
+    write_network(tmp_path, range(500_000, 500_100))
+    graph = elliptic.load_cospend_graph(tmp_path, keep_labels=True)
+
+    oracle = None
+    try:
+        oracle = separation.build_oracle(
+            graph,
+            processed_root=tmp_path / "processed",
+            data_root=tmp_path,
+            world="A",
+        )
+    except separation.DatasetMismatchError:
+        pass
+    assert oracle is None, (
+        "an oracle was returned for an incompatible pair; every downstream "
+        "report would read it as a clean 100% abstention"
+    )
+
+
+def test_a_compatible_pair_still_builds_an_oracle(tmp_path: Path) -> None:
+    """The guard must not become a wall: a matching pair behaves as before."""
+    from obsidianchain.io import elliptic
+    from obsidianchain.network import separation
+
+    write_chain(tmp_path, range(1, 101))
+    write_network(tmp_path, range(1, 101))
+    graph = elliptic.load_cospend_graph(tmp_path, keep_labels=True)
+
+    oracle = separation.build_oracle(
+        graph,
+        processed_root=tmp_path / "processed",
+        data_root=tmp_path,
+        world="A",
+    )
+    assert oracle is not None
+
+
+def test_run_regime_does_not_duplicate_the_guard() -> None:
+    """One rule in one place. A second copy is a thing that can drift."""
     source = (
         Path(__file__).resolve().parents[1]
         / "src" / "obsidianchain" / "eval" / "phase33.py"
     ).read_text(encoding="utf-8")
-    body = source[source.index("def run_regime"):]
-    guard_at = body.index("assert_datasets_compatible")
-    oracle_at = body.index("build_oracle")
-    assert guard_at < oracle_at, (
-        "the pairing must be checked before an empty oracle can be built"
+    body = source[source.index("def run_regime"):source.index("def _score_against_truth")]
+    executable = "\n".join(
+        line.split("#", 1)[0] for line in body.split("\n")
+    )
+    assert "assert_datasets_compatible" not in executable, (
+        "the guard belongs in build_oracle; a copy here can drift from it"
     )
 
 

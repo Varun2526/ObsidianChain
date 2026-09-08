@@ -48,7 +48,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from obsidianchain.cluster.unionfind import UnionFind
 from obsidianchain.io.elliptic import CoSpendGraph
 from obsidianchain.network.separation import (
     SeparationConfig,
@@ -130,16 +129,26 @@ def build_funnel(
 ) -> FunnelResult:
     """Replay the co-spend edges and record evidence at every proposed union.
 
-    The bookkeeping mirrors the constrained clusterer's - pooled statistics
-    keyed by root, merged on union - but lives here so the production merge
-    path is untouched by instrumentation.
-    """
-    production_config = production_config or SeparationConfig()
-    forest = UnionFind(graph.n_addresses)
+    The walk is :func:`obsidianchain.cluster.replay.replay_unions` - one
+    implementation shared with the Phase 3.3 decision scorer and the
+    demonstration runner. This function previously kept its own pooled
+    statistics dictionary over a plain :class:`UnionFind`, a second
+    implementation of the aggregation :class:`ConstrainedUnionFind` already
+    performs; that duplication is what the Phase 4 audit found.
 
-    stats = {int(code): s for code, s in oracle.address_stats.items()}
-    empty = oracle.empty_stats()
-    sizes = np.ones(graph.n_addresses, dtype=np.int64)
+    Two things about how it is called matter and are unchanged:
+
+    * ``veto=False`` - every union is applied, so all thresholds describe
+      the same baseline sequence of proposed merges. See the module
+      docstring on why a blocking funnel would not be comparable across
+      thresholds.
+    * ``config=PROBE_CONFIG`` - the raw statistic is extracted wherever it is
+      computable at all, so the distribution analysis is not confounded by
+      the production gates. The production rule is applied separately, below.
+    """
+    from obsidianchain.cluster import replay
+
+    production_config = production_config or SeparationConfig()
 
     edge_index: list[int] = []
     node_a: list[int] = []
@@ -153,50 +162,43 @@ def build_funnel(
     p_value: list[float] = []
     effect: list[float] = []
 
-    n_redundant = 0
-    for index, (a, b) in enumerate(graph.edges.tolist()):
-        root_a, root_b = forest.find(a), forest.find(b)
-        if root_a == root_b:
-            n_redundant += 1
-            continue
-
-        stats_a = stats.get(root_a, empty)
-        stats_b = stats.get(root_b, empty)
-
-        # Recorded BEFORE any evidence test, as specified.
-        edge_index.append(index)
-        node_a.append(int(a))
-        node_b.append(int(b))
-        pooled_a.append(int(stats_a.count))
-        pooled_b.append(int(stats_b.count))
-        size_a.append(int(sizes[root_a]))
-        size_b.append(int(sizes[root_b]))
+    def record(decision) -> None:
+        # Recorded BEFORE any evidence test is interpreted, as specified.
+        edge_index.append(decision.edge_index)
+        node_a.append(int(decision.node_a))
+        node_b.append(int(decision.node_b))
+        pooled_a.append(int(decision.evidence.n_a))
+        pooled_b.append(int(decision.evidence.n_b))
+        size_a.append(int(decision.size_a))
+        size_b.append(int(decision.size_b))
 
         # The statistic wherever it is computable at all. Two pooled
         # observations per side is the floor for a variance estimate, so
         # below that there is nothing to compute and the union is recorded
         # with zero degrees of freedom rather than a fabricated number.
-        if min(stats_a.count, stats_b.count) >= 2:
-            evidence = separation_evidence(stats_a, stats_b, PROBE_CONFIG)
-            dof.append(int(evidence.dof))
-            chi2.append(float(evidence.chi2))
-            p_value.append(float(evidence.p_value))
-            effect.append(float(evidence.effect))
+        if min(decision.evidence.n_a, decision.evidence.n_b) >= 2:
+            dof.append(int(decision.evidence.dof))
+            chi2.append(float(decision.evidence.chi2))
+            p_value.append(float(decision.evidence.p_value))
+            effect.append(float(decision.evidence.effect))
         else:
             dof.append(0)
             chi2.append(np.nan)
             p_value.append(np.nan)
             effect.append(np.nan)
 
-        # Apply the union unconditionally: the trajectory must stay the
-        # baseline's so every threshold describes the same sequence.
-        forest.union(a, b)
-        survivor = forest.find(a)
-        absorbed = root_b if survivor == root_a else root_a
-        merged = stats.get(survivor, empty).combine(stats.get(absorbed, empty))
-        stats[survivor] = merged
-        stats.pop(absorbed, None)
-        sizes[survivor] = sizes[root_a] + sizes[root_b]
+    # collect=False: a quarter of a million retained records would cost far
+    # more memory than the thirteen scalar lists above, for no benefit - the
+    # funnel never looks at a decision twice.
+    walk = replay.replay_unions(
+        graph,
+        oracle,
+        veto=False,
+        config=PROBE_CONFIG,
+        collect=False,
+        on_decision=record,
+    )
+    n_redundant = walk.n_redundant
 
     records = pd.DataFrame(
         {
@@ -427,13 +429,24 @@ def format_funnel(result: FunnelResult) -> str:
     return "\n".join(out)
 
 
-def write_records(result: FunnelResult, path: Path) -> int:
-    """Write the per-union records. Returns the row count."""
+def write_records(result: FunnelResult, path: Path, provenance=None) -> int:
+    """Write the per-union records. Returns the row count.
+
+    ``provenance`` attaches the record two ways - a marker column in every
+    row and a sibling ``.meta.json``. Optional so the function keeps working
+    for callers that only want the frame on disk; every CLI path passes it,
+    and ``tests/test_provenance.py`` reads the artifacts back to check.
+    """
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
     frame = result.records.copy()
     for column in ("chi2", "effect"):
         frame[column] = frame[column].round(6)
+    if provenance is not None:
+        from obsidianchain import provenance as prov
+
+        prov.write_frame(frame, path, provenance)
+        return int(len(frame))
+    path.parent.mkdir(parents=True, exist_ok=True)
     if path.suffix == ".parquet":
         frame.to_parquet(path, index=False)
     else:
