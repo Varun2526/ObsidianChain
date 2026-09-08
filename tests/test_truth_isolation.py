@@ -23,6 +23,8 @@ INFERENCE_MODULES = [
     "cluster/constrained.py",
     "cluster/pipeline.py",
     "cluster/unionfind.py",
+    "cluster/replay.py",
+    "cluster/index.py",
     "io/elliptic.py",
 ]
 

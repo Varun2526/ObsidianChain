@@ -1372,6 +1372,43 @@ def purity(
     )
 
 
+@app.command("build-cluster-index")
+def build_cluster_index(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    out_dir: Path = typer.Option(
+        None, "--out-dir", help="[default: <data-root>/processed]"
+    ),
+) -> None:
+    """Persist the clustering the read-only API needs. Run once.
+
+    Writes address_clusters.parquet (code, address, cluster_id) and
+    clusters.parquet (cluster_id, size, representative_address), both
+    provenance-stamped.
+
+    Only clusters of size > 1 are written. Measured, not assumed: the codes
+    referenced by evidence_funnel and phase33_decisions are exactly the
+    284,709 addresses in non-singleton clusters, so the 538,233 singletons
+    would add 23 MB referenced by nothing.
+
+    This re-derives the same co-spend clustering that 'cospend' computes and
+    discards. Persisting from inside 'cospend' would change that command's
+    side effects, so it is a separate command rather than a silent change to
+    the pipeline.
+    """
+    from obsidianchain.cluster import index
+
+    started = time.perf_counter()
+    summary = index.build(data_root, processed_root=out_dir)
+    typer.echo(index.format_summary(summary))
+    typer.echo("")
+    typer.echo(f"wrote {summary['address_clusters']['path']}")
+    typer.echo(f"wrote {summary['clusters']['path']}")
+    typer.echo(
+        f"peak memory {_peak_rss_mb():.1f} MB   "
+        f"wall time {time.perf_counter() - started:.2f} s"
+    )
+
+
 @app.command("demo")
 def demo(
     data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
