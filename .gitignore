@@ -4,6 +4,12 @@ data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 
+# Generated demonstration fixtures and their rendered output. Reproducible
+# from a seed (obsidianchain.demo.scenarios.DEMO_SEED), so there is nothing
+# to preserve here.
+data/demo/
+data/reach_stress/
+
 # ---- Vendored wheels (large, host-arch specific) ----
 vendor/
 
