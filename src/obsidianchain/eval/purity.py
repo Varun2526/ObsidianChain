@@ -351,8 +351,15 @@ def write_contaminated_csv(
     report: PurityReport,
     path: Path,
     graph: elliptic.CoSpendGraph | None = None,
+    provenance=None,
 ) -> int:
-    """Write the contaminated clusters to ``path``. Returns the row count."""
+    """Write the contaminated clusters to ``path``. Returns the row count.
+
+    ``provenance`` attaches the record two ways - a marker column in every
+    row and a sibling ``.meta.json``. Optional so the function keeps working
+    for callers that only want the frame on disk; every CLI path passes it,
+    and ``tests/test_provenance.py`` reads the artifacts back to check.
+    """
     frame = report.contaminated.loc[:, CSV_COLUMNS].copy()
     if graph is not None and graph.addresses is not None:
         frame.insert(
@@ -363,8 +370,13 @@ def write_contaminated_csv(
     frame["label_coverage"] = frame["label_coverage"].round(6)
     frame["purity"] = frame["purity"].round(6)
     frame["entropy"] = frame["entropy"].round(6)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_csv(path, index=False)
+    if provenance is not None:
+        from obsidianchain import provenance as prov
+
+        prov.write_frame(frame, path, provenance)
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        frame.to_csv(path, index=False)
     return int(len(frame))
 
 

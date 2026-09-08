@@ -68,6 +68,93 @@ import pandas as pd
 from obsidianchain.network import arrivals, boundary
 
 
+#: Share of a network dataset's transactions that must exist in the chain
+#: before the pair is considered the same experiment. A correct pairing sits
+#: at 1.0; a mismatched one measured 0.00095 (57 coincidentally equal integer
+#: ids out of 60,000), which is worse than zero because those 57 are
+#: different transactions that happen to share a number.
+MIN_TXID_OVERLAP = 0.5
+
+
+class DatasetMismatchError(RuntimeError):
+    """Raised when a chain and a network dataset are not the same experiment.
+
+    Lives here rather than in the evaluation harness because the guard has to
+    fire on the *production* fusion path. It moved after an audit found the
+    check was only ever called from ``eval/phase33.py``, leaving
+    ``run --mode fused``, ``fusion-summary`` and ``evidence-funnel``
+    unguarded - the three commands most likely to be pointed at a real
+    capture paired with the wrong chain.
+    """
+
+
+def assert_txid_overlap(
+    observed_txids,
+    chain_txids,
+    chain_description: str,
+    network_description: str,
+) -> float:
+    """The compatibility rule, applied to two already-loaded id sets.
+
+    Split out from :func:`assert_datasets_compatible` so that
+    :func:`build_oracle` can apply the identical rule to the frames it has
+    just read, without opening either file a second time. One rule, one
+    implementation, two entry points.
+
+    Returns the resolved fraction.
+    """
+    observed = set(observed_txids)
+    if not observed:
+        raise DatasetMismatchError(
+            f"network dataset {network_description} has no transactions"
+        )
+
+    chain = set(chain_txids)
+    resolved = len(observed & chain) / len(observed)
+
+    if resolved < MIN_TXID_OVERLAP:
+        raise DatasetMismatchError(
+            f"chain {chain_description} and network dataset "
+            f"{network_description} are not the same experiment: only "
+            f"{resolved:.4%} of {len(observed):,} observed transactions exist "
+            f"in the chain's {len(chain):,}. Pairing them would produce an "
+            f"oracle with no evidence and a silent 100% abstention. Point "
+            f"--chain-root at the blockchain this network data was generated "
+            f"over."
+        )
+    return resolved
+
+
+def assert_datasets_compatible(
+    chain_root: Path, network_root: Path, world: str | None = None
+) -> float:
+    """Fail loudly when a chain and a network dataset do not belong together.
+
+    Without this the failure is silent, not loud. :func:`build_oracle` maps
+    observations onto the chain and drops whatever does not resolve, so an
+    incompatible pair yields an oracle with no statistics, an abstention rate
+    of 100%, and a report that looks like a clean negative result. That is
+    the same shape of failure as an evaluation that cannot come out any way
+    but "pass", and it has bitten this project twice already.
+
+    Returns the resolved fraction so callers can report it.
+    """
+    from obsidianchain.io import elliptic
+
+    observations = boundary.load_observations(
+        Path(network_root) / "processed", world=world
+    )
+    return assert_txid_overlap(
+        observations["txid"].unique().tolist(),
+        elliptic.load_input_edges(chain_root)["txId"].unique().tolist(),
+        chain_description=str(chain_root),
+        network_description=(
+            f"{network_root} regime {world}" if world is not None
+            else str(network_root)
+        ),
+    )
+
+
 class Verdict(str, Enum):
     """The three answers this module can give. Note the absent fourth."""
 
@@ -381,6 +468,33 @@ def build_oracle(
             "call load_cospend_graph(keep_labels=True)"
         )
     edges = elliptic.load_input_edges(data_root)
+
+    # THE PAIRING GUARD. This is the production fusion path - every caller
+    # that builds an oracle passes through here - and a mismatched
+    # chain/network pair must not get past it.
+    #
+    # Without this the failure is silent: the attribution below drops every
+    # transaction that does not resolve to a chain address, the oracle comes
+    # back with no statistics, and the run reports a 100% abstention that
+    # reads exactly like a clean negative result. Measured on a real
+    # mismatch: 0.095% of ids resolved, all of them coincidentally equal
+    # integers belonging to different transactions.
+    #
+    # Applied to the frames already in hand rather than by calling
+    # assert_datasets_compatible, which would re-read both files. Same rule,
+    # same exception, no second read - and it fires before a single
+    # sufficient statistic is accumulated, so no verdict can be produced
+    # from an incompatible pair.
+    assert_txid_overlap(
+        inputs.observations["txid"].unique().tolist(),
+        edges["txId"].unique().tolist(),
+        chain_description=str(data_root if data_root is not None else "<default>"),
+        network_description=(
+            f"{processed_root} world {world}" if world is not None
+            else str(processed_root)
+        ),
+    )
+
     edges = edges.assign(
         _code=pd.Index(graph.addresses).get_indexer(edges["input_address"])
     )

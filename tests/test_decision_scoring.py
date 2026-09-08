@@ -6,6 +6,8 @@ rather than crashes, which is why they survived several reports.
 
 from __future__ import annotations
 
+from enum import Enum
+
 import numpy as np
 import pytest
 
@@ -206,3 +208,79 @@ def test_precision_uses_only_binary_scorable_blocks() -> None:
         "PURE_CROSS_ENTITY": 3, "PURE_SAME_ENTITY": 1, "MIXED_ENTITY": 99,
     }
     assert outcome.decision_precision == pytest.approx(0.75)
+
+
+# ---- the exported state columns come from the enum, not a literal ------
+#
+# Regression for the Phase 4 audit finding B3. `to_frame` enumerated
+# ("NO_EVIDENCE", "SEPARATED", "NOT_SEPARATED") as a literal tuple, so a
+# fourth evidence state could exist in code and silently vanish from
+# phase33.csv - no error, no missing file, just an absent column. That is the
+# worst failure shape available for an export, and it is exactly what would
+# have happened the first time a new state was added.
+#
+# These tests do NOT assert today's three states. Asserting the current set
+# would pass just as happily against the hardcoded tuple and would prove
+# nothing about where the names come from.
+
+
+class _FourStateVerdict(str, Enum):
+    """A stand-in state space, one member wider than production's.
+
+    Deliberately not a production state and deliberately not INCONCLUSIVE:
+    the point is that enumeration follows the enum, whatever it holds. No
+    new evidence state is introduced into the system by this test.
+    """
+
+    SEPARATED = "SEPARATED"
+    NOT_SEPARATED = "NOT_SEPARATED"
+    NO_EVIDENCE = "NO_EVIDENCE"
+    PROBE_STATE = "PROBE_STATE"
+
+
+def test_a_new_enum_member_appears_in_the_export(monkeypatch) -> None:
+    """Widen the enum and the export must widen with it."""
+    monkeypatch.setattr(phase33, "Verdict", _FourStateVerdict)
+    outcome = phase33.RegimeOutcome(
+        regime="A",
+        name="INDEPENDENT",
+        state_counts={"NO_EVIDENCE": 7, "PROBE_STATE": 3},
+    )
+    frame = phase33.to_frame({"A": outcome})
+
+    assert "state_PROBE_STATE" in frame.columns, (
+        "a state present in the enum was dropped from the export"
+    )
+    assert int(frame.loc[0, "state_PROBE_STATE"]) == 3
+    assert int(frame.loc[0, "state_NO_EVIDENCE"]) == 7
+
+
+def test_the_export_carries_exactly_the_enum_members(monkeypatch) -> None:
+    """No more and no fewer columns than the state space defines."""
+    monkeypatch.setattr(phase33, "Verdict", _FourStateVerdict)
+    frame = phase33.to_frame({"A": phase33.RegimeOutcome(regime="A")})
+    exported = {c[len("state_"):] for c in frame.columns if c.startswith("state_")}
+    assert exported == {m.value for m in _FourStateVerdict}
+
+
+def test_a_narrower_enum_narrows_the_export(monkeypatch) -> None:
+    """The coupling runs both ways, which is what rules out a literal list."""
+
+    class _TwoState(str, Enum):
+        SEPARATED = "SEPARATED"
+        NO_EVIDENCE = "NO_EVIDENCE"
+
+    monkeypatch.setattr(phase33, "Verdict", _TwoState)
+    frame = phase33.to_frame({"A": phase33.RegimeOutcome(regime="A")})
+    exported = {c[len("state_"):] for c in frame.columns if c.startswith("state_")}
+    assert exported == {"SEPARATED", "NO_EVIDENCE"}
+    assert "state_NOT_SEPARATED" not in frame.columns, (
+        "a literal list would have emitted this column regardless of the enum"
+    )
+
+
+def test_missing_states_export_as_zero_not_as_absent_columns() -> None:
+    """Unchanged behaviour: a state with no decisions is 0, not a gap."""
+    frame = phase33.to_frame({"A": phase33.RegimeOutcome(regime="A")})
+    for state in phase33.Verdict:
+        assert int(frame.loc[0, f"state_{state.value}"]) == 0

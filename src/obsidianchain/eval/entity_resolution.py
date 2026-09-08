@@ -531,13 +531,27 @@ def _entity_table(
     return frame, counts
 
 
-def write_per_entity_csv(result: EntityResolutionResult, path: Path) -> int:
+def write_per_entity_csv(
+    result: EntityResolutionResult, path: Path, provenance=None
+) -> int:
+    """Write the per-entity scores. Returns the row count.
+
+    ``provenance`` attaches the record two ways - a marker column in every
+    row and a sibling ``.meta.json``. Optional so the function keeps working
+    for callers that only want the frame on disk; every CLI path passes it,
+    and ``tests/test_provenance.py`` reads the artifacts back to check.
+    """
     frame = result.per_entity.copy()
     frame.insert(0, "heuristics", result.mode)
     for column in ("largest_cluster_share", "recall_e", "precision_e", "f1_e"):
         frame[column] = frame[column].round(6)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_csv(path, index=False)
+    if provenance is not None:
+        from obsidianchain import provenance as prov
+
+        prov.write_frame(frame, path, provenance)
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        frame.to_csv(path, index=False)
     return int(len(frame))
 
 

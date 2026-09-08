@@ -66,58 +66,16 @@ from obsidianchain.network.separation import Verdict
 
 FUNNEL_THRESHOLDS = (1, 2, 5, 10, 25)
 
-#: Share of a network dataset's transactions that must exist in the chain
-#: before the pair is considered the same experiment. A correct pairing sits
-#: at 1.0; a mismatched one measured 0.00095 (57 coincidentally equal integer
-#: ids out of 60,000), which is worse than zero because those 57 are
-#: different transactions that happen to share a number.
-MIN_TXID_OVERLAP = 0.5
+# The chain/network compatibility guard lives in
+# :mod:`obsidianchain.network.separation` so that it fires on the production
+# fusion path, not only here. Re-exported under the original names because
+# these are the public spelling the tests and the CLI already use, and they
+# resolve to the same objects - `except phase33.DatasetMismatchError` still
+# catches what `build_oracle` raises.
+MIN_TXID_OVERLAP = separation.MIN_TXID_OVERLAP
+DatasetMismatchError = separation.DatasetMismatchError
+assert_datasets_compatible = separation.assert_datasets_compatible
 
-
-class DatasetMismatchError(RuntimeError):
-    """Raised when a chain and a network dataset are not the same experiment."""
-
-
-def assert_datasets_compatible(
-    chain_root: Path, network_root: Path, world: str
-) -> float:
-    """Fail loudly when a chain and a network dataset do not belong together.
-
-    Without this the failure is silent, not loud. ``build_oracle`` maps
-    observations onto the chain and drops whatever does not resolve, so an
-    incompatible pair yields an oracle with no statistics, an abstention rate
-    of 100%, and a report that looks like a clean negative result. That is
-    the same shape of failure as an evaluation that cannot come out any way
-    but "pass", and it has bitten this project twice already.
-
-    Returns the resolved fraction so callers can report it.
-    """
-    from obsidianchain.io import elliptic
-    from obsidianchain.network import boundary
-
-    observations = boundary.load_observations(
-        Path(network_root) / "processed", world=world
-    )
-    observed = set(observations["txid"].unique().tolist())
-    if not observed:
-        raise DatasetMismatchError(
-            f"network dataset {network_root} regime {world} has no transactions"
-        )
-
-    chain = set(elliptic.load_input_edges(chain_root)["txId"].unique().tolist())
-    resolved = len(observed & chain) / len(observed)
-
-    if resolved < MIN_TXID_OVERLAP:
-        raise DatasetMismatchError(
-            f"chain {chain_root} and network dataset {network_root} "
-            f"(regime {world}) are not the same experiment: only "
-            f"{resolved:.4%} of {len(observed):,} observed transactions exist "
-            f"in the chain's {len(chain):,}. Pairing them would produce an "
-            f"oracle with no evidence and a silent 100% abstention. Point "
-            f"--chain-root at the blockchain this network data was generated "
-            f"over."
-        )
-    return resolved
 
 class TruthCategory(str, Enum):
     """What ground truth says about the two sides of one decision.
@@ -300,73 +258,55 @@ def load_entity_truth_FOR_EVALUATION_ONLY(
 def replay_decisions(graph, oracle, entity_of_address) -> list[Decision]:
     """Replay the edges and record ONE row per component boundary.
 
-    The engine itself is untouched: this uses the same
-    :class:`ConstrainedUnionFind` and the same oracle, and simply observes
-    what happens rather than changing it. Component membership is tracked
-    alongside so each boundary can be attributed to the entities actually
-    present on either side - which the engine has no reason to know and must
-    never be told.
+    The engine is untouched and the walk itself is
+    :func:`obsidianchain.cluster.replay.replay_unions` - one implementation
+    shared with the Phase 3.1 funnel and the demonstration runner. Before
+    that extraction this was one of four copies of the same loop, and it
+    reached into the clusterer's private evidence method to observe a
+    decision without making it.
+
+    Entities are attributed here, *after* the walk has finished, from the
+    member lists the walker hands back. The walker itself never sees truth
+    and must not: ``track_members`` exists for this attribution and for
+    nothing else.
     """
-    from obsidianchain.cluster.constrained import ConstrainedUnionFind
+    from obsidianchain.cluster import replay
 
-    forest = ConstrainedUnionFind(graph.n_addresses, oracle=oracle)
-    members: dict[int, list[int]] = {i: [i] for i in range(graph.n_addresses)}
-    seen: dict[tuple[int, int], Decision] = {}
-    next_id = 0
+    result = replay.replay_unions(
+        graph, oracle, veto=True, track_members=True
+    )
 
-    for a, b in graph.edges.tolist():
-        root_a, root_b = forest.find(a), forest.find(b)
-        if root_a == root_b:
-            continue  # already connected: no decision to make
-
-        key = (min(root_a, root_b), max(root_a, root_b))
-        if key in seen:
-            # The same boundary re-proposed by another edge. Provenance, not
-            # a second decision.
-            seen[key].proposing_edges += 1
-            forest.union(a, b)
-            continue
-
-        evidence = forest._evaluate_cannot_link(root_a, root_b)
-        side_a, side_b = list(members[root_a]), list(members[root_b])
-        merged = forest.union(a, b)
-
+    decisions: list[Decision] = []
+    for decision_id, row in enumerate(result.decisions):
         entities_a = {
             int(entity_of_address[m])
-            for m in side_a
+            for m in row.members_a
             if entity_of_address[m] >= 0
         }
         entities_b = {
             int(entity_of_address[m])
-            for m in side_b
+            for m in row.members_b
             if entity_of_address[m] >= 0
         }
-        decision = Decision(
-            decision_id=next_id,
-            component_a=int(key[0]),
-            component_b=int(key[1]),
-            evidence_state=evidence.verdict.value,
-            chi2=float(evidence.chi2),
-            p_value=float(evidence.p_value),
-            effect_size=float(evidence.effect),
-            pooled_n_a=int(evidence.n_a),
-            pooled_n_b=int(evidence.n_b),
-            blocked=not merged,
-            truth_category=classify_truth(entities_a, entities_b).value,
-            entities_a=tuple(sorted(entities_a)),
-            entities_b=tuple(sorted(entities_b)),
+        decisions.append(
+            Decision(
+                decision_id=decision_id,
+                component_a=row.component_a,
+                component_b=row.component_b,
+                evidence_state=row.evidence.verdict.value,
+                chi2=float(row.evidence.chi2),
+                p_value=float(row.evidence.p_value),
+                effect_size=float(row.evidence.effect),
+                pooled_n_a=int(row.evidence.n_a),
+                pooled_n_b=int(row.evidence.n_b),
+                proposing_edges=row.proposing_edges,
+                blocked=row.blocked,
+                truth_category=classify_truth(entities_a, entities_b).value,
+                entities_a=tuple(sorted(entities_a)),
+                entities_b=tuple(sorted(entities_b)),
+            )
         )
-        seen[key] = decision
-        next_id += 1
-
-        if merged:
-            survivor = forest.find(a)
-            absorbed = root_b if survivor == root_a else root_a
-            members[survivor] = side_a + side_b
-            if absorbed != survivor:
-                members.pop(absorbed, None)
-
-    return list(seen.values())
+    return decisions
 
 
 def run_regime(
@@ -393,7 +333,9 @@ def run_regime(
     outcome = RegimeOutcome(regime=key, name=worlds.REGIME_NAMES[regime])
     processed = network_root / "processed"
 
-    assert_datasets_compatible(chain_root, network_root, key)
+    # The chain/network pairing is checked inside build_oracle, on the
+    # frames it has already loaded. There is deliberately no second check
+    # here: one rule in one place cannot drift from itself.
 
     # --- INFERENCE SIDE: no truth is read anywhere below --------------
     oracle = separation.build_oracle(
@@ -720,8 +662,15 @@ def to_frame(outcomes: dict[str, RegimeOutcome]) -> pd.DataFrame:
             row[f"blocked_{category.value}"] = outcome.blocked_by_truth.get(
                 category.value, 0
             )
-        for state in ("NO_EVIDENCE", "SEPARATED", "NOT_SEPARATED"):
-            row[f"state_{state}"] = outcome.state_counts.get(state, 0)
+        # Derived from the Verdict enum, never from a literal list. A
+        # hardcoded tuple here meant a fourth evidence state could exist in
+        # code and silently vanish from the export - the export would look
+        # complete and be short one column, which is the worst failure shape
+        # available: no error, no missing file, just an absent state.
+        for state in Verdict:
+            row[f"state_{state.value}"] = outcome.state_counts.get(
+                state.value, 0
+            )
         for threshold in FUNNEL_THRESHOLDS:
             row[f"decidable_ge{threshold}"] = outcome.decidable.get(threshold, 0)
             row[f"sep_share_ge{threshold}"] = outcome.separated_share.get(
