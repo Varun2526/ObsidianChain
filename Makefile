@@ -52,7 +52,7 @@ DOCKER_RUN := docker run --rm $(OFFLINE) --platform $(PLATFORM) \
 	-v $(DATA_DIR):/data \
 	-e OBSIDIANCHAIN_DATA=/data
 
-.PHONY: help vendor build run shell test verify isolation arch freeze dirs clean demo \
+.PHONY: help vendor build run shell test verify isolation arch freeze dirs clean demo serve \
         clean-vendor clean-vendor-all check-vendor
 
 help: ## Show this help
@@ -137,6 +137,16 @@ test: dirs ## Run pytest inside the container, air-gapped
 
 # The demonstration is SYNTHETIC and confined to data/demo. It never reads or
 # writes data/processed, and a test asserts that.
+# The API is read-only over precomputed artifacts. --network none is
+# dropped here and ONLY here among the run targets, because a server that
+# cannot accept a connection is not a server; the port is published to
+# localhost only.
+serve: dirs ## Serve the read-only API on localhost:8000
+	docker run --rm -it --platform $(PLATFORM) \
+		-p 127.0.0.1:8000:8000 \
+		-v $(DATA_DIR):/data -e OBSIDIANCHAIN_DATA=/data \
+		$(IMAGE):$(TAG) serve --host 0.0.0.0 --port 8000
+
 demo: dirs ## Run the five DEMO scenarios; writes data/demo/output/index.html
 	$(DOCKER_RUN) $(IMAGE):$(TAG) demo --rebuild
 	@echo ""
