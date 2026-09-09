@@ -60,7 +60,12 @@ from typing import Mapping
 import pandas as pd
 
 #: Bump when the sidecar layout changes so an old file stays readable.
-PROVENANCE_SCHEMA = "obsidianchain.provenance/1"
+#:
+#: /2 added ``inputs`` and ``run_fingerprint``. A /1 sidecar simply lacks
+#: them; nothing that read /1 breaks, but a consumer that needs an evidence
+#: identity can require /2 rather than guess whether the absence means "no
+#: inputs" or "written before inputs were recorded".
+PROVENANCE_SCHEMA = "obsidianchain.provenance/2"
 
 #: The one column added to every exported row.
 PROVENANCE_COLUMN = "provenance_type"
@@ -145,6 +150,23 @@ class Provenance:
     CLI, and a blocked-merge count produced under a loosened rule is
     otherwise indistinguishable from one produced under the real one."""
 
+    inputs: Mapping[str, str] | None = None
+    """Every input that determines a row of this artifact, as name -> value.
+
+    Added in schema /2 because ``dataset_sha256`` records the NETWORK dataset
+    only, while a row of the evidence funnel is also determined by two raw
+    chain files and by two settings that live in code. An identity built on
+    ``dataset_sha256`` alone can silently re-point: edit a chain file, leave
+    the network dataset alone, and the same identity resolves to a different
+    row with no error anywhere.
+
+    Values are hex digests for files and canonical labels for settings. See
+    :mod:`obsidianchain.run_fingerprint` for what goes in and why."""
+
+    run_fingerprint: str | None = None
+    """Digest over ``inputs``, so a consumer can compare one string instead of
+    re-deriving the fold. Full 64 characters; the public identity truncates."""
+
     git_revision: str | None = field(default_factory=git_revision)
     notes: tuple[str, ...] = ()
 
@@ -192,6 +214,8 @@ class Provenance:
             "production_rule": dict(self.production_rule)
             if self.production_rule is not None
             else None,
+            "inputs": dict(self.inputs) if self.inputs is not None else None,
+            "run_fingerprint": self.run_fingerprint,
             "git_revision": self.git_revision,
             "notes": list(self.notes),
         }

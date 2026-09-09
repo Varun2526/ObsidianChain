@@ -21,7 +21,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from obsidianchain import __version__
-from obsidianchain.api import artifacts, boundary, demo
+from obsidianchain.api import (
+    artifacts,
+    boundary,
+    demo,
+    evidence,
+    provenance_gate,
+)
 
 API_PREFIX = "/api"
 
@@ -83,6 +89,76 @@ def create_app(data_root=None) -> FastAPI:
         return JSONResponse(
             status_code=500,
             content={"error": "truth_leak_blocked", "detail": str(exc)},
+        )
+
+    @app.exception_handler(evidence.EvidenceIdInvalidError)
+    async def _bad_id(request: Request, exc: evidence.EvidenceIdInvalidError):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "evidence_id_invalid", "detail": str(exc)},
+        )
+
+    @app.exception_handler(evidence.EvidenceIdStaleError)
+    async def _stale_id(request: Request, exc: evidence.EvidenceIdStaleError):
+        # 409, never 404. A stale id and an unknown row are different
+        # failures: one says the inputs changed under you, the other says
+        # that row never existed. Collapsing them would hide a re-point.
+        return JSONResponse(
+            status_code=409,
+            content={
+                "error": "evidence_id_stale",
+                "detail": str(exc),
+                "hint": "A determining input changed; mint a new id against "
+                        "the current run.",
+            },
+        )
+
+    @app.exception_handler(evidence.EvidenceNotFoundError)
+    async def _no_row(request: Request, exc: evidence.EvidenceNotFoundError):
+        return JSONResponse(
+            status_code=404,
+            content={"error": "evidence_not_found", "detail": str(exc)},
+        )
+
+    @app.exception_handler(evidence.EvidenceJoinError)
+    async def _join(request: Request, exc: evidence.EvidenceJoinError):
+        return JSONResponse(
+            status_code=500,
+            content={"error": "evidence_join_failed", "detail": str(exc)},
+        )
+
+    @app.exception_handler(provenance_gate.ProvenanceRefusedError)
+    async def _refused(
+        request: Request, exc: provenance_gate.ProvenanceRefusedError
+    ):
+        return JSONResponse(
+            status_code=500,
+            content={"error": "provenance_refused", "detail": str(exc)},
+        )
+
+    @app.get(
+        f"{API_PREFIX}/evidence/{{evidence_id}}",
+        summary="Network evidence recorded for one proposed merge",
+        response_description=(
+            "The persisted funnel row, its provenance, the configuration the "
+            "statistics were computed under, and two availability booleans. "
+            "No verdict and no reason - neither is persisted."
+        ),
+    )
+    async def get_evidence(evidence_id: str) -> JSONResponse:
+        """Return the network evidence recorded for one proposed merge.
+
+        SYNTHETIC network data. The response describes what was recorded; it
+        does not claim the evidence proves the merge, and it does not claim
+        the evidence caused the production engine to allow or block it - the
+        persisted funnel is the chain-only trajectory and no fused decision
+        ledger exists.
+
+        Reads two precomputed artifacts and joins them. Nothing is clustered,
+        pooled, tested or evaluated.
+        """
+        return JSONResponse(
+            content=evidence.get_evidence(evidence_id, app.state.data_root)
         )
 
     @app.get(
