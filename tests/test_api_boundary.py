@@ -161,6 +161,13 @@ EXPECTED_IMPORT_GRAPH = {
     "obsidianchain.api.artifacts",
     "obsidianchain.api.boundary",
     "obsidianchain.api.demo",
+    # Phase 5.2, reviewed: the evidence handler and the provenance gate are
+    # both read-only presentation code, and run_fingerprint is stdlib-only
+    # (hashlib + pathlib, asserted in tests/test_run_fingerprint.py) so it
+    # carries nothing this layer is forbidden.
+    "obsidianchain.api.evidence",
+    "obsidianchain.api.provenance_gate",
+    "obsidianchain.run_fingerprint",
     "obsidianchain.demo",
     "obsidianchain.demo.api",
     "obsidianchain.demo.scenarios",

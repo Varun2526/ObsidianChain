@@ -152,7 +152,36 @@ def build_tables(graph, roots: np.ndarray) -> IndexTables:
     )
 
 
-def _provenance(tables: IndexTables, note: str) -> prov.Provenance:
+def chain_inputs(data_root) -> dict[str, str]:
+    """Hash the two chain files that determine this index.
+
+    Both, not one. ``AddrTx_edgelist.csv`` fixes edge and transaction
+    ordering; ``wallets_classes.csv`` is concatenated FIRST in the single
+    ``factorize`` inside ``load_cospend_graph``, so its length and content
+    shift every address code - and therefore every ``code`` and
+    ``cluster_id`` in these tables.
+
+    Recording both lets the API check that the address index it is joining
+    against was built from the same chain as the evidence artifact, rather
+    than assuming it.
+    """
+    from obsidianchain import run_fingerprint as rf
+    from obsidianchain.io import elliptic
+
+    return {
+        "chain_addr_tx_sha256": rf.sha256_file(
+            elliptic.find_dataset_file(elliptic.ADDR_TX, data_root)
+        ),
+        "chain_universe_sha256": rf.sha256_file(
+            elliptic.find_dataset_file(elliptic.WALLETS_CLASSES, data_root)
+        ),
+        "heuristics": HEURISTICS,
+    }
+
+
+def _provenance(
+    tables: IndexTables, note: str, inputs: dict[str, str] | None = None
+) -> prov.Provenance:
     """Phase 4.1 provenance for a chain-only derived artifact.
 
     ``synthetic_network`` is None, not False: these tables are derived from
@@ -163,6 +192,7 @@ def _provenance(tables: IndexTables, note: str) -> prov.Provenance:
         provenance_type=prov.ProvenanceType.PRODUCTION,
         dataset_id="elliptic++/cospend",
         synthetic_network=None,
+        inputs=inputs,
         notes=(
             note,
             "Co-spend clustering under the common-input-ownership heuristic. "
@@ -179,8 +209,14 @@ def _provenance(tables: IndexTables, note: str) -> prov.Provenance:
     )
 
 
-def write_tables(tables: IndexTables, processed_root) -> dict:
-    """Write both tables with Phase 4.1 provenance. Returns a summary."""
+def write_tables(
+    tables: IndexTables, processed_root, inputs: dict[str, str] | None = None
+) -> dict:
+    """Write both tables with Phase 4.1 provenance. Returns a summary.
+
+    ``inputs`` are the chain hashes from :func:`chain_inputs`. Optional so a
+    test can build tables from a hand-made graph with no files behind them.
+    """
     processed_root = Path(processed_root)
     address_path = processed_root / ADDRESS_CLUSTERS
     cluster_path = processed_root / CLUSTERS
@@ -192,6 +228,7 @@ def write_tables(tables: IndexTables, processed_root) -> dict:
             tables,
             "Address-to-cluster index for the read-only API. "
             "Closes the code/address gap left by in-memory factorize codes.",
+            inputs,
         ),
     )
     prov.write_frame(
@@ -201,6 +238,7 @@ def write_tables(tables: IndexTables, processed_root) -> dict:
             tables,
             "Cluster summary for the read-only API: size and representative "
             "address per non-singleton cluster.",
+            inputs,
         ),
     )
     return {
@@ -239,7 +277,7 @@ def build(data_root, processed_root=None) -> dict:
     graph = elliptic.load_cospend_graph(data_root, keep_labels=True)
     run = run_clustering(graph, label=HEURISTICS)
     tables = build_tables(graph, run.roots)
-    summary = write_tables(tables, processed_root)
+    summary = write_tables(tables, processed_root, chain_inputs(data_root))
     summary["largest_cluster"] = int(run.largest)
     summary["coverage"] = float(run.coverage)
     return summary

@@ -18,6 +18,21 @@ DEFAULT_DATA_ROOT = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
 #: The Phase 3.4 demonstration payload, relative to the data root.
 DEMO_SCENARIOS = Path("demo") / "output" / "scenarios.json"
 
+#: The production evidence funnel and the Stage 0 index it joins against.
+#: Relative to the data root; the API never composes a path into raw/ or into
+#: any *_truth/ directory.
+EVIDENCE_FUNNEL = Path("processed") / "evidence_funnel.parquet"
+ADDRESS_CLUSTERS = Path("processed") / "address_clusters.parquet"
+CLUSTERS = Path("processed") / "clusters.parquet"
+
+#: Command that regenerates each, named in the error so an operator is not
+#: left guessing. The API never runs these.
+_BUILD_COMMAND = {
+    EVIDENCE_FUNNEL: 'make run ARGS="evidence-funnel"',
+    ADDRESS_CLUSTERS: 'make run ARGS="build-cluster-index"',
+    CLUSTERS: 'make run ARGS="build-cluster-index"',
+}
+
 
 class ArtifactMissingError(FileNotFoundError):
     """Raised when a precomputed artifact the API needs is not on disk."""
@@ -73,3 +88,68 @@ def load_demo_scenarios(root=None) -> dict:
             f"{path} holds {type(payload).__name__}, expected an object"
         )
     return payload
+
+
+def _require(root, relative: Path) -> Path:
+    path = data_root(root) / relative
+    if not path.is_file():
+        raise ArtifactMissingError(
+            f"{path} not found. Run '{_BUILD_COMMAND[relative]}' first; the "
+            f"API reads precomputed artifacts and never builds them on "
+            f"request."
+        )
+    return path
+
+
+def evidence_funnel_path(root=None) -> Path:
+    return _require(root, EVIDENCE_FUNNEL)
+
+
+def address_clusters_path(root=None) -> Path:
+    return _require(root, ADDRESS_CLUSTERS)
+
+
+def clusters_path(root=None) -> Path:
+    return _require(root, CLUSTERS)
+
+
+def load_evidence_funnel(root=None, columns=None):
+    """Read the production evidence funnel, provenance-gated.
+
+    A plain ``read_parquet``. Measured: 253,429 rows in a 3.8 MB file, so a
+    column-projected read is a few milliseconds and DuckDB would add a
+    dependency to solve a problem that does not exist. If that stops being
+    true, measure before reaching for one.
+
+    Returns ``(frame, sidecar)`` so a caller cannot end up holding rows whose
+    provenance it never looked at.
+    """
+    import pandas as pd
+
+    from obsidianchain.api import provenance_gate
+
+    path = evidence_funnel_path(root)
+    meta = provenance_gate.require_production(path)
+    return pd.read_parquet(path, columns=columns), meta
+
+
+def load_address_clusters(root=None, columns=None):
+    """Read the Stage 0 address index, provenance-gated."""
+    import pandas as pd
+
+    from obsidianchain.api import provenance_gate
+
+    path = address_clusters_path(root)
+    meta = provenance_gate.require_production(path)
+    return pd.read_parquet(path, columns=columns), meta
+
+
+def load_clusters(root=None, columns=None):
+    """Read the Stage 0 cluster summary, provenance-gated."""
+    import pandas as pd
+
+    from obsidianchain.api import provenance_gate
+
+    path = clusters_path(root)
+    meta = provenance_gate.require_production(path)
+    return pd.read_parquet(path, columns=columns), meta

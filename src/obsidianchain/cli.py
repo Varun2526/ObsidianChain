@@ -48,6 +48,40 @@ app = typer.Typer(
 DATA_ROOT = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
 
 
+def _evidence_run_inputs(data_root: Path, network_manifest: dict) -> tuple[dict, str]:
+    """Hash every input that determines an evidence row, and fold them.
+
+    Computed HERE, on the artifact-generation side, and persisted into the
+    sidecar. The API must never do this: an API-only deployment has no
+    ``data/raw/``, and hashing an input per request would make a response
+    depend on a file the endpoint does not own.
+
+    Two chain files, not one. ``AddrTx_edgelist.csv`` fixes edge ordering;
+    ``wallets_classes.csv`` is concatenated first in the single factorize, so
+    it shifts every address code. Both determine a row, so both are hashed.
+    """
+    from obsidianchain import run_fingerprint as rf
+    from obsidianchain.io import elliptic
+
+    addr_tx = elliptic.find_dataset_file(elliptic.ADDR_TX, data_root)
+    universe = elliptic.find_dataset_file(elliptic.WALLETS_CLASSES, data_root)
+    inputs = {
+        "chain_addr_tx_sha256": rf.sha256_file(addr_tx),
+        "chain_universe_sha256": rf.sha256_file(universe),
+        "network_dataset_sha256": str(network_manifest.get("dataset_sha256", "")),
+        "heuristics": rf.HEURISTICS_MULTI_INPUT,
+        "row_statistics_config": rf.PROBE_ROW_CONFIG,
+    }
+    full = rf.build_evidence_run_fingerprint(
+        chain_addr_tx_sha256=inputs["chain_addr_tx_sha256"],
+        chain_universe_sha256=inputs["chain_universe_sha256"],
+        network_dataset_sha256=inputs["network_dataset_sha256"],
+        heuristics=inputs["heuristics"],
+        row_statistics_config=inputs["row_statistics_config"],
+    )
+    return inputs, full
+
+
 def _provenance(
     kind: str,
     dataset_id: str,
@@ -56,6 +90,8 @@ def _provenance(
     synthetic_network=None,
     manifest=None,
     config=None,
+    inputs=None,
+    run_fingerprint=None,
     notes=(),
 ):
     """Provenance for one durable artifact.
@@ -75,6 +111,8 @@ def _provenance(
         synthetic_network=synthetic_network,
         generator_version=(manifest or {}).get("generator_version"),
         production_rule=prov.rule_config(config) if config is not None else None,
+        inputs=inputs,
+        run_fingerprint=run_fingerprint,
         notes=tuple(notes),
     )
 
@@ -826,6 +864,8 @@ def evidence_funnel(
     # PRODUCTION pipeline on the frozen dataset - but synthetic_network is
     # true, because the chain is real Elliptic++ and the announcements
     # behind every chi-square here are generated.
+    network_manifest = _boundary.load_manifest(data_root / "processed")
+    run_inputs, run_fp = _evidence_run_inputs(data_root, network_manifest)
     rows = funnel.write_records(
         result,
         destination,
@@ -833,14 +873,23 @@ def evidence_funnel(
             "PRODUCTION",
             dataset_id="elliptic++/frozen-september-2026",
             synthetic_network=True,
-            manifest=_boundary.load_manifest(data_root / "processed"),
+            manifest=network_manifest,
             config=config,
+            inputs=run_inputs,
+            run_fingerprint=run_fp,
             notes=(
                 "Network announcements are SYNTHETIC. Demonstrates the "
                 "mechanism; validates nothing about Bitcoin.",
+                "CHAIN-ONLY trajectory: every proposed union was applied. "
+                "This is not a persisted fused-engine decision ledger.",
+                "Row statistics were computed under PROBE_CONFIG "
+                "(min_pooled=1, min_observer=2), NOT under production_rule. "
+                "Degrees of freedom in particular may differ under it.",
             ),
         ),
     )
+    typer.echo("")
+    typer.echo(f"run fingerprint  {run_fp[:16]}   (full digest in the sidecar)")
     typer.echo("")
     typer.echo(f"wrote {rows:,} per-union records -> {destination}")
     typer.echo(
