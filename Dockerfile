@@ -75,6 +75,12 @@ COPY scripts/ /app/scripts/
 COPY tests/ /app/tests/
 RUN pip install --no-index --no-build-isolation --no-deps /app
 
+# ---- API port ---------------------------------------------------------
+# Informational only; nothing listens unless `obsidianchain serve` is the
+# command. The CLI binds 127.0.0.1 by default, so reaching it from outside
+# the container needs an explicit --host as well as a published port.
+EXPOSE 8000
+
 # ---- data mount point -------------------------------------------------
 # ./data is bind-mounted here at run time; see the Makefile.
 RUN mkdir -p /data/raw /data/processed

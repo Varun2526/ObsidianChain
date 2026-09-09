@@ -16,6 +16,14 @@
 # Regenerate with: make vendor && make freeze
 
 # ---- direct dependencies ----
+# fastapi/uvicorn serve the read-only presentation layer over precomputed
+# artifacts (Phase 5). httpx is required by starlette's TestClient, so it is
+# a test dependency in the same sense pytest is. Deliberately plain uvicorn,
+# not uvicorn[standard]: the extras pull uvloop, httptools and watchfiles,
+# all compiled, none needed to serve a handful of read-only GETs.
+fastapi==0.141.1
+httpx==0.28.1
+uvicorn==0.52.4
 duckdb==1.5.5
 lightgbm==4.7.0
 matplotlib==3.11.1
@@ -29,10 +37,17 @@ typer==0.27.2
 
 # ---- transitive dependencies (pinned for reproducibility) ----
 annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+certifi==2026.7.22
+click==8.5.0
 cloudpickle==3.1.2
 contourpy==1.3.3
 cycler==0.12.1
 fonttools==4.64.0
+h11==0.16.0
+httpcore==1.0.9
+idna==3.19
 igraph==1.0.0
 iniconfig==2.3.0
 joblib==1.6.0
@@ -43,6 +58,11 @@ narwhals==2.25.0
 packaging==26.3
 pillow==12.3.0
 pluggy==1.6.0
+# pydantic-core is a compiled Rust extension: unlike every other wheel here
+# it is architecture-specific, so linux/amd64 and linux/arm64 vendor
+# different files for the same version.
+pydantic==2.13.5
+pydantic-core==2.46.5
 pygments==2.21.0
 pyparsing==3.3.2
 python-dateutil==2.9.0.post0
@@ -50,5 +70,8 @@ rich==15.0.0
 scipy==1.17.1
 shellingham==1.5.4
 six==1.17.0
+starlette==1.6.0
 texttable==1.7.0
 threadpoolctl==3.6.0
+typing-extensions==4.16.0
+typing-inspection==0.4.4

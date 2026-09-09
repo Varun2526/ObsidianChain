@@ -1372,6 +1372,28 @@ def purity(
     )
 
 
+@app.command("serve")
+def serve(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8000, "--port"),
+) -> None:
+    """Serve the read-only API over precomputed artifacts.
+
+    Binds to localhost by default: this is a forensics prototype that runs on
+    one laptop, and an API that reads a quarantined data directory has no
+    business listening on 0.0.0.0 without somebody deciding that on purpose.
+    """
+    import uvicorn
+
+    from obsidianchain.api.app import create_app
+
+    typer.echo(f"obsidianchain API  data root {data_root}")
+    typer.echo("  read-only: no clustering, no evidence, no evaluation")
+    typer.echo("  network data in this project is SYNTHETIC")
+    uvicorn.run(create_app(data_root), host=host, port=port, log_level="info")
+
+
 @app.command("build-cluster-index")
 def build_cluster_index(
     data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
