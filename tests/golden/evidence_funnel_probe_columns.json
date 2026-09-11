@@ -1,0 +1,165 @@
+{
+  "column_order": [
+    "edge_index",
+    "node_a",
+    "node_b",
+    "pooled_a",
+    "pooled_b",
+    "min_pooled",
+    "size_a",
+    "size_b",
+    "min_size",
+    "dof",
+    "chi2",
+    "p_value",
+    "effect"
+  ],
+  "columns": {
+    "chi2": {
+      "comparison": "bit-exact",
+      "digest": "b58d99dc0fbcb02415227e62a099b16869559b7fd26b8e703c78439ece761093",
+      "dtype": "float64",
+      "summary": {
+        "max": 18344.34144,
+        "min": 0.864977,
+        "n_nan": 251914,
+        "sum": 512410.548076
+      }
+    },
+    "dof": {
+      "comparison": "bit-exact",
+      "digest": "24e8e5aa9e921ad6d2a7f020e495cac1942384cbc51897adc5fcb4d43120b062",
+      "dtype": "int64",
+      "summary": {
+        "max": 8.0,
+        "min": 0.0,
+        "n_nan": 0,
+        "sum": 11845.0
+      }
+    },
+    "edge_index": {
+      "comparison": "bit-exact",
+      "digest": "de5cb36df766eeb63b3048208bbb0b6dd32178fd2953894cb38597b002613706",
+      "dtype": "int64",
+      "summary": {
+        "max": 274312.0,
+        "min": 0.0,
+        "n_nan": 0,
+        "sum": 35258459568.0
+      }
+    },
+    "effect": {
+      "comparison": "bit-exact",
+      "digest": "d687655e2da004f38098ef20297961b1f0a08d02b143c75a6058768ea98c516b",
+      "dtype": "float64",
+      "summary": {
+        "max": 0.560735,
+        "min": 0.01548,
+        "n_nan": 251914,
+        "sum": 328.683454
+      }
+    },
+    "min_pooled": {
+      "comparison": "bit-exact",
+      "digest": "47e095518830cf3084e51c11f580f809a17ee0ac67cbf4854e9170a6a19b2a52",
+      "dtype": "int64",
+      "summary": {
+        "max": 673.0,
+        "min": 0.0,
+        "n_nan": 0,
+        "sum": 16762.0
+      }
+    },
+    "min_size": {
+      "comparison": "bit-exact",
+      "digest": "5fe61dda19cc6db6b191d935d2faf6d07644c7899d23da4636c4cc75cbd3a565",
+      "dtype": "int64",
+      "summary": {
+        "max": 799.0,
+        "min": 1.0,
+        "n_nan": 0,
+        "sum": 297331.0
+      }
+    },
+    "node_a": {
+      "comparison": "bit-exact",
+      "digest": "cfa21f096d763449bc30af93a1419e2c86ad9b1a165242320cc3ffc2ca26f340",
+      "dtype": "int64",
+      "summary": {
+        "max": 822926.0,
+        "min": 5.0,
+        "n_nan": 0,
+        "sum": 101572780042.0
+      }
+    },
+    "node_b": {
+      "comparison": "bit-exact",
+      "digest": "09d2b09dbb4d80b035e3ee7857772b5a1a1df647390961c228e30ef085a7c42e",
+      "dtype": "int64",
+      "summary": {
+        "max": 822941.0,
+        "min": 3.0,
+        "n_nan": 0,
+        "sum": 101941680256.0
+      }
+    },
+    "p_value": {
+      "comparison": "significant-digits/12",
+      "digest": "3e22c1c0d6015ba8ae7f08d988d7754741a3e25afa69ad5220b3f1052b8316e3",
+      "dtype": "float64",
+      "summary": {
+        "max": 0.9989659669273853,
+        "min": 0.0,
+        "n_nan": 251914,
+        "sum": 263.97750813983316
+      }
+    },
+    "pooled_a": {
+      "comparison": "bit-exact",
+      "digest": "1b3d2d428ce1512cf72a53f615950c7ee066d5cb95c27b2629c143482bbc1ff3",
+      "dtype": "int64",
+      "summary": {
+        "max": 3707.0,
+        "min": 0.0,
+        "n_nan": 0,
+        "sum": 17436237.0
+      }
+    },
+    "pooled_b": {
+      "comparison": "bit-exact",
+      "digest": "1c1f8f8c2d054e5564e2b31957e7023828f3aed0a8de9b4fe70b942ab2aa06cb",
+      "dtype": "int64",
+      "summary": {
+        "max": 3707.0,
+        "min": 0.0,
+        "n_nan": 0,
+        "sum": 3404575.0
+      }
+    },
+    "size_a": {
+      "comparison": "bit-exact",
+      "digest": "05edd8a555a0df3c161289cbf74d37598a91bcb8b2605afc7f757208bf2f46aa",
+      "dtype": "int64",
+      "summary": {
+        "max": 14884.0,
+        "min": 1.0,
+        "n_nan": 0,
+        "sum": 237403942.0
+      }
+    },
+    "size_b": {
+      "comparison": "bit-exact",
+      "digest": "247f66acc01fa10e721c98afaf2f9e9e835837c9691e416d2ae35a190327fb5b",
+      "dtype": "int64",
+      "summary": {
+        "max": 14869.0,
+        "min": 1.0,
+        "n_nan": 0,
+        "sum": 8570047.0
+      }
+    }
+  },
+  "n_rows": 253429,
+  "row_order_digest": "de5cb36df766eeb63b3048208bbb0b6dd32178fd2953894cb38597b002613706",
+  "schema": "obsidianchain.funnel_golden/1"
+}

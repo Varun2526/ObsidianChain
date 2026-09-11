@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from obsidianchain import evidence_contract as contract
 from obsidianchain import provenance as prov
 
 #: Sidecar schema the evidence route requires.
@@ -72,6 +73,77 @@ def load_sidecar(artifact_path) -> dict:
     return meta
 
 
+def require_artifact_schema(meta: dict, artifact_path) -> None:
+    """Refuse a /1 evidence artifact where /2 fields are about to be served.
+
+    Section 1 of the Phase 5.3 contract: the artifact became an API contract
+    the moment an endpoint served it, so its content layout is versioned
+    separately from the provenance record. A /1 artifact has no verdict or
+    reason columns; serving it would silently omit the two fields the caller
+    asked for rather than saying the artifact predates them.
+    """
+    declared = (meta.get("artifact") or {}).get("artifact_schema")
+    if declared != contract.ARTIFACT_SCHEMA:
+        raise ProvenanceRefusedError(
+            f"{Path(artifact_path).name} declares artifact_schema="
+            f"{declared!r}; {contract.ARTIFACT_SCHEMA} is required to serve "
+            f"the production verdict and reason. Regenerate with "
+            f"'make run ARGS=\"evidence-funnel\"'."
+        )
+
+
+def require_artifact_identity(meta: dict, artifact_path) -> None:
+    """Refuse an artifact that disagrees with its own sidecar.
+
+    An artifact and its sidecar are two files, so no publish order makes
+    swapping them one atomic step. The dangerous half of a torn publish is
+    NEW PARQUET + OLD SIDECAR, because the API takes the current run
+    fingerprint from the sidecar: that state does not read as broken, it
+    reads as a valid run in which every previously minted evidence id
+    resolves against rows it was never minted for. Silent re-pointing is what
+    the fingerprint exists to prevent, so it must not be reachable by a
+    crash.
+
+    The writer therefore stamps the fingerprint into the parquet's own footer
+    as well, and this compares the two. Either half being stale is a
+    mismatch, so the check is order-independent and the failure is loud.
+
+    Refused rather than repaired. Rewriting the sidecar from the parquet
+    footer would make the artifact whole again, but it would also make a
+    half-finished regeneration look like a completed one, and an operator
+    who never learns that the last publish was interrupted does not re-run
+    it. The message names the command instead.
+    """
+    declared = meta.get("run_fingerprint")
+    if not declared:
+        return  # no evidence identity to tear; require_production checks that
+
+    path = Path(artifact_path)
+    if path.suffix != ".parquet":
+        return
+
+    embedded = prov.read_artifact_identity(path).get(
+        prov.FINGERPRINT_METADATA_KEY
+    )
+    if embedded is None:
+        raise ProvenanceRefusedError(
+            f"{path.name} carries no embedded run fingerprint while its "
+            f"sidecar declares {str(declared)[:16]}. The artifact predates "
+            f"the identity stamp, so a torn publish could not be "
+            f"distinguished from a complete one. Regenerate with "
+            f"'make run ARGS=\"evidence-funnel\"'."
+        )
+    if embedded != declared:
+        raise ProvenanceRefusedError(
+            f"{path.name} does not match its sidecar: the file carries run "
+            f"fingerprint {embedded[:16]} and the sidecar declares "
+            f"{str(declared)[:16]}. This is a TORN PUBLISH - one of the two "
+            f"was replaced and the other was not - so every evidence id "
+            f"would resolve against rows it was not minted for. Refusing to "
+            f"serve. Re-run 'make run ARGS=\"evidence-funnel\"'."
+        )
+
+
 def require_production(artifact_path, *, require_inputs: bool = True) -> dict:
     """Return the sidecar, or refuse the artifact.
 
@@ -108,4 +180,7 @@ def require_production(artifact_path, *, require_inputs: bool = True) -> dict:
             f"{Path(artifact_path).name} carries no 'inputs' block; the "
             f"evidence identity cannot be established without it."
         )
+    # Last, because it reads the artifact itself. The cheap sidecar checks
+    # above should reject a wrong file before the footer is opened at all.
+    require_artifact_identity(meta, artifact_path)
     return meta

@@ -21,6 +21,7 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
+from obsidianchain import evidence_contract as contract
 from obsidianchain import provenance as prov
 from obsidianchain import run_fingerprint as rf
 from obsidianchain.api import artifacts, boundary, evidence, provenance_gate
@@ -319,28 +320,61 @@ def test_no_truth_field_reaches_the_response(client, fingerprint, a_decidable_ro
     )
 
 
-@pytest.mark.parametrize("field", [
-    "verdict", "verdict_derived", "reason", "evidence_state",
+#: Fields that must not appear anywhere in the response, at any depth.
+#:
+#: ``verdict`` and ``reason`` were on this list through Phase 5.2, when
+#: neither was persisted and any occurrence would have been a derivation.
+#: Schema /2 records both, so they moved to
+#: :data:`PERSISTED_ONLY_IN_PRODUCTION_BLOCK` below - permitted in exactly one
+#: place and nowhere else. ``verdict_derived`` stays banned outright: that
+#: name can only ever mean a reconstruction.
+FORBIDDEN_ANYWHERE = [
+    "verdict_derived", "evidence_state",
     "truth_category", "entities_a", "entities_b", "blocked", "contested",
     "proposing_edges", "component_a", "component_b", "risk", "severity",
     "txid", "transaction", "observer_id", "peer_ip", "timestamp",
     "true_entity_id", "true_origin_id",
-])
+]
+
+#: Persisted /2 fields with exactly one legitimate home.
+PERSISTED_ONLY_IN_PRODUCTION_BLOCK = ["verdict", "reason", "reason_code"]
+
+
+def walk_dicts(node, path="$"):
+    """Every dict in the payload, with the path that reached it."""
+    if isinstance(node, dict):
+        yield path, node
+        for key, value in node.items():
+            yield from walk_dicts(value, f"{path}.{key}")
+    elif isinstance(node, list):
+        for i, value in enumerate(node):
+            yield from walk_dicts(value, f"{path}[{i}]")
+
+
+@pytest.mark.parametrize("field", FORBIDDEN_ANYWHERE)
 def test_a_forbidden_field_appears_nowhere_in_the_response(
     client, fingerprint, a_decidable_row, field
 ) -> None:
     body = client.get(route(f"{fingerprint}:{a_decidable_row}")).json()
+    for path, node in walk_dicts(body):
+        assert field not in node, f"{field} present at {path}"
 
-    def walk(node):
-        if isinstance(node, dict):
-            assert field not in node, f"{field} present at {list(node)}"
-            for value in node.values():
-                walk(value)
-        elif isinstance(node, list):
-            for value in node:
-                walk(value)
 
-    walk(body)
+@pytest.mark.parametrize("field", PERSISTED_ONLY_IN_PRODUCTION_BLOCK)
+def test_a_persisted_verdict_field_lives_only_in_the_production_block(
+    client, fingerprint, a_decidable_row, field
+) -> None:
+    """One home, so a caller cannot pick up a verdict beside probe numbers.
+
+    A ``verdict`` sitting next to the probe statistics would read as the
+    verdict of those statistics. It is not - it is the verdict of a separate
+    evaluation under a different configuration.
+    """
+    body = client.get(route(f"{fingerprint}:{a_decidable_row}")).json()
+    homes = [path for path, node in walk_dicts(body) if field in node]
+    assert homes == ["$.production_evidence"], (
+        f"{field} should appear only in production_evidence, found at {homes}"
+    )
 
 
 @pytest.mark.parametrize("word", ["CONFIRMED", "INFERRED"])
@@ -352,6 +386,35 @@ def test_no_unsupported_certainty_word_appears(
     )
 
 
+#: The frozen disclaimers, which are allowed to contain the banned phrases
+#: because they exist to deny them. Excised before the substring scan below,
+#: and pinned separately in
+#: ``test_the_frozen_wordings_are_the_contract_constants_verbatim`` so they
+#: cannot be reworded into the claim they currently refuse.
+FROZEN_DISCLAIMERS = (
+    contract.NOT_SEPARATED_MEANING,
+    contract.FROZEN_RUN_LIMITATION,
+    contract.VERDICT_SCOPE,
+    contract.VERDICT_DEFINITION,
+)
+
+
+def body_outside_the_disclaimers(payload) -> str:
+    """The serialised response with the frozen disclaimers removed.
+
+    A naive substring ban cannot survive schema /2: NOT_SEPARATED must travel
+    with a sentence that contains "the same entity" precisely in order to say
+    the verdict is not evidence of it. Deleting the ban would be the wrong
+    fix - it is the check that stops a claim appearing. So the disclaimers
+    are cut out and verified verbatim against the contract instead, and
+    everything else is scanned exactly as before.
+    """
+    text = json.dumps(payload)
+    for wording in FROZEN_DISCLAIMERS:
+        text = text.replace(json.dumps(wording)[1:-1], "")
+    return text.lower()
+
+
 @pytest.mark.parametrize("claim", [
     "belongs to", "owns these", "same IP", "same entity", "proves",
 ])
@@ -359,10 +422,48 @@ def test_no_ownership_claim_appears(
     client, fingerprint, a_decidable_row, claim
 ) -> None:
     """The response must never assert identity from a shared origin."""
-    body = json.dumps(
+    body = body_outside_the_disclaimers(
         client.get(route(f"{fingerprint}:{a_decidable_row}")).json()
-    ).lower()
+    )
     assert claim.lower() not in body
+
+
+def test_the_frozen_wordings_are_the_contract_constants_verbatim(
+    client, fingerprint, a_decidable_row
+) -> None:
+    """No paraphrase. A paraphrase is where a denial becomes a claim."""
+    block = client.get(
+        route(f"{fingerprint}:{a_decidable_row}")
+    ).json()["production_evidence"]
+    assert block["definition"] == contract.VERDICT_DEFINITION
+    assert block["scope"] == contract.VERDICT_SCOPE
+    assert block["frozen_run_limitation"] == contract.FROZEN_RUN_LIMITATION
+    assert block["meaning"] == contract.NOT_SEPARATED_MEANING
+
+    # and the constant itself still denies rather than asserts
+    assert "is not evidence that" in contract.NOT_SEPARATED_MEANING
+    assert "the same entity" in contract.NOT_SEPARATED_MEANING
+
+
+def test_the_disclaimer_excision_is_not_a_blanket_exemption(
+    client, fingerprint, a_decidable_row
+) -> None:
+    """The excision must remove the disclaimers and nothing else.
+
+    Otherwise the substring ban above would be passing vacuously.
+    """
+    payload = client.get(route(f"{fingerprint}:{a_decidable_row}")).json()
+    full = json.dumps(payload)
+    trimmed = body_outside_the_disclaimers(payload)
+    removed = len(full) - len(trimmed)
+    expected = sum(len(json.dumps(w)[1:-1]) for w in FROZEN_DISCLAIMERS)
+    # VERDICT_DEFINITION also appears inside the persisted evaluation_config
+    # note, so it is removed twice; nothing else may be.
+    assert removed == expected + len(contract.VERDICT_DEFINITION), (
+        f"excision removed {removed} characters, expected "
+        f"{expected + len(contract.VERDICT_DEFINITION)}"
+    )
+    assert len(trimmed) > 1000, "the response was almost entirely excised"
 
 
 def test_the_statement_describes_rather_than_concludes(
@@ -545,7 +646,7 @@ def test_the_response_has_exactly_the_declared_top_level_keys(
     assert set(body) == {
         "evidence_id", "edge_index", "run_fingerprint", "provenance",
         "statistics_config", "trajectory", "proposed_merge", "statistics",
-        "availability", "statement",
+        "production_evidence", "availability", "statement",
     }
 
 
@@ -574,6 +675,274 @@ def test_the_statistics_block_is_exactly_the_persisted_columns(
     assert stats["chi2"] == pytest.approx(float(row["chi2"]))
     assert stats["p_value"] == pytest.approx(float(row["p_value"]))
     assert stats["effect"] == pytest.approx(float(row["effect"]))
+
+
+# ---- Phase 5.3 section 9. the persisted production evaluation ----------
+
+
+def test_the_production_block_is_exactly_the_persisted_columns(
+    real_root, client, fingerprint, a_decidable_row
+) -> None:
+    """Read, not derived. Every field traced back to its /2 column."""
+    funnel = pd.read_parquet(real_root / artifacts.EVIDENCE_FUNNEL)
+    row = funnel[funnel["edge_index"] == a_decidable_row].iloc[0]
+    block = client.get(
+        route(f"{fingerprint}:{a_decidable_row}")
+    ).json()["production_evidence"]
+
+    assert block["verdict"] == row["verdict_production"]
+    assert block["reason"] == row["reason_production"]
+    assert block["reason_code"] == row["reason_code_production"]
+    assert block["dof"] == int(row["dof_production"])
+    assert block["chi2"] == pytest.approx(float(row["chi2_production"]))
+    assert block["p_value"] == pytest.approx(float(row["p_value_production"]))
+    assert block["effect"] == pytest.approx(float(row["effect_production"]))
+
+
+def test_the_reason_code_matches_the_contract_mapping(
+    real_root, client, fingerprint, a_decidable_row
+) -> None:
+    """The code the API serves is the code the contract assigns the reason."""
+    block = client.get(
+        route(f"{fingerprint}:{a_decidable_row}")
+    ).json()["production_evidence"]
+    assert block["reason_code"] == contract.reason_code(block["reason"])
+
+
+def test_both_statistic_blocks_declare_which_configuration_they_are(
+    client, fingerprint, a_decidable_row
+) -> None:
+    """Section 9: a frontend holding two must not be able to plot the wrong one."""
+    body = client.get(route(f"{fingerprint}:{a_decidable_row}")).json()
+    assert body["statistics"]["config"] == "probe"
+    assert body["production_evidence"]["config"] == "production"
+
+
+def test_the_production_block_carries_its_evaluation_configuration(
+    client, fingerprint, a_decidable_row
+) -> None:
+    config = client.get(
+        route(f"{fingerprint}:{a_decidable_row}")
+    ).json()["production_evidence"]["evaluation_config"]
+    assert config["min_pooled_observations"] == 25
+    assert config["min_observer_observations"] == 5
+    assert config["alpha"] == 1e-4
+    assert config["min_effect"] == 0.05
+    assert config["evaluation_order"][0] == "POOLED_GATE"
+
+
+def test_the_two_configurations_are_actually_different(
+    client, fingerprint, a_decidable_row
+) -> None:
+    """If they were the same, labelling them would be pointless."""
+    body = client.get(route(f"{fingerprint}:{a_decidable_row}")).json()
+    probe = body["statistics_config"]
+    production = body["production_evidence"]["evaluation_config"]
+    assert (probe["min_pooled_observations"],
+            probe["min_observer_observations"]) != (
+        production["min_pooled_observations"],
+        production["min_observer_observations"],
+    )
+
+
+def test_dof_serialises_as_an_integer_not_a_float(
+    client, fingerprint, a_decidable_row
+) -> None:
+    """Section 13. The nullable column reads back as a float in some pandas
+    versions; the response must say 8, never 8.0."""
+    raw = client.get(route(f"{fingerprint}:{a_decidable_row}")).text
+    body = json.loads(raw)
+    dof = body["production_evidence"]["dof"]
+    assert isinstance(dof, int) and not isinstance(dof, bool)
+    assert f'"dof": {dof}.0' not in raw
+    assert f'"dof":{dof}.0' not in raw
+
+
+def test_an_unevaluated_row_reports_null_not_a_dataclass_default(
+    client, fingerprint, a_no_evidence_row
+) -> None:
+    """Section 13. chi2=0, p=1.0 would read as 'perfectly consistent'."""
+    block = client.get(
+        route(f"{fingerprint}:{a_no_evidence_row}")
+    ).json()["production_evidence"]
+    assert block["verdict"] == "NO_EVIDENCE"
+    for field in ("dof", "chi2", "p_value", "effect"):
+        assert block[field] is None, f"{field} was {block[field]!r}, expected null"
+    # the reason code, not a number, is what discriminates the three gates
+    assert block["reason_code"] in {
+        "INSUFFICIENT_POOLED", "INSUFFICIENT_OBSERVER", "ZERO_VARIANCE"
+    }
+
+
+def test_not_separated_never_travels_without_its_meaning(
+    real_root, client, fingerprint
+) -> None:
+    """Section 8, on every row that carries the verdict."""
+    funnel = pd.read_parquet(
+        real_root / artifacts.EVIDENCE_FUNNEL,
+        columns=["edge_index", "verdict_production"],
+    )
+    rows = funnel[funnel["verdict_production"] == "NOT_SEPARATED"]
+    # Not a skip. This artifact has 40 NOT_SEPARATED rows and the frozen
+    # metrics pin that; zero of them would mean the production evaluation
+    # stopped producing the verdict whose wording this test guards, which is
+    # a failure to report and not a reason to stand down.
+    assert not rows.empty, (
+        "no NOT_SEPARATED row in the funnel. The frozen run has 40; if the "
+        "production evaluation no longer yields the verdict, section 8's "
+        "wording guarantee is untested rather than satisfied."
+    )
+    for edge in rows["edge_index"].tolist()[:5]:
+        block = client.get(
+            route(f"{fingerprint}:{int(edge)}")
+        ).json()["production_evidence"]
+        assert block["meaning"] == contract.NOT_SEPARATED_MEANING
+
+
+def test_the_frozen_run_limitation_is_on_every_verdict_response(
+    client, fingerprint, a_decidable_row, a_no_evidence_row
+) -> None:
+    """Section 10. A screenshot must not read as a claim about the method."""
+    for edge in (a_decidable_row, a_no_evidence_row):
+        block = client.get(
+            route(f"{fingerprint}:{edge}")
+        ).json()["production_evidence"]
+        assert block["frozen_run_limitation"] == contract.FROZEN_RUN_LIMITATION
+        assert "property of this frozen dataset, not" in block[
+            "frozen_run_limitation"
+        ]
+
+
+def test_the_verdict_is_scoped_to_the_proposed_union_not_the_clusters(
+    client, fingerprint, a_decidable_row
+) -> None:
+    """Section 18. cluster_id is final; component_size_at_record is not."""
+    body = client.get(route(f"{fingerprint}:{a_decidable_row}")).json()
+    scope = body["production_evidence"]["scope"]
+    assert scope == contract.VERDICT_SCOPE
+    assert "THIS proposed" in scope
+    # and the two differently-timed fields it warns about are both present
+    side = body["proposed_merge"]["side_a"]
+    assert "cluster_id" in side and "component_size_at_record" in side
+
+
+def test_the_run_verdict_counts_match_the_artifact(
+    real_root, client, fingerprint, a_decidable_row
+) -> None:
+    """The run-level context is the artifact's own count, not a recount."""
+    funnel = pd.read_parquet(
+        real_root / artifacts.EVIDENCE_FUNNEL, columns=["verdict_production"]
+    )
+    actual = funnel["verdict_production"].value_counts().to_dict()
+    served = client.get(
+        route(f"{fingerprint}:{a_decidable_row}")
+    ).json()["production_evidence"]["run_verdict_counts"]
+    for verdict, count in served.items():
+        assert actual.get(verdict, 0) == count, verdict
+
+
+def test_the_trajectory_equivalence_claim_is_carried_with_the_verdict(
+    client, fingerprint, a_decidable_row
+) -> None:
+    """Section 7. The chain-only funnel may only be presented as the fused
+    trajectory because a verification established the two coincide."""
+    block = client.get(
+        route(f"{fingerprint}:{a_decidable_row}")
+    ).json()["production_evidence"]
+    assert block["veto_never_fired"] is True
+    assert block["trajectory_equivalence"].startswith("VERIFIED:")
+
+
+def test_a_schema_1_evidence_artifact_is_refused_naming_the_command(
+    root, fingerprint, a_decidable_row
+) -> None:
+    """Section 1. Never served silently without the fields it lacks."""
+    path = Path(str(root / artifacts.EVIDENCE_FUNNEL) + prov.META_SUFFIX)
+    meta = json.loads(path.read_text(encoding="utf-8"))
+    meta["artifact"]["artifact_schema"] = contract.ARTIFACT_SCHEMA_V1
+    path.write_text(json.dumps(meta), encoding="utf-8")
+
+    client = TestClient(create_app(root), raise_server_exceptions=False)
+    response = client.get(route(f"{fingerprint}:{a_decidable_row}"))
+    assert response.status_code == 500
+    detail = response.json()["detail"]
+    assert contract.ARTIFACT_SCHEMA in detail
+    assert "evidence-funnel" in detail
+
+
+@pytest.mark.parametrize("declared", [None, "", "obsidianchain.other/2"])
+def test_an_artifact_with_no_declared_schema_is_refused(
+    root, fingerprint, a_decidable_row, declared
+) -> None:
+    path = Path(str(root / artifacts.EVIDENCE_FUNNEL) + prov.META_SUFFIX)
+    meta = json.loads(path.read_text(encoding="utf-8"))
+    if declared is None:
+        meta.pop("artifact", None)
+    else:
+        meta["artifact"]["artifact_schema"] = declared
+    path.write_text(json.dumps(meta), encoding="utf-8")
+
+    client = TestClient(create_app(root), raise_server_exceptions=False)
+    response = client.get(route(f"{fingerprint}:{a_decidable_row}"))
+    assert response.status_code == 500
+    assert response.json()["error"] == "provenance_refused"
+
+
+def test_a_phase_5_2_evidence_id_is_409_not_silently_repointed(
+    client, a_decidable_row
+) -> None:
+    """Section 6/9. The Phase 5.2 fingerprint covered the probe row config
+    only. Schema /2 rows are determined by the production configuration too,
+    so the fingerprint moved and every 5.2 id must fail loudly."""
+    stale = "8756a67bfe8b8db8"
+    response = client.get(route(f"{stale}:{a_decidable_row}"))
+    assert response.status_code == 409
+    body = response.json()
+    assert stale in body["detail"]
+    assert body["error"] == "evidence_id_stale"
+
+
+def test_the_phase_5_2_fingerprint_is_no_longer_current(fingerprint) -> None:
+    """Guards the test above: it would pass vacuously on any wrong string."""
+    assert fingerprint != "8756a67bfe8b8db8"
+
+
+# ---- section 20. the frozen-input manifest ------------------------------
+
+
+def test_the_served_run_is_the_frozen_input_manifest(
+    real_root, client, fingerprint, a_decidable_row
+) -> None:
+    """The response's provenance must name the frozen network dataset.
+
+    An artifact regenerated against a different capture would serve numbers
+    that no frozen metric describes. The hash is checked against the file the
+    project froze, not against whatever the sidecar happens to claim.
+    """
+    frozen = (
+        "c405493d5bd904c0e17c840dca79386a7502cdde45518810fe8398d7adf9380a"
+    )
+    observations = real_root / "processed" / "network" / "observations.parquet"
+    # Not a skip. The served provenance is only meaningful if it names the
+    # dataset the project actually froze, so an absent dataset makes this
+    # assertion unverifiable - which must be a failure. A skip here would
+    # remove the one check that the response is not describing some other
+    # capture, and remove it silently.
+    assert observations.is_file(), (
+        f"{observations} is absent, so the served run cannot be checked "
+        f"against the frozen input manifest. Generate it with "
+        f"'make run ARGS=\"network-generate\"'."
+    )
+
+    digest = rf.sha256_file(observations)
+    assert digest == frozen, (
+        "the frozen network dataset changed on disk; every downstream metric "
+        "and every evidence id is invalidated"
+    )
+    served = client.get(
+        route(f"{fingerprint}:{a_decidable_row}")
+    ).json()["provenance"]["network_dataset_sha256"]
+    assert served == frozen
 
 
 # ---- 25-28. no computation, no mutation, determinism -------------------

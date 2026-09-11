@@ -168,6 +168,11 @@ EXPECTED_IMPORT_GRAPH = {
     "obsidianchain.api.evidence",
     "obsidianchain.api.provenance_gate",
     "obsidianchain.run_fingerprint",
+    # Phase 5.3-B, reviewed: the artifact's public contract - schema string,
+    # reason codes, row-config labels and the frozen wordings. Standard
+    # library only (asserted in tests/test_evidence_contract.py), and it
+    # exists precisely so the API can name these without importing eval/.
+    "obsidianchain.evidence_contract",
     "obsidianchain.demo",
     "obsidianchain.demo.api",
     "obsidianchain.demo.scenarios",

@@ -140,9 +140,10 @@ def create_app(data_root=None) -> FastAPI:
         f"{API_PREFIX}/evidence/{{evidence_id}}",
         summary="Network evidence recorded for one proposed merge",
         response_description=(
-            "The persisted funnel row, its provenance, the configuration the "
-            "statistics were computed under, and two availability booleans. "
-            "No verdict and no reason - neither is persisted."
+            "The persisted funnel row, its provenance, the probe statistics "
+            "with the configuration they were computed under, the persisted "
+            "production evaluation (verdict, reason, reason code) in a "
+            "separate labelled block, and two availability booleans."
         ),
     )
     async def get_evidence(evidence_id: str) -> JSONResponse:
@@ -153,6 +154,11 @@ def create_app(data_root=None) -> FastAPI:
         the evidence caused the production engine to allow or block it - the
         persisted funnel is the chain-only trajectory and no fused decision
         ledger exists.
+
+        The verdict and reason are read from schema /2 columns exactly as
+        ``separation_evidence()`` returned them at that proposed merge. They
+        are not reconstructed here, and a /1 artifact is refused rather than
+        served without them.
 
         Reads two precomputed artifacts and joins them. Nothing is clustered,
         pooled, tested or evaluated.
