@@ -1,0 +1,493 @@
+{
+  "run_fingerprint": "043ea584e99daf99",
+  "alert_count_total": 2128,
+  "alert_count_matched": 2128,
+  "offset": 0,
+  "limit": 25,
+  "alerts": [
+    {
+      "alert_id": "043ea584e99daf99:314770",
+      "rank": 1,
+      "cluster_id": 314770,
+      "risk_score": 1.0,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 148,
+      "members_total": 148,
+      "first_timestep": 44,
+      "last_timestep": 44,
+      "top_signals": [
+        "tx_per_active_timestep_asof_t",
+        "output_fanout_mean_asof_t",
+        "input_fanin_mean_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:628486",
+      "rank": 2,
+      "cluster_id": 628486,
+      "risk_score": 1.0,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 160,
+      "members_total": 160,
+      "first_timestep": 49,
+      "last_timestep": 49,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "input_fanin_mean_asof_t",
+        "tx_per_active_timestep_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:140985",
+      "rank": 3,
+      "cluster_id": 140985,
+      "risk_score": 0.9940476190476191,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 497,
+      "members_total": 497,
+      "first_timestep": 46,
+      "last_timestep": 46,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "fees_total_asof_t",
+        "cluster_size_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:646404",
+      "rank": 4,
+      "cluster_id": 646404,
+      "risk_score": 0.9940476190476191,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 147,
+      "members_total": 150,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "fees_total_asof_t",
+        "input_fanin_mean_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:20212",
+      "rank": 5,
+      "cluster_id": 20212,
+      "risk_score": 0.9481981981981982,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 2,
+      "members_total": 2,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_size_mean_asof_t",
+        "cluster_size_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:62014",
+      "rank": 6,
+      "cluster_id": 62014,
+      "risk_score": 0.9481981981981982,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 1,
+      "members_total": 7,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_size_mean_asof_t",
+        "tx_per_active_timestep_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:425268",
+      "rank": 7,
+      "cluster_id": 425268,
+      "risk_score": 0.9481981981981982,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 1,
+      "members_total": 2,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_size_mean_asof_t",
+        "cluster_size_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:336169",
+      "rank": 8,
+      "cluster_id": 336169,
+      "risk_score": 0.9357067397497265,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 1,
+      "members_total": 2,
+      "first_timestep": 43,
+      "last_timestep": 43,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_per_active_timestep_asof_t",
+        "n_txs_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:21034",
+      "rank": 9,
+      "cluster_id": 21034,
+      "risk_score": 0.9297619047619048,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 2,
+      "members_total": 2,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_size_mean_asof_t",
+        "fees_mean_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:121468",
+      "rank": 10,
+      "cluster_id": 121468,
+      "risk_score": 0.837012987012987,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 95,
+      "members_total": 96,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "fees_total_asof_t",
+        "btc_sent_total_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:351213",
+      "rank": 11,
+      "cluster_id": 351213,
+      "risk_score": 0.7504095004095004,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 1094,
+      "members_total": 2881,
+      "first_timestep": 42,
+      "last_timestep": 49,
+      "top_signals": [
+        "cluster_size_asof_t",
+        "output_fanout_mean_asof_t",
+        "fees_total_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:545337",
+      "rank": 12,
+      "cluster_id": 545337,
+      "risk_score": 0.7504095004095004,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 327,
+      "members_total": 334,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "input_fanin_mean_asof_t",
+        "fees_total_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:33788",
+      "rank": 13,
+      "cluster_id": 33788,
+      "risk_score": 0.6722927747024133,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 5,
+      "members_total": 5,
+      "first_timestep": 47,
+      "last_timestep": 47,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_per_active_timestep_asof_t",
+        "fees_total_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:79796",
+      "rank": 14,
+      "cluster_id": 79796,
+      "risk_score": 0.6515151515151515,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 1,
+      "members_total": 2,
+      "first_timestep": 44,
+      "last_timestep": 44,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_size_mean_asof_t",
+        "fees_mean_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:136423",
+      "rank": 15,
+      "cluster_id": 136423,
+      "risk_score": 0.6515151515151515,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 2,
+      "members_total": 2,
+      "first_timestep": 48,
+      "last_timestep": 48,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_size_mean_asof_t",
+        "tx_per_active_timestep_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:182751",
+      "rank": 16,
+      "cluster_id": 182751,
+      "risk_score": 0.6515151515151515,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 1,
+      "members_total": 2,
+      "first_timestep": 45,
+      "last_timestep": 45,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_size_mean_asof_t",
+        "cluster_size_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:461905",
+      "rank": 17,
+      "cluster_id": 461905,
+      "risk_score": 0.6515151515151515,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 2,
+      "members_total": 2,
+      "first_timestep": 47,
+      "last_timestep": 47,
+      "top_signals": [
+        "tx_size_mean_asof_t",
+        "output_fanout_mean_asof_t",
+        "btc_sent_total_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:457612",
+      "rank": 18,
+      "cluster_id": 457612,
+      "risk_score": 0.6034132218342745,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 119,
+      "members_total": 169,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "fees_total_asof_t",
+        "fees_mean_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:347077",
+      "rank": 19,
+      "cluster_id": 347077,
+      "risk_score": 0.5635964912280702,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 2,
+      "members_total": 2,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_size_mean_asof_t",
+        "tx_per_active_timestep_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:53767",
+      "rank": 20,
+      "cluster_id": 53767,
+      "risk_score": 0.55,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 2,
+      "members_total": 2,
+      "first_timestep": 43,
+      "last_timestep": 43,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_size_mean_asof_t",
+        "fees_mean_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:255754",
+      "rank": 21,
+      "cluster_id": 255754,
+      "risk_score": 0.55,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 2,
+      "members_total": 2,
+      "first_timestep": 44,
+      "last_timestep": 44,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_size_mean_asof_t",
+        "fees_mean_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:194512",
+      "rank": 22,
+      "cluster_id": 194512,
+      "risk_score": 0.5083333333333333,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 2,
+      "members_total": 2,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "tx_size_mean_asof_t",
+        "output_fanout_mean_asof_t",
+        "btc_sent_total_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:393830",
+      "rank": 23,
+      "cluster_id": 393830,
+      "risk_score": 0.4979732246543526,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 4,
+      "members_total": 5,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "fees_total_asof_t",
+        "tx_size_mean_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:419137",
+      "rank": 24,
+      "cluster_id": 419137,
+      "risk_score": 0.48686908005709095,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 2,
+      "members_total": 2,
+      "first_timestep": 42,
+      "last_timestep": 42,
+      "top_signals": [
+        "tx_per_active_timestep_asof_t",
+        "n_txs_asof_t",
+        "tx_size_mean_asof_t"
+      ]
+    },
+    {
+      "alert_id": "043ea584e99daf99:467906",
+      "rank": 25,
+      "cluster_id": 467906,
+      "risk_score": 0.4666666666666667,
+      "severity": "CRITICAL",
+      "ranking_aggregation": "AGG-TOPK",
+      "members_scored": 1,
+      "members_total": 2,
+      "first_timestep": 43,
+      "last_timestep": 43,
+      "top_signals": [
+        "output_fanout_mean_asof_t",
+        "tx_size_mean_asof_t",
+        "fees_mean_asof_t"
+      ]
+    }
+  ],
+  "meaning": "An alert is a co-spend CLUSTER whose member addresses the Phase 6 model scored highly. A cluster is an inference produced by the common-input-ownership heuristic, not a person, an account or a legal entity. A high score is a ranking signal for investigator attention. It is not a finding, not an accusation, and not evidence of any offence.",
+  "score_scope": "Risk is the calibrated probability the Phase 6 model assigned to an address, aggregated to its cluster. Scores are out-of-sample: alerts are generated from the TEST split only, because train and validation scores are optimistic by construction and ranking them beside test scores would mislead.",
+  "provenance": {
+    "provenance_type": "PRODUCTION",
+    "dataset_id": "elliptic++/frozen-september-2026",
+    "dataset_sha256": null,
+    "synthetic_network": true,
+    "run_fingerprint": "043ea584e99daf998f29f7566089a98039354fd5984cd7279ea44096bf2a3e2a",
+    "public_run_fingerprint": "043ea584e99daf99",
+    "phase6_dataset_fingerprint": "043ea584e99daf998f29f7566089a98039354fd5984cd7279ea44096bf2a3e2a",
+    "artifact_schema": "obsidianchain.alerts/1",
+    "model": {
+      "family": "LightGBM",
+      "calibration": "isotonic, fitted on the VALIDATION split only",
+      "n_features": 43,
+      "explainability": "TreeSHAP via LightGBM pred_contrib (log-odds)"
+    },
+    "feature_semantics": "Every feature is as-of the address's LAST active timestep, computed only from transactions with Time step <= t. Boundary-spanning addresses were removed entirely, so the splits are address-disjoint.",
+    "split": {
+      "train": "t1-t34",
+      "validation": "t35-t41",
+      "test": "t42-t49"
+    },
+    "scored_split": "test",
+    "severity_bands": [
+      {
+        "band": "CRITICAL",
+        "target": 0.9,
+        "threshold": 0.21052631578947367,
+        "support": 1843,
+        "validation_precision": 0.9001627780792186,
+        "populated": true
+      },
+      {
+        "band": "HIGH",
+        "target": 0.75,
+        "threshold": 0.19088937093275488,
+        "support": 2337,
+        "validation_precision": 0.750106974753958,
+        "populated": true
+      },
+      {
+        "band": "MEDIUM",
+        "target": 0.5,
+        "threshold": 0.08970976253298153,
+        "support": 3840,
+        "validation_precision": 0.5,
+        "populated": true
+      }
+    ],
+    "ranking_aggregation": "AGG-TOPK",
+    "git_revision": null,
+    "notes": [
+      "Network observations are SYNTHETIC and are investigative context only. They never establish that an IP owns, controls or sent from a wallet.",
+      "A cluster is an inference from the common-input-ownership heuristic, not a person or a legal entity.",
+      "No artifact here carries a ground-truth label: on real data there is none, and displaying one would make this a label viewer.",
+      "Scores are out-of-sample; only the TEST split is ranked."
+    ]
+  }
+}
