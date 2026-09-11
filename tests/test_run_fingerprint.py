@@ -257,6 +257,207 @@ def test_row_config_label_is_pure() -> None:
     assert rf.row_config_label(25, 5) == "probe:min_pooled=25,min_observer=5"
 
 
+# ---- Phase 5.3 section 6. the production half of the row config --------
+
+
+def live_row_config() -> str:
+    """The label the artifact writer actually persists, built from the two
+    live configuration objects rather than retyped here."""
+    from obsidianchain import evidence_contract as contract
+    from obsidianchain.eval.evidence_funnel import PROBE_CONFIG
+    from obsidianchain.network.separation import SeparationConfig
+
+    production = SeparationConfig()  # production defaults, untouched
+    return contract.combined_row_config_label(
+        probe_min_pooled=PROBE_CONFIG.min_pooled_observations,
+        probe_min_observer=PROBE_CONFIG.min_observer_observations,
+        production_min_pooled=production.min_pooled_observations,
+        production_min_observer=production.min_observer_observations,
+        production_alpha=production.alpha,
+        production_min_effect=production.min_effect,
+    )
+
+
+def test_the_combined_label_matches_both_live_configurations() -> None:
+    """Schema /2 rows are determined by two configurations, so the digest
+    term has to name both. Checked against the live objects: if either is
+    edited, every persisted number changes while all three file hashes stay
+    identical, and this is the only thing standing between that and a silent
+    re-point."""
+    from obsidianchain.eval.evidence_funnel import PROBE_CONFIG
+    from obsidianchain.network.separation import SeparationConfig
+
+    production = SeparationConfig()
+    label = live_row_config()
+    assert label.startswith(rf.PROBE_ROW_CONFIG + "|")
+    assert PROBE_CONFIG.min_pooled_observations == 1
+    assert PROBE_CONFIG.min_observer_observations == 2
+    assert production.min_pooled_observations == 25
+    assert production.min_observer_observations == 5
+    assert production.alpha == 1e-4
+    assert production.min_effect == 0.05
+    assert label == (
+        "probe:min_pooled=1,min_observer=2"
+        "|production:min_pooled=25,min_observer=5,"
+        "alpha=1e-04,min_effect=0.05"
+    )
+
+
+def persisted_funnel_sidecar() -> dict:
+    """The evidence funnel's sidecar, or a FAILURE - never a skip.
+
+    These two tests are the only ones that check what the last regeneration
+    actually wrote to disk, as opposed to what the code would produce if
+    asked. Their own docstrings say so. Letting them skip on an absent
+    artifact means the suite reports green on exactly the machine where the
+    persisted fingerprint has never been checked at all, and an id minted
+    from a stale label is indistinguishable from a correct one.
+
+    So an absent artifact fails here. The suite's other artifact-dependent
+    tests skip by design, because they measure frozen numbers that a machine
+    without the dataset genuinely cannot measure; these two measure an
+    IDENTITY, and an unverified identity is worse than a missing number.
+    """
+    import json
+    import os
+
+    from obsidianchain import provenance as prov
+
+    root = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
+    sidecar = root / "processed" / ("evidence_funnel.parquet" + prov.META_SUFFIX)
+    assert sidecar.is_file(), (
+        f"{sidecar} is absent, so the persisted run fingerprint has not been "
+        f"verified against the code that mints evidence ids. This test must "
+        f"not skip: generate the artifact with "
+        f"'make run ARGS=\"evidence-funnel\"'."
+    )
+    return json.loads(sidecar.read_text(encoding="utf-8"))
+
+
+def test_the_persisted_row_config_is_the_combined_label() -> None:
+    """The sidecar on disk must carry both halves, not just the probe half.
+
+    This is the one that would actually catch a regression: the label could
+    be correct in code and still not be what the last regeneration wrote.
+    """
+    meta = persisted_funnel_sidecar()
+    assert meta["inputs"]["row_statistics_config"] == live_row_config()
+
+
+def test_the_persisted_fingerprint_is_the_one_the_inputs_imply() -> None:
+    """Recomputed from the sidecar's own inputs block and compared.
+
+    A persisted digest that did not follow from the persisted inputs would
+    make every evidence id unfalsifiable.
+    """
+    meta = persisted_funnel_sidecar()
+    recomputed = rf.build_evidence_run_fingerprint(**meta["inputs"])
+    assert recomputed == meta["run_fingerprint"]
+
+
+def test_the_persisted_sidecar_actually_carries_a_fingerprint() -> None:
+    """Guards the identity gate's own escape hatch.
+
+    ``provenance_gate.require_artifact_identity`` returns early when a
+    sidecar declares no fingerprint, because several artifacts in this
+    project legitimately have none. That early return must never apply to
+    THIS artifact: a funnel regenerated without a fingerprint would pass the
+    torn-publish check by being unidentifiable rather than by being intact.
+    """
+    meta = persisted_funnel_sidecar()
+    fingerprint = meta.get("run_fingerprint")
+    assert isinstance(fingerprint, str) and len(fingerprint) == 64, (
+        f"the evidence funnel sidecar declares run_fingerprint="
+        f"{fingerprint!r}; without one the identity gate cannot detect a "
+        f"torn publish and silently permits the artifact"
+    )
+
+
+PRODUCTION_MUTATIONS = {
+    "min_pooled": dict(production_min_pooled=26),
+    "min_observer": dict(production_min_observer=6),
+    "alpha": dict(production_alpha=1e-3),
+    "min_effect": dict(production_min_effect=0.06),
+}
+
+
+def fingerprint_for(**overrides) -> str:
+    from obsidianchain import evidence_contract as contract
+
+    base = dict(
+        probe_min_pooled=1, probe_min_observer=2,
+        production_min_pooled=25, production_min_observer=5,
+        production_alpha=1e-4, production_min_effect=0.05,
+    )
+    return rf.build_evidence_run_fingerprint(
+        chain_addr_tx_sha256=A,
+        chain_universe_sha256=B,
+        network_dataset_sha256=C,
+        heuristics=rf.HEURISTICS_MULTI_INPUT,
+        row_statistics_config=contract.combined_row_config_label(
+            **{**base, **overrides}
+        ),
+    )
+
+
+@pytest.mark.parametrize("name", sorted(PRODUCTION_MUTATIONS))
+def test_changing_a_production_parameter_changes_the_fingerprint(name) -> None:
+    """Each of the four is a determining input for the seven /2 columns."""
+    assert fingerprint_for() != fingerprint_for(**PRODUCTION_MUTATIONS[name])
+
+
+def test_the_four_production_mutations_are_mutually_distinct() -> None:
+    """Not merely different from the baseline - different from each other.
+
+    Four fingerprints that all differed from the base but collided with one
+    another would still let one production change be mistaken for another.
+    """
+    digests = {
+        name: fingerprint_for(**mutation)
+        for name, mutation in PRODUCTION_MUTATIONS.items()
+    }
+    assert len(set(digests.values())) == 4, digests
+
+
+def test_the_canonical_payload_carries_all_four_production_parameters() -> None:
+    """Section 6: inspectable, so the digest can be audited by eye."""
+    from obsidianchain import evidence_contract as contract
+
+    payload = rf.canonical_payload(
+        chain_addr_tx_sha256=A,
+        chain_universe_sha256=B,
+        network_dataset_sha256=C,
+        heuristics=rf.HEURISTICS_MULTI_INPUT,
+        row_statistics_config=contract.combined_row_config_label(
+            probe_min_pooled=1, probe_min_observer=2,
+            production_min_pooled=25, production_min_observer=5,
+            production_alpha=1e-4, production_min_effect=0.05,
+        ),
+    )
+    for term in ("min_pooled=25", "min_observer=5",
+                 "alpha=1e-04", "min_effect=0.05"):
+        assert term in payload, term
+    # and the probe half is still there beside it
+    assert "probe:min_pooled=1,min_observer=2" in payload
+
+
+def test_a_probe_only_fingerprint_differs_from_the_combined_one() -> None:
+    """The Phase 5.2 digest and the Phase 5.3 digest must not collide.
+
+    They cannot describe the same artifact: one covers thirteen columns, the
+    other twenty. If they agreed, a 5.2 id would resolve against a /2
+    artifact and silently pick up a verdict it was never minted for.
+    """
+    probe_only = rf.build_evidence_run_fingerprint(
+        chain_addr_tx_sha256=A,
+        chain_universe_sha256=B,
+        network_dataset_sha256=C,
+        heuristics=rf.HEURISTICS_MULTI_INPUT,
+        row_statistics_config=rf.PROBE_ROW_CONFIG,
+    )
+    assert probe_only != fingerprint_for()
+
+
 # ---- import discipline ---------------------------------------------------
 
 

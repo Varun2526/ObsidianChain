@@ -65,6 +65,10 @@ PROBE_CONFIG = SeparationConfig(
     min_pooled_observations=1, min_observer_observations=2
 )
 
+#: Schema /2 adds the production-evaluation columns. Imported rather than
+#: redeclared so the artifact and the API cannot drift apart.
+from obsidianchain import evidence_contract as contract
+
 RECORD_COLUMNS = [
     "edge_index",
     "node_a",
@@ -126,6 +130,7 @@ def build_funnel(
     oracle: SeparationOracle,
     thresholds: tuple[int, ...] = DEFAULT_THRESHOLDS,
     production_config: SeparationConfig | None = None,
+    production_statistics_config: SeparationConfig | None = None,
 ) -> FunnelResult:
     """Replay the co-spend edges and record evidence at every proposed union.
 
@@ -200,6 +205,25 @@ def build_funnel(
     )
     n_redundant = walk.n_redundant
 
+    # ---- schema /2: the production evaluation ------------------------
+    #
+    # A SECOND walk of the same trajectory, not a re-derivation from the
+    # columns above. `union_without_veto` never consults evidence, so with
+    # veto=False the union sequence is a pure function of the graph and is
+    # identical between the two walks - which means row i of one aligns with
+    # row i of the other. That alignment is asserted, not assumed.
+    #
+    # One oracle serves both: SeparationConfig reaches only the oracle's
+    # `config` attribute, never its per-address statistics, so the pooled
+    # numbers are config-independent.
+    production = None
+    if production_statistics_config is not None:
+        production = _production_evaluation(
+            graph, oracle, production_statistics_config,
+            expected_edge_index=edge_index,
+            expected_pooled=(pooled_a, pooled_b),
+        )
+
     records = pd.DataFrame(
         {
             "edge_index": edge_index,
@@ -218,6 +242,16 @@ def build_funnel(
         },
         columns=RECORD_COLUMNS,
     )
+    if production is not None:
+        for column in contract.PRODUCTION_COLUMNS:
+            values = production[column]
+            if column == "dof_production":
+                # Nullable INTEGER, not float. A plain list with Nones makes
+                # pandas infer float64, and the column would land as `double`
+                # with 8.0 instead of 8 - the trap the contract calls out.
+                records[column] = pd.array(values, dtype="Int64")
+            else:
+                records[column] = values
 
     result = FunnelResult(
         records=records,
@@ -241,6 +275,100 @@ def build_funnel(
     verdicts[Verdict.NO_EVIDENCE.value] += int(len(records) - len(candidate))
     result.production_verdicts = verdicts
     return result
+
+
+def _production_evaluation(
+    graph, oracle, config: SeparationConfig, *, expected_edge_index,
+    expected_pooled,
+) -> dict[str, list]:
+    """Walk the same trajectory again under the production configuration.
+
+    Returns the seven schema /2 columns. Every value is the direct output of
+    ``separation_evidence`` under ``config`` - nothing here derives a verdict
+    from a persisted number.
+
+    Short-circuited rows carry NULL statistics, not the dataclass defaults.
+    All three NO_EVIDENCE gates return early with chi2=0.0, dof=0,
+    p_value=1.0, effect=0.0, and those are not results: persisting them raw
+    would put a chi-square of exactly zero on a quarter of a million rows
+    that were never evaluated. ``reason_code_production`` is what
+    distinguishes the three gates, since they are numerically identical.
+    """
+    from obsidianchain.cluster import replay as _replay
+
+    verdicts: list[str] = []
+    codes: list[str] = []
+    reasons: list[str] = []
+    dof: list[float | None] = []
+    chi2: list[float | None] = []
+    p_value: list[float | None] = []
+    effect: list[float | None] = []
+    seen_edges: list[int] = []
+    seen_pooled_a: list[int] = []
+    seen_pooled_b: list[int] = []
+
+    def record_production(decision) -> None:
+        evidence = decision.evidence
+        seen_edges.append(decision.edge_index)
+        seen_pooled_a.append(int(evidence.n_a))
+        seen_pooled_b.append(int(evidence.n_b))
+        verdicts.append(evidence.verdict.value)
+        # Total mapping: an unmapped reason aborts generation rather than
+        # being coerced to a default.
+        codes.append(contract.reason_code(evidence.reason))
+        reasons.append(evidence.reason)
+        if evidence.verdict is Verdict.NO_EVIDENCE:
+            dof.append(None)
+            chi2.append(None)
+            p_value.append(None)
+            effect.append(None)
+        else:
+            dof.append(int(evidence.dof))
+            chi2.append(float(evidence.chi2))
+            p_value.append(float(evidence.p_value))
+            effect.append(float(evidence.effect))
+
+    _replay.replay_unions(
+        graph, oracle, veto=False, config=config, collect=False,
+        on_decision=record_production,
+    )
+
+    # Alignment is the whole basis for joining the two walks row-wise, so it
+    # is checked rather than trusted.
+    if seen_edges != list(expected_edge_index):
+        raise RuntimeError(
+            "the production walk did not follow the same trajectory as the "
+            "probe walk: edge_index sequences differ. The two walks must be "
+            "row-aligned or the production columns would describe different "
+            "proposed merges."
+        )
+    if (seen_pooled_a, seen_pooled_b) != (
+        list(expected_pooled[0]), list(expected_pooled[1])
+    ):
+        raise RuntimeError(
+            "the production walk observed different pooled counts from the "
+            "probe walk; the oracle is not config-independent as assumed."
+        )
+
+    import numpy as _np
+
+    def _round(values):
+        return [
+            None if v is None else float(_np.round(v, contract.ROUNDING_DECIMALS))
+            for v in values
+        ]
+
+    return {
+        "verdict_production": verdicts,
+        "reason_code_production": codes,
+        "reason_production": reasons,
+        "dof_production": dof,
+        # Rounded to the same 6 decimals the probe columns use, so the two
+        # blocks are comparable at face value.
+        "chi2_production": _round(chi2),
+        "p_value_production": p_value,
+        "effect_production": _round(effect),
+    }
 
 
 def _production_verdict(row, config: SeparationConfig) -> Verdict:

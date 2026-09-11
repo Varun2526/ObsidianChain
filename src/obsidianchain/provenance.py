@@ -79,6 +79,31 @@ SYNTHETIC_NETWORK_COLUMN = "synthetic_network"
 #: keeps its provenance.
 META_SUFFIX = ".meta.json"
 
+#: Parquet footer key carrying the artifact's own run fingerprint.
+#:
+#: An artifact and its sidecar are two files, so publishing them is two
+#: filesystem operations and no ordering makes that one atomic step. A crash
+#: between them leaves a new parquet beside an old sidecar - and because the
+#: API reads the CURRENT fingerprint out of the sidecar, that state does not
+#: look broken. It looks like a valid run, and every evidence id minted
+#: against the old fingerprint resolves cheerfully against the new rows.
+#: Silent re-pointing is the exact failure the fingerprint exists to prevent,
+#: so a torn publish must not be able to produce it.
+#:
+#: Writing the fingerprint into the parquet's own footer makes the pair
+#: self-describing: the identity is carried by BOTH files, so a mismatch is
+#: detectable by reading them, whichever half is stale. The check lives in
+#: ``api/provenance_gate.require_artifact_identity``.
+#:
+#: The footer, specifically, because it costs nothing: pyarrow reads
+#: key-value metadata without touching a single row group, so the guard is a
+#: few hundred microseconds and does not scale with the file.
+FINGERPRINT_METADATA_KEY = "obsidianchain.run_fingerprint"
+
+#: Same idea for the content schema, so a /1 artifact relabelled by a
+#: hand-edited sidecar is caught by the file itself.
+ARTIFACT_SCHEMA_METADATA_KEY = "obsidianchain.artifact_schema"
+
 
 class ProvenanceType(str, Enum):
     """Which pipeline produced an artifact. See the module docstring."""
@@ -163,6 +188,17 @@ class Provenance:
     Values are hex digests for files and canonical labels for settings. See
     :mod:`obsidianchain.run_fingerprint` for what goes in and why."""
 
+    artifact: Mapping[str, object] | None = None
+    """Artifact-specific contract block.
+
+    The sidecar's top level describes the OBSERVATION layer - which dataset,
+    which generator, whether the network is synthetic. This block describes
+    what was done to it: the artifact's own content schema, the trajectory
+    walked, and any evaluation configuration applied. Kept separate so that
+    ``provenance_type: PRODUCTION`` sitting beside a production rule cannot be
+    read as "production data evaluated by the production rule" - one of those
+    words means pipeline and the other means rule."""
+
     run_fingerprint: str | None = None
     """Digest over ``inputs``, so a consumer can compare one string instead of
     re-deriving the fold. Full 64 characters; the public identity truncates."""
@@ -215,6 +251,7 @@ class Provenance:
             if self.production_rule is not None
             else None,
             "inputs": dict(self.inputs) if self.inputs is not None else None,
+            "artifact": dict(self.artifact) if self.artifact is not None else None,
             "run_fingerprint": self.run_fingerprint,
             "git_revision": self.git_revision,
             "notes": list(self.notes),
@@ -294,8 +331,75 @@ def write_frame(
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = stamp(frame, provenance) if stamp_rows else frame
     if path.suffix == ".parquet":
-        payload.to_parquet(path, index=index)
+        write_parquet_with_identity(payload, path, provenance, index=index)
     else:
         payload.to_csv(path, index=index, **to_csv_kwargs)
     write_meta(path, provenance)
     return path
+
+
+def artifact_identity(provenance: Provenance) -> dict[str, str]:
+    """The identity keys this provenance contributes to a parquet footer.
+
+    Empty when there is no fingerprint to carry. Several artifacts in this
+    project legitimately have none - a purity CSV has no evidence identity -
+    and inventing one so the dict is never empty would make "unidentified"
+    and "identified" indistinguishable, which is the mistake
+    ``run_fingerprint._require_digest`` already refuses to make.
+    """
+    identity: dict[str, str] = {}
+    if provenance.run_fingerprint:
+        identity[FINGERPRINT_METADATA_KEY] = str(provenance.run_fingerprint)
+    schema = (dict(provenance.artifact or {})).get("artifact_schema")
+    if schema:
+        identity[ARTIFACT_SCHEMA_METADATA_KEY] = str(schema)
+    return identity
+
+
+def write_parquet_with_identity(
+    payload: pd.DataFrame, path, provenance: Provenance, *, index: bool = False
+) -> Path:
+    """Write a parquet whose footer carries its own run fingerprint.
+
+    Goes through pyarrow rather than ``DataFrame.to_parquet`` because the
+    existing pandas metadata in the footer must be PRESERVED, not replaced:
+    dropping it would change how the file reads back (index handling, dtypes
+    including the nullable Int64 that section 1 pins) while looking like a
+    pure metadata addition. So the identity keys are merged into whatever
+    schema pyarrow derived, and nothing else about the write changes.
+    """
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    path = Path(path)
+    identity = artifact_identity(provenance)
+    table = pa.Table.from_pandas(payload, preserve_index=index or None)
+    if identity:
+        merged = dict(table.schema.metadata or {})
+        merged.update(
+            {key.encode(): value.encode() for key, value in identity.items()}
+        )
+        table = table.replace_schema_metadata(merged)
+    pq.write_table(table, path)
+    return path
+
+
+def read_artifact_identity(path) -> dict[str, str]:
+    """Read the identity keys out of a parquet footer.
+
+    Returns an empty dict for a file that carries none, so a caller can tell
+    "this artifact predates the identity keys" from "this artifact disagrees
+    with its sidecar". Those need different answers: the first is an
+    artifact to regenerate, the second is a torn publish.
+    """
+    import pyarrow.parquet as pq
+
+    metadata = pq.ParquetFile(Path(path)).schema_arrow.metadata or {}
+    decoded = {
+        key.decode(): value.decode()
+        for key, value in metadata.items()
+        if key.decode() in (
+            FINGERPRINT_METADATA_KEY, ARTIFACT_SCHEMA_METADATA_KEY
+        )
+    }
+    return decoded

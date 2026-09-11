@@ -11,18 +11,30 @@ union was applied, none was vetoed - and no fused-engine decision ledger is
 persisted anywhere in this project. ``run --mode fused`` and
 ``fusion-summary`` write zero files.
 
-No verdict is served, derived or otherwise. The persisted statistics were
-computed under ``PROBE_CONFIG`` (min_pooled=1, min_observer=2), not under the
-production rule (25, 5), so degrees of freedom in particular may differ under
-it. Deriving a production verdict from them would be an approximation dressed
-as a fact. The response states the mismatch in its own body rather than
-hiding it in a comment.
+Two statistic blocks, never one
+-------------------------------
+``statistics`` is the **probe** evaluation: computed under ``PROBE_CONFIG``
+(min_pooled=1, min_observer=2) to extract a value wherever one was
+computable. It is not the production rule and no verdict is derived from it.
 
-``reason`` is not served either. It exists on ``SeparationEvidence`` and is
-dropped by the funnel writer, and two of the six reachable rationales are
-indistinguishable from the persisted fields - both leave ``dof=0, chi2=0,
-p=1.0, effect=0``. A reconstructed reason on a "why was this flagged?" screen
-is exactly the inferred claim this project has spent four phases removing.
+``production_evidence`` is the **production** evaluation: verdict, reason and
+reason code as ``separation_evidence()`` returned them under the frozen
+production configuration (25, 5, alpha=1e-4, min_effect=0.05), persisted by
+the artifact writer at schema ``/2``. Phase 5.2 served neither, because
+deriving them from the probe columns would have been an approximation dressed
+as a fact - two of the reachable rationales are indistinguishable once
+persisted, all three NO_EVIDENCE gates leaving ``dof=0, chi2=0, p=1.0``. The
+answer was to record the real evaluation, not to guess it. Nothing on this
+path reconstructs, re-derives or post-hoc classifies anything.
+
+Both blocks carry ``config`` inside themselves, so a caller holding two sets
+of statistics cannot plot the wrong one. Where the production evaluation
+short-circuited at a gate, its four statistic fields are ``null`` rather than
+the dataclass defaults: a chi-square of exactly zero on 253,389 rows would
+read as "perfectly consistent" instead of "never evaluated".
+
+A ``/1`` artifact is refused rather than served without these fields; see
+:func:`obsidianchain.api.provenance_gate.require_artifact_schema`.
 
 Availability, not judgement
 ---------------------------
@@ -43,12 +55,12 @@ whole design turns on.
 
 from __future__ import annotations
 
-import math
 import re
 from dataclasses import dataclass
 
+from obsidianchain import evidence_contract as contract
 from obsidianchain import run_fingerprint as rf
-from obsidianchain.api import artifacts, boundary
+from obsidianchain.api import artifacts, boundary, provenance_gate
 
 #: ``<run_fingerprint>:<edge_index>``. Anchored, and the index may not carry a
 #: sign or leading zeros, so exactly one string addresses one row.
@@ -67,7 +79,8 @@ STATISTICS_NOTE = (
     "These statistics were computed under the probe configuration below to "
     "extract a value wherever one was computable. They were NOT computed "
     "under provenance.production_rule, and degrees of freedom in particular "
-    "may differ under it. No verdict is derived from them here."
+    "may differ under it. No verdict is derived from them here: the "
+    "production evaluation is carried separately, in production_evidence."
 )
 
 UNRESOLVED_ADDRESS = None
@@ -144,20 +157,23 @@ def current_run_fingerprint(sidecar: dict) -> str:
 
 
 def _clean(value):
-    """NaN -> None, numpy scalar -> Python scalar.
+    """Missing -> None, numpy scalar -> Python scalar.
 
     NaN is not representable in JSON and 251,914 rows carry it. Emitting
     ``null`` says "not computed"; emitting ``NaN`` would either break the
     encoder or arrive as a string.
+
+    ``pandas.isna`` rather than ``math.isnan`` because schema /2 introduced a
+    nullable integer column: an absent ``dof_production`` arrives as
+    ``pandas.NA``, which is not a float, has no ``.item()``, and would
+    otherwise be handed to the JSON encoder untouched.
     """
-    if value is None:
-        return None
-    if isinstance(value, float) and math.isnan(value):
+    import pandas as pd
+
+    if value is None or pd.isna(value):
         return None
     if hasattr(value, "item"):
         value = value.item()
-    if isinstance(value, float) and math.isnan(value):
-        return None
     return value
 
 
@@ -210,6 +226,51 @@ def _provenance_block(sidecar: dict) -> dict:
     }
 
 
+def _production_block(row, sidecar: dict) -> dict:
+    """The production evaluation, as persisted. Nothing is derived here.
+
+    Every value is read from a schema /2 column. The wordings are the frozen
+    ones from :mod:`obsidianchain.evidence_contract` rather than paraphrases,
+    because a paraphrase is where "did not establish separation" turns into
+    "same entity".
+    """
+    artifact = sidecar.get("artifact") or {}
+    verdict = str(row["verdict_production"])
+    block = {
+        "config": "production",
+        "verdict": verdict,
+        "reason_code": str(row["reason_code_production"]),
+        "reason": str(row["reason_production"]),
+        "dof": _clean_int(row["dof_production"]),
+        "chi2": _clean(row["chi2_production"]),
+        "p_value": _clean(row["p_value_production"]),
+        "effect": _clean(row["effect_production"]),
+        "evaluation_config": artifact.get("production_evaluation_config"),
+        "definition": contract.VERDICT_DEFINITION,
+        "scope": contract.VERDICT_SCOPE,
+        "trajectory_equivalence": artifact.get("trajectory_equivalence"),
+        "veto_never_fired": artifact.get("veto_never_fired"),
+        "run_verdict_counts": artifact.get("production_verdict_counts"),
+        "frozen_run_limitation": contract.FROZEN_RUN_LIMITATION,
+    }
+    # NOT_SEPARATED never travels without its gloss: it is the field most
+    # likely to be rendered as "confirmed same entity".
+    if verdict == "NOT_SEPARATED":
+        block["meaning"] = contract.NOT_SEPARATED_MEANING
+    return block
+
+
+def _clean_int(value):
+    """Nullable integer -> int or None.
+
+    pandas' default parquet read demotes a nullable int64 to float64, so a
+    dof of 8 arrives as 8.0 and would serialise as 8.0. The contract promises
+    8, so the cast is explicit.
+    """
+    cleaned = _clean(value)
+    return None if cleaned is None else int(cleaned)
+
+
 def get_evidence(raw_id: str, root=None) -> dict:
     """Load one evidence row and shape the response.
 
@@ -219,6 +280,9 @@ def get_evidence(raw_id: str, root=None) -> dict:
     parsed = parse_evidence_id(raw_id)
 
     funnel, sidecar = artifacts.load_evidence_funnel(root)
+    provenance_gate.require_artifact_schema(
+        sidecar, artifacts.evidence_funnel_path(root)
+    )
     current = current_run_fingerprint(sidecar)
     if parsed.run_fingerprint != current:
         raise EvidenceIdStaleError(
@@ -297,6 +361,10 @@ def get_evidence(raw_id: str, root=None) -> dict:
         "trajectory": {"name": "chain-only", "note": TRAJECTORY_NOTE},
         "proposed_merge": {"side_a": side_a, "side_b": side_b},
         "statistics": {
+            # Explicitly labelled inside the block as well as by
+            # statistics_config above, so a frontend holding two statistic
+            # blocks cannot plot the wrong one.
+            "config": "probe",
             "pooled_observations_a": int(row["pooled_a"]),
             "pooled_observations_b": int(row["pooled_b"]),
             "min_pooled": min_pooled,
@@ -305,6 +373,7 @@ def get_evidence(raw_id: str, root=None) -> dict:
             "p_value": p_value,
             "effect": _clean(row["effect"]),
         },
+        "production_evidence": _production_block(row, sidecar),
         "availability": {
             "evidence_available": evidence_available,
             "decidable_under_production_rule": (

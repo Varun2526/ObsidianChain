@@ -48,7 +48,9 @@ app = typer.Typer(
 DATA_ROOT = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
 
 
-def _evidence_run_inputs(data_root: Path, network_manifest: dict) -> tuple[dict, str]:
+def _evidence_run_inputs(
+    data_root: Path, network_manifest: dict, production_config
+) -> tuple[dict, str]:
     """Hash every input that determines an evidence row, and fold them.
 
     Computed HERE, on the artifact-generation side, and persisted into the
@@ -60,17 +62,31 @@ def _evidence_run_inputs(data_root: Path, network_manifest: dict) -> tuple[dict,
     ``wallets_classes.csv`` is concatenated first in the single factorize, so
     it shifts every address code. Both determine a row, so both are hashed.
     """
+    from obsidianchain import evidence_contract as contract
     from obsidianchain import run_fingerprint as rf
+    from obsidianchain.eval.evidence_funnel import PROBE_CONFIG
     from obsidianchain.io import elliptic
 
     addr_tx = elliptic.find_dataset_file(elliptic.ADDR_TX, data_root)
     universe = elliptic.find_dataset_file(elliptic.WALLETS_CLASSES, data_root)
+    # BOTH configurations, because schema /2 rows are determined by both:
+    # the thirteen probe columns by the first, the seven production columns
+    # by the second. A fingerprint covering only the probe half would let the
+    # production rule change while every evidence id kept resolving.
+    row_config = contract.combined_row_config_label(
+        probe_min_pooled=PROBE_CONFIG.min_pooled_observations,
+        probe_min_observer=PROBE_CONFIG.min_observer_observations,
+        production_min_pooled=production_config.min_pooled_observations,
+        production_min_observer=production_config.min_observer_observations,
+        production_alpha=production_config.alpha,
+        production_min_effect=production_config.min_effect,
+    )
     inputs = {
         "chain_addr_tx_sha256": rf.sha256_file(addr_tx),
         "chain_universe_sha256": rf.sha256_file(universe),
         "network_dataset_sha256": str(network_manifest.get("dataset_sha256", "")),
         "heuristics": rf.HEURISTICS_MULTI_INPUT,
-        "row_statistics_config": rf.PROBE_ROW_CONFIG,
+        "row_statistics_config": row_config,
     }
     full = rf.build_evidence_run_fingerprint(
         chain_addr_tx_sha256=inputs["chain_addr_tx_sha256"],
@@ -80,6 +96,168 @@ def _evidence_run_inputs(data_root: Path, network_manifest: dict) -> tuple[dict,
         row_statistics_config=inputs["row_statistics_config"],
     )
     return inputs, full
+
+
+def _publish_pair(staged: Path, destination: Path, run_fingerprint: str) -> None:
+    """Move a staged artifact and its sidecar into place, tear-safely.
+
+    Two files means two ``os.replace`` calls and there is no ordering that
+    makes them one atomic step. What CAN be guaranteed is that no torn
+    intermediate state is ever mistaken for a complete one, and that is done
+    in three parts:
+
+    1. **The identity is in both files.** ``provenance.write_frame`` stamps
+       the run fingerprint into the parquet footer as well as the sidecar, so
+       a mismatched pair is detectable by reading it. The API's gate refuses
+       one rather than serving rows under the wrong fingerprint - which is
+       the specific accident that matters, because new-parquet-with-old-
+       sidecar does not look broken, it looks like a valid earlier run.
+
+    2. **Both halves are durable before either is visible.** The staged
+       files are fsynced, so a power loss cannot publish a name that points
+       at unwritten blocks. Without this the window is not the microseconds
+       between two renames; it is however long the page cache holds the data.
+
+    3. **The sidecar goes last, and its absence is checked for.** Ordering
+       does not affect detectability - the gate catches either half being
+       stale - but it decides which failure an operator meets. Parquet first
+       means the incomplete state is "new rows, no matching sidecar", and
+       ``load_sidecar`` already refuses an artifact whose sidecar is missing
+       or stale rather than defaulting to serving it.
+
+    The verification in :func:`_verify_funnel_artifact` has already run at
+    this point, so nothing here decides whether to publish - only how.
+    """
+    import os as _os
+
+    staged_meta = Path(str(staged) + ".meta.json")
+    if not staged_meta.is_file():
+        typer.secho(
+            f"HARD STOP: {staged_meta.name} was not written beside the "
+            f"staged artifact. Publishing the parquet alone would leave it "
+            f"with the PREVIOUS run's sidecar. Refusing to publish.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=8)
+
+    # Durable before visible. Directory fsync too: on POSIX the rename
+    # itself is only durable once the parent directory's entry is flushed.
+    for path in (staged, staged_meta):
+        handle = _os.open(path, _os.O_RDONLY)
+        try:
+            _os.fsync(handle)
+        finally:
+            _os.close(handle)
+
+    _os.replace(staged, destination)
+    _os.replace(staged_meta, str(destination) + ".meta.json")
+
+    directory = _os.open(destination.parent, _os.O_RDONLY)
+    try:
+        _os.fsync(directory)
+    finally:
+        _os.close(directory)
+
+    # Read the published pair back through the same gate the API uses. A
+    # publish that cannot be served is a failed publish, and finding that out
+    # now - with the staging directory still on disk and the operator still
+    # watching - is worth one footer read.
+    from obsidianchain.api import provenance_gate as _gate
+    from obsidianchain import provenance as _prov
+
+    meta = _gate.load_sidecar(destination)
+    if meta.get("run_fingerprint") != run_fingerprint:
+        typer.secho(
+            f"HARD STOP: the published sidecar carries run fingerprint "
+            f"{str(meta.get('run_fingerprint'))[:16]}, not the "
+            f"{run_fingerprint[:16]} just computed. The pair is torn.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=8)
+    embedded = _prov.read_artifact_identity(destination).get(
+        _prov.FINGERPRINT_METADATA_KEY
+    )
+    if embedded != run_fingerprint:
+        typer.secho(
+            f"HARD STOP: the published parquet carries embedded fingerprint "
+            f"{str(embedded)[:16]}, not {run_fingerprint[:16]}. The API "
+            f"would refuse this artifact as a torn publish.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=8)
+    _gate.require_artifact_identity(meta, destination)
+
+
+def _verify_funnel_artifact(staged: Path, published: Path, counts: dict) -> None:
+    """Section 14: what must be identical, and what is expected to change.
+
+    The thirteen probe columns must be bit-identical in VALUE against the
+    artifact being replaced. The whole-file hash is expected to change - it
+    must, once seven columns are added - so it is never compared.
+    """
+    import pandas as pd
+
+    from obsidianchain import evidence_contract as contract
+
+    import pyarrow.parquet as pq
+
+    fresh = pd.read_parquet(staged)
+    for column in contract.PRODUCTION_COLUMNS:
+        if column not in fresh.columns:
+            typer.secho(f"missing production column {column!r}", fg=typer.colors.RED)
+            raise typer.Exit(code=5)
+
+    # Section 1 pins the on-disk types, so the gate checks them. Without this
+    # a nullable integer silently lands as a double and the API serves 8.0
+    # where the contract promises 8.
+    expected = {
+        "verdict_production": "string",
+        "reason_code_production": "string",
+        "reason_production": "string",
+        "dof_production": "int64",
+        "chi2_production": "double",
+        "p_value_production": "double",
+        "effect_production": "double",
+    }
+    actual = dict(
+        zip(
+            pq.ParquetFile(staged).schema_arrow.names,
+            [str(t) for t in pq.ParquetFile(staged).schema_arrow.types],
+        )
+    )
+    for column, want in expected.items():
+        got = actual.get(column, "")
+        if want not in got:
+            typer.secho(
+                f"HARD STOP: {column} has on-disk type {got!r}, contract "
+                f"requires {want!r}. Refusing to publish.",
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(code=7)
+    if int(len(fresh)) != sum(counts.values()):
+        raise typer.Exit(code=5)
+
+    if not published.is_file():
+        return  # first generation: nothing to compare against
+    old = pd.read_parquet(published)
+    import numpy as np
+
+    for column in old.columns:
+        if column in contract.PRODUCTION_COLUMNS:
+            continue
+        a, b = old[column].to_numpy(), fresh[column].to_numpy()
+        same = (
+            np.array_equal(a, b, equal_nan=True) if a.dtype.kind == "f"
+            else np.array_equal(a, b)
+        )
+        if not same:
+            typer.secho(
+                f"HARD STOP: existing column {column!r} changed during "
+                f"regeneration. Refusing to publish; the artifact on disk is "
+                f"untouched.",
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(code=6)
 
 
 def _provenance(
@@ -92,6 +270,7 @@ def _provenance(
     config=None,
     inputs=None,
     run_fingerprint=None,
+    artifact=None,
     notes=(),
 ):
     """Provenance for one durable artifact.
@@ -113,6 +292,7 @@ def _provenance(
         production_rule=prov.rule_config(config) if config is not None else None,
         inputs=inputs,
         run_fingerprint=run_fingerprint,
+        artifact=artifact,
         notes=tuple(notes),
     )
 
@@ -854,10 +1034,12 @@ def evidence_funnel(
         config=config,
     )
     result = funnel.build_funnel(
-        graph, oracle, thresholds=levels, production_config=config
+        graph, oracle, thresholds=levels, production_config=config,
+        production_statistics_config=config,
     )
     typer.echo(funnel.format_funnel(result))
 
+    from obsidianchain import evidence_contract as contract
     from obsidianchain.network import boundary as _boundary
 
     destination = out or (data_root / "processed" / "evidence_funnel.parquet")
@@ -865,31 +1047,114 @@ def evidence_funnel(
     # true, because the chain is real Elliptic++ and the announcements
     # behind every chi-square here are generated.
     network_manifest = _boundary.load_manifest(data_root / "processed")
-    run_inputs, run_fp = _evidence_run_inputs(data_root, network_manifest)
-    rows = funnel.write_records(
-        result,
-        destination,
-        provenance=_provenance(
-            "PRODUCTION",
-            dataset_id="elliptic++/frozen-september-2026",
-            synthetic_network=True,
-            manifest=network_manifest,
-            config=config,
-            inputs=run_inputs,
-            run_fingerprint=run_fp,
-            notes=(
-                "Network announcements are SYNTHETIC. Demonstrates the "
-                "mechanism; validates nothing about Bitcoin.",
-                "CHAIN-ONLY trajectory: every proposed union was applied. "
-                "This is not a persisted fused-engine decision ledger.",
-                "Row statistics were computed under PROBE_CONFIG "
-                "(min_pooled=1, min_observer=2), NOT under production_rule. "
-                "Degrees of freedom in particular may differ under it.",
-            ),
+    run_inputs, run_fp = _evidence_run_inputs(data_root, network_manifest, config)
+
+    # ---- section 7: trajectory equivalence, VERIFIED not inferred -----
+    #
+    # The measurement lives in eval/trajectory.py so it can be tested; this
+    # command only reports it and decides whether to publish. It used to be
+    # inline here, where the one thing standing between a re-pointed
+    # evidence id and a published artifact was untestable by construction.
+    from obsidianchain.eval import trajectory as _trajectory
+
+    separated = int((result.records["verdict_production"] == "SEPARATED").sum())
+    equivalence = _trajectory.verify_trajectory_equivalence(
+        graph, oracle, config, n_separated=separated
+    )
+    veto_never_fired = equivalence.equivalent
+    typer.echo("")
+    typer.echo(equivalence.as_report())
+    if equivalence.invariant_violated:
+        typer.secho(
+            "INVARIANT VIOLATED: no SEPARATED verdict, yet the fused and "
+            "chain-only trajectories differ. Refusing to publish.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=4)
+
+    counts = {
+        state: int((result.records["verdict_production"] == state).sum())
+        for state in ("SEPARATED", "NOT_SEPARATED", "NO_EVIDENCE")
+    }
+    artifact_block = {
+        "artifact_schema": contract.ARTIFACT_SCHEMA,
+        "trajectory": "chain-only",
+        "probe_statistics_config": {
+            "min_pooled_observations": funnel.PROBE_CONFIG.min_pooled_observations,
+            "min_observer_observations":
+                funnel.PROBE_CONFIG.min_observer_observations,
+        },
+        "production_evaluation_config": {
+            "min_pooled_observations": config.min_pooled_observations,
+            "min_observer_observations": config.min_observer_observations,
+            "alpha": config.alpha,
+            "min_effect": config.min_effect,
+            "evaluation_order": ["POOLED_GATE", "OBSERVER_GATE",
+                                 "VARIANCE_GATE", "COMPUTE", "DECIDE"],
+            "note": contract.VERDICT_DEFINITION,
+        },
+        "production_verdict_counts": counts,
+        "veto_never_fired": veto_never_fired,
+        # The frozen wording, from the contract rather than retyped here, so
+        # a test can compare the SERVED string against the constant instead
+        # of settling for a "VERIFIED:" prefix match.
+        "trajectory_equivalence": equivalence.statement,
+        "trajectory_equivalence_evidence": {
+            "separated_verdicts": equivalence.n_separated,
+            "unions_refused_by_veto": equivalence.n_blocked,
+            "roots_equal": equivalence.roots_equal,
+            "component_sizes_equal": equivalence.component_sizes_equal,
+        },
+        "not_separated_meaning": contract.NOT_SEPARATED_MEANING,
+        "frozen_run_limitation": contract.FROZEN_RUN_LIMITATION,
+        "verdict_scope": contract.VERDICT_SCOPE,
+    }
+
+    evidence_provenance = _provenance(
+        "PRODUCTION",
+        dataset_id="elliptic++/frozen-september-2026",
+        synthetic_network=True,
+        manifest=network_manifest,
+        config=config,
+        inputs=run_inputs,
+        run_fingerprint=run_fp,
+        artifact=artifact_block,
+        notes=(
+            "Network announcements are SYNTHETIC. Demonstrates the "
+            "mechanism; validates nothing about Bitcoin.",
+            "CHAIN-ONLY trajectory: every proposed union was applied.",
+            "The thirteen probe columns were computed under PROBE_CONFIG "
+            "(min_pooled=1, min_observer=2). The seven *_production columns "
+            "were computed under the production rule. Both configurations "
+            "are in artifact.",
         ),
     )
+
+    # ---- sections 15/16: validate, then publish atomically ------------
+    #
+    # Written to a temporary directory and moved into place only after the
+    # invariants pass. A half-finished regeneration must never leave a new
+    # parquet beside an old sidecar, and the fingerprint must not become
+    # visible before the artifact it names.
+    import shutil as _shutil
+    import tempfile as _tempfile
+
+    # Staged inside the DESTINATION's directory: os.replace is atomic only
+    # within one filesystem, and /tmp is a different device from the mounted
+    # data root.
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(_tempfile.mkdtemp(prefix=".oc-funnel-", dir=destination.parent))
+    try:
+        staged = staging / destination.name
+        rows = funnel.write_records(result, staged, provenance=evidence_provenance)
+        _verify_funnel_artifact(staged, destination, counts)
+        _publish_pair(staged, destination, run_fp)
+    finally:
+        _shutil.rmtree(staging, ignore_errors=True)
+
     typer.echo("")
     typer.echo(f"run fingerprint  {run_fp[:16]}   (full digest in the sidecar)")
+    typer.echo(f"artifact schema  {contract.ARTIFACT_SCHEMA}")
     typer.echo("")
     typer.echo(f"wrote {rows:,} per-union records -> {destination}")
     typer.echo(
