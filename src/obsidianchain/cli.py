@@ -1839,3 +1839,289 @@ def main() -> None:
 
 if __name__ == "__main__":
     sys.exit(app())
+
+
+# ---- Phase 6: entity risk ranking ---------------------------------------
+
+
+@app.command("phase6-dataset")
+def phase6_dataset(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    out: Path = typer.Option(None, "--out"),
+    min_depth: int = typer.Option(
+        5, "--peel-min-depth",
+        help="PEEL-1 primary depth (SPEC 5.7). 10 is the sensitivity run.",
+    ),
+) -> None:
+    """Build the Phase 6 address-level feature matrix.
+
+    Address-level prediction, as-of-t features recomputed from the
+    transaction layer, address-disjoint temporal split. Reads no
+    wallets_features.csv column - SPEC 0.3 found 52 of 55 of them leak the
+    future - and joins labels only after every feature is built.
+    """
+    from obsidianchain.features import dataset as ds
+
+    started = time.perf_counter()
+    frame, report = ds.build_dataset(data_root, min_depth=min_depth)
+    destination = out or (
+        data_root / "processed" / f"phase6_dataset_d{min_depth}.parquet"
+    )
+
+    typer.echo("=" * 78)
+    typer.echo("OBSIDIANCHAIN - PHASE 6.0 DATASET")
+    typer.echo("=" * 78)
+    typer.echo(f"  addresses seen                      {report.n_addresses:>12,}")
+    typer.echo(f"  dropped: spans a split boundary     {report.n_spanners_dropped:>12,}")
+    typer.echo(f"  labeled rows retained               {report.n_labeled:>12,}")
+    typer.echo("")
+    for split in ("train", "validation", "test"):
+        n = report.split_counts.get(split, 0)
+        p = report.prevalence.get(split, float("nan"))
+        typer.echo(f"  {split:<12} {n:>10,} rows   prevalence {p*100:6.3f}%")
+
+    fingerprint = ds.dataset_fingerprint(data_root, min_depth)
+    provenance = _provenance(
+        "PRODUCTION",
+        dataset_id="elliptic++/frozen-september-2026",
+        synthetic_network=True,
+        inputs={"phase6_dataset_sha256": fingerprint},
+        run_fingerprint=fingerprint,
+        artifact={
+            "artifact_schema": ds.ARTIFACT_SCHEMA,
+            "prediction_unit": "address",
+            "label_policy": "class1=1, class2=0, class3 EXCLUDED (never licit)",
+            "split": {"train": "t1-t34", "validation": "t35-t41", "test": "t42-t49"},
+            "peel_min_depth": int(min_depth),
+            "feature_groups": {k: len(v) for k, v in ds.FEATURE_GROUPS.items()},
+            "excluded": [
+                "Aggregate_feature_1..72 (UNRESOLVED provenance, SPEC 0.7)",
+                "Local_feature_1..93 (anonymised, SPEC 3.3)",
+                "52 of 55 wallets_features.csv columns (whole-life, SPEC 0.3)",
+                "cluster_size_final (final membership is not predictive input)",
+                "k-hop illicit exposure (SPEC 4.2)",
+            ],
+            "split_counts": report.split_counts,
+            "prevalence": report.prevalence,
+        },
+        notes=(
+            "Network features are derived from SYNTHETIC announcements. They "
+            "are behavioural summaries, never ownership claims.",
+            "Unknown-class addresses are EXCLUDED, never treated as licit.",
+            "Features are as-of the address's last active timestep; "
+            "boundary-spanning addresses are removed entirely.",
+        ),
+    )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    _publish_frame(frame, destination, provenance, fingerprint)
+
+    typer.echo("")
+    typer.echo(f"dataset fingerprint  {fingerprint[:16]}")
+    typer.echo(f"wrote {len(frame):,} rows x {len(frame.columns)} columns -> {destination}")
+    typer.echo(f"peak memory {_peak_rss_mb():.1f} MB   "
+               f"wall time {time.perf_counter() - started:.1f} s")
+
+
+def _publish_frame(frame, destination: Path, provenance, fingerprint: str) -> None:
+    """Stage, then move both halves into place (the Phase 5.3-B discipline)."""
+    import shutil as _shutil
+    import tempfile as _tempfile
+
+    from obsidianchain import provenance as prov
+
+    staging = Path(_tempfile.mkdtemp(prefix=".oc-phase6-", dir=destination.parent))
+    try:
+        staged = staging / destination.name
+        prov.write_frame(frame, staged, provenance)
+        _publish_pair(staged, destination, fingerprint)
+    finally:
+        _shutil.rmtree(staging, ignore_errors=True)
+
+
+@app.command("phase6-experiment")
+def phase6_experiment(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    dataset_path: Path = typer.Option(None, "--dataset"),
+    min_depth: int = typer.Option(5, "--peel-min-depth"),
+) -> None:
+    """Run the M0-M3 ablation, cluster aggregation and P1-P4.
+
+    Every threshold, label definition and prediction was frozen in
+    docs/PHASE6_SPEC.md before this ran. Nothing here is selected on the
+    strength of a result.
+    """
+    import pandas as pd
+
+    from obsidianchain.features import dataset as ds
+    from obsidianchain.ml import experiment, metrics, model
+
+    started = time.perf_counter()
+    path = dataset_path or (
+        data_root / "processed" / f"phase6_dataset_d{min_depth}.parquet"
+    )
+    if not path.is_file():
+        typer.secho(
+            f"{path} not found. Run 'phase6-dataset' first.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
+    frame = pd.read_parquet(path)
+
+    typer.echo("=" * 78)
+    typer.echo(f"OBSIDIANCHAIN - PHASE 6.0 EXPERIMENT   (PEEL-1 depth >= {min_depth})")
+    typer.echo("=" * 78)
+
+    stages = experiment.run_ablation(frame)
+    typer.echo("")
+    typer.echo("-- ablation, TEST split " + "-" * 54)
+    typer.echo(f"  {'stage':<14}{'PR-AUC':>9}{'base':>8}{'nAP':>8}{'ROC':>8}"
+               f"{'P@10':>7}{'P@50':>7}{'P@100':>7}{'Brier':>8}")
+    previous = None
+    for s in stages:
+        r = s.test
+        typer.echo(
+            f"  {s.name:<14}{r.pr_auc:>9.4f}{r.pr_auc_baseline:>8.4f}"
+            f"{r.normalised_ap:>8.4f}{r.roc_auc:>8.4f}"
+            f"{r.precision_at[10]:>7.2f}{r.precision_at[50]:>7.2f}"
+            f"{r.precision_at[100]:>7.2f}{r.brier:>8.5f}"
+        )
+        previous = r
+    typer.echo("")
+    for a, b in zip(stages, stages[1:]):
+        typer.echo(f"  delta({b.name} - {a.name}) PR-AUC "
+                   f"{b.test.pr_auc - a.test.pr_auc:+.5f}")
+
+    trained, scored = experiment.fit_full(frame)
+    typer.echo("")
+    typer.echo("-- severity bands (validation only, SPEC 6.3.1) " + "-" * 30)
+    for band in trained.bands:
+        if band.populated:
+            typer.echo(f"  {band.name:<9} target {band.target:.2f}  "
+                       f"threshold {band.threshold:.6f}  "
+                       f"support {band.support:>6,}  "
+                       f"validation precision {band.precision:.4f}")
+        else:
+            typer.echo(f"  {band.name:<9} target {band.target:.2f}  UNPOPULATED "
+                       f"- no threshold meets the target at support >= "
+                       f"{model.MIN_SUPPORT}")
+    counts = pd.Series(scored["severity"]).value_counts().to_dict()
+    typer.echo(f"  test severity distribution: {counts}")
+
+    clusters_path = data_root / "processed" / "address_clusters.parquet"
+    cluster_table = None
+    if clusters_path.is_file():
+        index = pd.read_parquet(clusters_path, columns=["address", "cluster_id"])
+        cluster_table = experiment.aggregate_clusters(scored, index)
+        cluster_metrics = experiment.evaluate_clusters(cluster_table)
+        typer.echo("")
+        typer.echo("-- cluster aggregation, TEST members " + "-" * 41)
+        typer.echo(f"  clusters {len(cluster_table):,}   "
+                   f"positive (share>=0.10) {int(cluster_table['label_primary'].sum()):,}   "
+                   f"positive (>=1 illicit) {int(cluster_table['label_sensitivity'].sum()):,}")
+        typer.echo(f"  {'label':<24}{'agg':<11}{'PR-AUC':>9}{'P@10':>7}{'P@50':>7}"
+                   f"{'P@100':>7}{'R@10':>7}{'R@50':>7}{'R@100':>7}")
+        for row in cluster_metrics.itertuples():
+            typer.echo(
+                f"  {row.cluster_label:<24}{row.aggregation:<11}{row.pr_auc:>9.4f}"
+                f"{row.precision_at_10:>7.2f}{row.precision_at_50:>7.2f}"
+                f"{row.precision_at_100:>7.2f}{row.recall_at_10:>7.3f}"
+                f"{row.recall_at_50:>7.3f}{row.recall_at_100:>7.3f}"
+            )
+    else:
+        cluster_metrics = pd.DataFrame()
+
+    predictions = experiment.evaluate_predictions(
+        stages, cluster_table if cluster_table is not None else pd.DataFrame(),
+        scored,
+    )
+    typer.echo("")
+    typer.echo("-- pre-registered predictions " + "-" * 48)
+    for row in predictions.itertuples():
+        verdict = "HELD" if row.held else "REFUTED"
+        typer.echo(f"  {row.prediction}  {verdict:<8} observed "
+                   f"{row.observed:+.5f}  threshold {row.threshold}")
+        typer.echo(f"      {row.statement}")
+        detail = getattr(row, "detail", None)
+        if isinstance(detail, str):
+            typer.echo(f"      {detail}")
+
+    contributions = model.shap_contributions(trained, scored)
+    mean_abs = contributions.drop(columns=["base_value"]).abs().mean()
+    typer.echo("")
+    typer.echo("-- SHAP, mean |contribution| in log-odds, top 12 " + "-" * 29)
+    for name, value in mean_abs.sort_values(ascending=False).head(12).items():
+        typer.echo(f"  {value:>8.4f}  {name}")
+
+    fingerprint = ds.dataset_fingerprint(data_root, min_depth)
+    processed = data_root / "processed"
+    _write_phase6_outputs(
+        processed, min_depth, fingerprint, stages, scored, cluster_metrics,
+        predictions, mean_abs, trained,
+    )
+    typer.echo("")
+    typer.echo(f"wall time {time.perf_counter() - started:.1f} s   "
+               f"peak memory {_peak_rss_mb():.1f} MB")
+
+
+def _write_phase6_outputs(processed: Path, min_depth: int, fingerprint: str,
+                          stages, scored, cluster_metrics, predictions,
+                          mean_abs, trained) -> None:
+    """Persist every Phase 6 result with provenance."""
+    import pandas as pd
+
+    from obsidianchain.features import dataset as ds
+    from obsidianchain.ml import metrics as ml_metrics
+
+    suffix = f"_d{min_depth}"
+    ablation = pd.DataFrame([s.test.as_dict() for s in stages])
+    ablation["stage"] = [s.name for s in stages]
+    ablation["n_features"] = [len(s.features) for s in stages]
+
+    bands = pd.DataFrame([
+        {"band": b.name, "target": b.target, "threshold": b.threshold,
+         "support": b.support, "validation_precision": b.precision,
+         "populated": b.populated}
+        for b in trained.bands
+    ])
+    calibration = ml_metrics.calibration_curve(scored["y"], scored["risk"])
+    shap_frame = mean_abs.rename("mean_abs_contribution").reset_index()
+    shap_frame.columns = ["feature", "mean_abs_contribution"]
+
+    artifact = {
+        "artifact_schema": "obsidianchain.phase6_results/1",
+        "peel_min_depth": int(min_depth),
+        "cluster_label_primary": "illicit_share_among_labeled >= 0.10",
+        "cluster_label_sensitivity": ">=1 illicit labeled member",
+        "predictions": predictions.to_dict("records"),
+        "note": (
+            "PEEL-1 is structural candidate generation, not laundering "
+            "classification. Network features are behavioural summaries of "
+            "SYNTHETIC announcements, never ownership claims."
+        ),
+    }
+    for name, frame in (
+        (f"phase6_ablation{suffix}.csv", ablation),
+        (f"phase6_severity_bands{suffix}.csv", bands),
+        (f"phase6_calibration{suffix}.csv", calibration),
+        (f"phase6_cluster_metrics{suffix}.csv", cluster_metrics),
+        (f"phase6_predictions{suffix}.csv", predictions),
+        (f"phase6_shap{suffix}.csv", shap_frame),
+    ):
+        if frame is None or len(frame) == 0:
+            continue
+        provenance = _provenance(
+            "PRODUCTION",
+            dataset_id="elliptic++/frozen-september-2026",
+            synthetic_network=True,
+            inputs={"phase6_dataset_sha256": fingerprint},
+            run_fingerprint=fingerprint,
+            artifact=artifact,
+            notes=(
+                "Network features are SYNTHETIC in origin and are not "
+                "ownership claims.",
+                "Unknown-class addresses were excluded, never treated licit.",
+            ),
+        )
+        from obsidianchain import provenance as prov
+
+        prov.write_frame(frame, processed / name, provenance)
