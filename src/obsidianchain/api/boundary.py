@@ -51,6 +51,14 @@ FORBIDDEN_RECOMPUTATION = (
     "obsidianchain.network.audit",
     "obsidianchain.io.elliptic",
     "obsidianchain.eval",
+    # Phase 7. The alert layer serves precomputed artifacts, so neither the
+    # feature builders nor the model may be reachable from a request
+    # handler: either one would let an endpoint produce a number no manifest
+    # describes, and ml/ would put a LightGBM booster one call away from an
+    # HTTP route.
+    "obsidianchain.features",
+    "obsidianchain.ml",
+    "obsidianchain.alerts.build",
 )
 
 #: Symbols and paths that carry evaluation-only truth.

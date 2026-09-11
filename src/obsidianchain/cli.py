@@ -2125,3 +2125,137 @@ def _write_phase6_outputs(processed: Path, min_depth: int, fingerprint: str,
         from obsidianchain import provenance as prov
 
         prov.write_frame(frame, processed / name, provenance)
+
+
+# ---- Phase 7: investigation and alert layer ------------------------------
+
+
+@app.command("phase7-alerts")
+def phase7_alerts(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    dataset_path: Path = typer.Option(None, "--dataset"),
+    min_depth: int = typer.Option(5, "--peel-min-depth"),
+) -> None:
+    """Generate the five Phase 7 alert artifacts.
+
+    Scoring runs HERE, once, not in a request handler. The API's guarantee is
+    that a response is a file the pipeline already wrote, and
+    api/boundary.py makes obsidianchain.ml and obsidianchain.features
+    unreachable by import so that stays true.
+
+    Alerts are generated from the TEST split only: train and validation
+    scores are optimistic by construction, and ranking them beside test
+    scores would put the most confidently wrong rows at the top of an
+    investigator's queue.
+    """
+    import pandas as pd
+
+    from obsidianchain.alerts import build as alert_build
+    from obsidianchain.alerts import contract as alert_contract
+    from obsidianchain.features import dataset as ds
+
+    started = time.perf_counter()
+    path = dataset_path or (
+        data_root / "processed" / f"phase6_dataset_d{min_depth}.parquet"
+    )
+    if not path.is_file():
+        typer.secho(
+            f"{path} not found. Run 'phase6-dataset' first.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
+
+    frame = pd.read_parquet(path)
+    fingerprint = ds.dataset_fingerprint(data_root, min_depth)
+
+    typer.echo("=" * 78)
+    typer.echo("OBSIDIANCHAIN - PHASE 7.0 ALERT ARTIFACTS")
+    typer.echo("=" * 78)
+    typer.echo("  An alert is a co-spend CLUSTER, not a person or an account.")
+    typer.echo("  Network observations are SYNTHETIC and are investigative")
+    typer.echo("  context only - never an ownership or identity claim.")
+    typer.echo("")
+
+    artifacts, summary = alert_build.build(data_root, frame, fingerprint)
+    named = artifacts.named()
+    alert_build.assert_no_labels(named)
+
+    typer.echo(f"  alerts                    {summary['n_alerts']:>12,}")
+    typer.echo(f"  scored member addresses   {summary['n_members']:>12,}")
+    typer.echo(f"  explanation rows          {len(artifacts.explanations):>12,}")
+    typer.echo(f"  timeline points           {len(artifacts.timeline):>12,}")
+    typer.echo(f"  relationship edges        {len(artifacts.relationships):>12,}")
+    typer.echo(f"  ranking aggregation       {summary['ranking_aggregation']:>12}")
+    typer.echo("")
+    for band, count in sorted(summary["severity_counts"].items()):
+        typer.echo(f"  severity {band:<10} {count:>12,}")
+
+    # Each table declares its OWN content schema. Stamping the index's
+    # schema on all five would leave a reader unable to tell, from the
+    # sidecar alone, which layout a file actually has.
+    table_schema = {
+        "alerts": alert_contract.ALERT_SCHEMA,
+        "alert_members": alert_contract.MEMBER_SCHEMA,
+        "alert_explanations": alert_contract.EXPLANATION_SCHEMA,
+        "alert_timeline": alert_contract.TIMELINE_SCHEMA,
+        "alert_relationships": alert_contract.RELATIONSHIP_SCHEMA,
+    }
+    artifact_block = {
+        "index_schema": alert_contract.ALERT_SCHEMA,
+        "model": {
+            "family": "LightGBM",
+            "calibration": "isotonic, fitted on the VALIDATION split only",
+            "n_features": summary["n_features"],
+            "explainability": "TreeSHAP via LightGBM pred_contrib (log-odds)",
+        },
+        "scored_split": "test",
+        "split": {"train": "t1-t34", "validation": "t35-t41", "test": "t42-t49"},
+        "feature_semantics": (
+            "Every feature is as-of the address's LAST active timestep, "
+            "computed only from transactions with Time step <= t. "
+            "Boundary-spanning addresses were removed entirely, so the "
+            "splits are address-disjoint."
+        ),
+        "ranking_aggregation": summary["ranking_aggregation"],
+        "aggregations_served": list(alert_contract.AGGREGATIONS),
+        "severity_bands": summary["bands"],
+        "explanation_categories": list(alert_contract.CATEGORIES),
+        "relationships_supported": list(alert_contract.RELATIONSHIPS),
+        "alert_meaning": alert_contract.ALERT_MEANING,
+        "network_context_meaning": alert_contract.NETWORK_CONTEXT_MEANING,
+        "score_scope": alert_contract.SCORE_SCOPE,
+        "peel_min_depth": int(min_depth),
+    }
+    notes = (
+        "Network observations are SYNTHETIC and are investigative context "
+        "only. They never establish that an IP owns, controls or sent from "
+        "a wallet.",
+        "A cluster is an inference from the common-input-ownership "
+        "heuristic, not a person or a legal entity.",
+        "No artifact here carries a ground-truth label: on real data there "
+        "is none, and displaying one would make this a label viewer.",
+        "Scores are out-of-sample; only the TEST split is ranked.",
+    )
+
+    processed = data_root / "processed"
+    for name, table in named.items():
+        destination = processed / f"{name}.parquet"
+        provenance = _provenance(
+            "PRODUCTION",
+            dataset_id="elliptic++/frozen-september-2026",
+            synthetic_network=True,
+            inputs={"phase6_dataset_sha256": fingerprint},
+            run_fingerprint=fingerprint,
+            artifact={
+                **artifact_block, "table": name,
+                "artifact_schema": table_schema[name],
+            },
+            notes=notes,
+        )
+        _publish_frame(table, destination, provenance, fingerprint)
+
+    typer.echo("")
+    typer.echo(f"run fingerprint  {fingerprint[:16]}")
+    typer.echo(f"wrote 5 artifacts -> {processed}")
+    typer.echo(f"peak memory {_peak_rss_mb():.1f} MB   "
+               f"wall time {time.perf_counter() - started:.1f} s")

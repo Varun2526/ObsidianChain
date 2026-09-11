@@ -173,6 +173,19 @@ EXPECTED_IMPORT_GRAPH = {
     # library only (asserted in tests/test_evidence_contract.py), and it
     # exists precisely so the API can name these without importing eval/.
     "obsidianchain.evidence_contract",
+    # Phase 7, reviewed: the alert layer's read path and its public
+    # contract. Both are presentation code over precomputed artifacts.
+    # api.alerts scores nothing - obsidianchain.ml, obsidianchain.features
+    # and obsidianchain.alerts.build are all on FORBIDDEN_RECOMPUTATION, so
+    # neither the model nor the feature builders are reachable from a
+    # handler. alerts.contract and alerts.feature_groups are standard
+    # library only (asserted in tests/test_phase7_alerts.py); the latter
+    # exists precisely so the API can name a feature's group without
+    # importing the builders that define it.
+    "obsidianchain.alerts",
+    "obsidianchain.alerts.contract",
+    "obsidianchain.alerts.feature_groups",
+    "obsidianchain.api.alerts",
     "obsidianchain.demo",
     "obsidianchain.demo.api",
     "obsidianchain.demo.scenarios",

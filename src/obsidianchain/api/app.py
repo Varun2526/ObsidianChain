@@ -17,11 +17,13 @@ Failures are explicit and distinguish two different problems:
 
 from __future__ import annotations
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.responses import JSONResponse
 
 from obsidianchain import __version__
+from obsidianchain.alerts import contract as alerts_contract
 from obsidianchain.api import (
+    alerts as alerts_api,
     artifacts,
     boundary,
     demo,
@@ -127,6 +129,37 @@ def create_app(data_root=None) -> FastAPI:
             content={"error": "evidence_join_failed", "detail": str(exc)},
         )
 
+    @app.exception_handler(alerts_contract.AlertIdInvalidError)
+    async def _bad_alert(request: Request, exc):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "alert_id_invalid", "detail": str(exc)},
+        )
+
+    @app.exception_handler(alerts_contract.AlertIdStaleError)
+    async def _stale_alert(request: Request, exc):
+        # 409, never 404. A stale id and an unknown cluster are different
+        # facts: one means the artifact moved under the caller, the other
+        # means the cluster was never there.
+        return JSONResponse(
+            status_code=409,
+            content={"error": "alert_id_stale", "detail": str(exc)},
+        )
+
+    @app.exception_handler(alerts_contract.AlertNotFoundError)
+    async def _no_alert(request: Request, exc):
+        return JSONResponse(
+            status_code=404,
+            content={"error": "alert_not_found", "detail": str(exc)},
+        )
+
+    @app.exception_handler(alerts_api.AlertFilterError)
+    async def _bad_filter(request: Request, exc):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "alert_filter_invalid", "detail": str(exc)},
+        )
+
     @app.exception_handler(provenance_gate.ProvenanceRefusedError)
     async def _refused(
         request: Request, exc: provenance_gate.ProvenanceRefusedError
@@ -166,6 +199,54 @@ def create_app(data_root=None) -> FastAPI:
         return JSONResponse(
             content=evidence.get_evidence(evidence_id, app.state.data_root)
         )
+
+    @app.get(
+        f"{API_PREFIX}/alerts",
+        summary="Ranked investigation alerts",
+        response_description=(
+            "Alerts ranked by aggregated member risk, with the filters "
+            "applied and the provenance of the run that produced them. An "
+            "alert is a co-spend CLUSTER, not a person or an account."
+        ),
+    )
+    async def list_alerts(
+        severity: list[str] | None = Query(default=None),
+        min_risk: float | None = Query(default=None, ge=0.0, le=1.0),
+        max_risk: float | None = Query(default=None, ge=0.0, le=1.0),
+        first_timestep: int | None = Query(default=None, ge=1, le=49),
+        last_timestep: int | None = Query(default=None, ge=1, le=49),
+        limit: int = Query(default=50, ge=1, le=500),
+        offset: int = Query(default=0, ge=0),
+    ) -> JSONResponse:
+        """Slice one precomputed parquet file. Nothing is scored here."""
+        payload = alerts_api.list_alerts(
+            data_root, severity=severity, min_risk=min_risk, max_risk=max_risk,
+            first_t=first_timestep, last_t=last_timestep,
+            limit=limit, offset=offset,
+        )
+        boundary.assert_no_truth_fields(payload)
+        return JSONResponse(content=payload)
+
+    @app.get(
+        f"{API_PREFIX}/alerts/{{alert_id}}",
+        summary="One investigation alert, opened",
+        response_description=(
+            "Calibrated risk and severity, the model's own SHAP explanation, "
+            "the M0-M3 evidence behind it, supported address relationships, "
+            "an activity timeline, network evidence as investigative context "
+            "only, and full provenance."
+        ),
+    )
+    async def get_alert(alert_id: str) -> JSONResponse:
+        """Join five precomputed tables by alert_id. Nothing is computed.
+
+        The network block never asserts that an IP owns or sent from a
+        wallet, and where a quantity was not computable the response says
+        INSUFFICIENT_EVIDENCE rather than returning a zero.
+        """
+        payload = alerts_api.get_alert(alert_id, data_root)
+        boundary.assert_no_truth_fields(payload)
+        return JSONResponse(content=payload)
 
     @app.get(
         f"{API_PREFIX}/demo/scenarios",
