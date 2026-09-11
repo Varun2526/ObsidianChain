@@ -60,7 +60,11 @@ def build(data_root, incidence, config=None) -> pd.DataFrame:
         if pd.isna(phase1_code):
             rows.append((0, False, np.nan, 0, np.nan, np.nan, False))
             continue
-        stats = oracle.address_stats.get(int(phase1_code))
+        # The public accessor, not the oracle's statistics dict. Phase 4.1
+        # reserves direct access for the pooling implementation so there
+        # stays exactly one of it; this module only summarises what has
+        # already been pooled and never merges two groups.
+        stats = oracle.stats_for(int(phase1_code))
         if stats is None or stats.count == 0:
             rows.append((0, False, np.nan, 0, np.nan, np.nan, False))
             continue
