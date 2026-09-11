@@ -144,6 +144,27 @@ def require_artifact_identity(meta: dict, artifact_path) -> None:
         )
 
 
+def require_same_run(primary: dict, secondary: dict, name: str) -> None:
+    """Refuse a detail table from a different run than its index.
+
+    Phase 7 publishes five artifacts per run and joins them by ``alert_id``.
+    A stale detail table would join CLEANLY - the ids look the same - and
+    describe a different cluster under the right-looking heading, which is
+    the same silent re-pointing the run fingerprint exists to prevent. So
+    the fingerprints are compared rather than the join being trusted.
+    """
+    expected = primary.get("run_fingerprint")
+    found = secondary.get("run_fingerprint")
+    if expected and found != expected:
+        raise ProvenanceRefusedError(
+            f"{name} was produced by run {str(found)[:16]} but the alert "
+            f"index is run {str(expected)[:16]}. These five artifacts are "
+            f"written together and joined by alert_id, so a mismatched pair "
+            f"would describe a different cluster without erroring. Re-run "
+            f"'make run ARGS=\"phase7-alerts\"'."
+        )
+
+
 def require_production(artifact_path, *, require_inputs: bool = True) -> dict:
     """Return the sidecar, or refuse the artifact.
 

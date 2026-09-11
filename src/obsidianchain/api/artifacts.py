@@ -25,12 +25,25 @@ EVIDENCE_FUNNEL = Path("processed") / "evidence_funnel.parquet"
 ADDRESS_CLUSTERS = Path("processed") / "address_clusters.parquet"
 CLUSTERS = Path("processed") / "clusters.parquet"
 
+#: Phase 7. The alert artifacts, all written by one ``phase7-alerts`` run.
+#: ``ALERTS`` carries the provenance the others are checked against; the four
+#: detail tables are joined to it by ``alert_id`` and share its fingerprint.
+ALERTS = Path("processed") / "alerts.parquet"
+ALERT_TABLES = {
+    "alert_members": Path("processed") / "alert_members.parquet",
+    "alert_explanations": Path("processed") / "alert_explanations.parquet",
+    "alert_timeline": Path("processed") / "alert_timeline.parquet",
+    "alert_relationships": Path("processed") / "alert_relationships.parquet",
+}
+
 #: Command that regenerates each, named in the error so an operator is not
 #: left guessing. The API never runs these.
 _BUILD_COMMAND = {
     EVIDENCE_FUNNEL: 'make run ARGS="evidence-funnel"',
     ADDRESS_CLUSTERS: 'make run ARGS="build-cluster-index"',
     CLUSTERS: 'make run ARGS="build-cluster-index"',
+    ALERTS: 'make run ARGS="phase7-alerts"',
+    **{p: 'make run ARGS="phase7-alerts"' for p in ALERT_TABLES.values()},
 }
 
 
@@ -153,3 +166,46 @@ def load_clusters(root=None, columns=None):
     path = clusters_path(root)
     meta = provenance_gate.require_production(path)
     return pd.read_parquet(path, columns=columns), meta
+
+
+def alerts_path(root=None) -> Path:
+    return _require(root, ALERTS)
+
+
+def load_alerts(root=None, columns=None):
+    """Read the ranked alert table, provenance-gated.
+
+    Returns ``(frame, sidecar)`` so a caller cannot hold alerts whose
+    provenance it never looked at - the same contract as the evidence funnel.
+    """
+    import pandas as pd
+
+    from obsidianchain.api import provenance_gate
+
+    path = alerts_path(root)
+    meta = provenance_gate.require_production(path)
+    return pd.read_parquet(path, columns=columns), meta
+
+
+def load_alert_table(root=None, name: str = "alert_members", columns=None):
+    """Read one of the four alert detail tables.
+
+    Gated on its own sidecar, and additionally checked against the ranked
+    table's fingerprint by ``provenance_gate.require_same_run`` at the route
+    level: a detail table from a different run would join by ``alert_id``
+    without error and silently describe a different cluster.
+    """
+    import pandas as pd
+
+    from obsidianchain.api import provenance_gate
+
+    if name not in ALERT_TABLES:
+        raise ArtifactInvalidError(
+            f"{name!r} is not an alert table; expected one of "
+            f"{sorted(ALERT_TABLES)}"
+        )
+    path = _require(root, ALERT_TABLES[name])
+    meta = provenance_gate.require_production(path)
+    index_meta = provenance_gate.require_production(alerts_path(root))
+    provenance_gate.require_same_run(index_meta, meta, name)
+    return pd.read_parquet(path, columns=columns)
