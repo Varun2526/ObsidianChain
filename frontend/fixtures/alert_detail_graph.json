@@ -1,0 +1,5133 @@
+{
+  "alert_id": "043ea584e99daf99:314770",
+  "run_fingerprint": "043ea584e99daf99",
+  "summary": {
+    "alert_id": "043ea584e99daf99:314770",
+    "rank": 1,
+    "cluster_id": 314770,
+    "risk_score": 1.0,
+    "severity": "CRITICAL",
+    "ranking_aggregation": "AGG-TOPK",
+    "members_scored": 148,
+    "members_total": 148,
+    "first_timestep": 44,
+    "last_timestep": 44,
+    "top_signals": [
+      "tx_per_active_timestep_asof_t",
+      "output_fanout_mean_asof_t",
+      "input_fanin_mean_asof_t"
+    ]
+  },
+  "meaning": "An alert is a co-spend CLUSTER whose member addresses the Phase 6 model scored highly. A cluster is an inference produced by the common-input-ownership heuristic, not a person, an account or a legal entity. A high score is a ranking signal for investigator attention. It is not a finding, not an accusation, and not evidence of any offence.",
+  "score_scope": "Risk is the calibrated probability the Phase 6 model assigned to an address, aggregated to its cluster. Scores are out-of-sample: alerts are generated from the TEST split only, because train and validation scores are optimistic by construction and ranking them beside test scores would mislead.",
+  "risk": {
+    "score": 1.0,
+    "severity": "CRITICAL",
+    "ranking_aggregation": "AGG-TOPK",
+    "aggregations": {
+      "AGG-MAX": 1.0,
+      "AGG-TOPK": 1.0,
+      "AGG-QUANT": 1.0,
+      "AGG-WMEAN": 0.9822085366679851
+    },
+    "top_member_risk": 1.0
+  },
+  "why_flagged": {
+    "units": "log-odds (SHAP contribution to the model's raw margin)",
+    "meaning": "A model signal is a SHAP contribution in log-odds: how much this feature moved THIS model's score for THIS address, relative to the model's base value. It is a statement about the model's behaviour, not about Bitcoin, and a large contribution is not evidence of wrongdoing.",
+    "insufficient_evidence_meaning": "The quantity could not be established for this address from the available data. It is reported as insufficient evidence rather than as zero, because 'not measured' and 'measured as none' are different answers and conflating them would invent a fact.",
+    "categories": [
+      "MODEL_SIGNAL",
+      "BLOCKCHAIN_CONTEXT",
+      "NETWORK_CONTEXT",
+      "INSUFFICIENT_EVIDENCE"
+    ],
+    "per_member": [
+      {
+        "address": "121yHE9JRzMBKxd8JSsoRd8JT2sSRNn5EG",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.3213564343355837,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.7038453513533733,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8041043398906638,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7736713630920176,
+            "feature_value": 0.02290747,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.0383131678421322,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9476897523203408,
+            "feature_value": 0.011453735,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9380657889912404,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8823824752266312,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1LerB2XAgE4A3fH87ppdzdcvJBXkAJsZez",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.4412904472529524,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.6353463804745876,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8538027078842236,
+            "feature_value": 0.02309979,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.850278494754851,
+            "feature_value": 76.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.067906520255808,
+            "feature_value": 0.011549895,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.0436523102910116,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8755686070313837,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.798367300846903,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1KqH5e5i6GAL4G5Mrf7JYiNw96dX7eiAzP",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.4296217517139787,
+            "feature_value": 1.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.7040247345442197,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.792934089939545,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7689024504337798,
+            "feature_value": 0.02293791,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.0425474587930519,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9455440624715267,
+            "feature_value": 0.011468955,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9384950794466497,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8826653186083807,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1KjrSw3bx6NTUs1hpjf63Kj5phzihakqyM",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.776986654804855,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8886139468762195,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.862732704405032,
+            "feature_value": 0.02376343,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.6971431492736129,
+            "feature_value": 5.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2743708157137494,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2715326466056722,
+            "feature_value": 0.011881715,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9144950628895437,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.8418686202309075,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1KdarcbS1cyARfXQEcEomffsL8d9PQ7Kmh",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.741751905669043,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.167011746245728,
+            "feature_value": 79.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8969267268691434,
+            "feature_value": 15.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8693757196866603,
+            "feature_value": 0.02638692,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2367603398350604,
+            "feature_value": 0.01319346,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2146387136691454,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.9744834506132483,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8008215663904135,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "12gaVnYYcZfRhZ7Ctikpz7sZE9QkonDDED",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.348019836602613,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.704089703009329,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.780888843486985,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7793892439647463,
+            "feature_value": 0.02293358,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.021806327359488,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9607755022486807,
+            "feature_value": 0.01146679,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9409988676258956,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8331013651068286,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1KF9PAKche2zFyv2fAUMs1kFH9P9LiHnp1",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.427626261267123,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.635294415496642,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8517737125678204,
+            "feature_value": 76.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.844366491828276,
+            "feature_value": 0.02313603,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.0659142554209413,
+            "feature_value": 0.011568015,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.056017421957884,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8739572531842802,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8346833906150132,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1Jotg1Ct6yBbkJHLeoKoCXtETh7PVuUbWL",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.741751905669043,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.167011746245728,
+            "feature_value": 79.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8969267268691434,
+            "feature_value": 15.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8693757196866603,
+            "feature_value": 0.02638692,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2367603398350604,
+            "feature_value": 0.01319346,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2146387136691454,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.9744834506132483,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8008215663904135,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1JnNu6zcyVgRokGd5J7F9hwAvmrNPTCd2p",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.3213564343355837,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.7038453513533733,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8041043398906638,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7736713630920176,
+            "feature_value": 0.02292183,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.0383131678421322,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9476897523203408,
+            "feature_value": 0.011460915,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9380657889912404,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8823824752266312,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1JWL2McP6YYqGpUE2pRhdan5YNZNrq8aWR",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.396404860969317,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.6486762927859657,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.770424811517777,
+            "feature_value": 0.02305532,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.5211679945945507,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.1453038911579132,
+            "feature_value": 0.01152766,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9452608979754876,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.8893877481557939,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.6870566339740957,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1J3zZ7vD1VLpvnRGuZL5g274D8cZWGG61A",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.7811201978412625,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.9946677131766657,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.9114356334226428,
+            "feature_value": 7.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7793085606501537,
+            "feature_value": 0.02354377,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.3535995173507558,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.1643616491464603,
+            "feature_value": 0.011771885,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.9048758882026249,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.7885238528710434,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1Hx9K4JNvsRS3JNqALPdBvB2VNWaYB79pv",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.4302470556521634,
+            "feature_value": 1.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.7041815075892988,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7763502551681598,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.765253330251566,
+            "feature_value": 0.02293414,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.031114112425391,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.941438710414136,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9207634515569437,
+            "feature_value": 0.01146707,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8538629884061251,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1Hqy6vCcpThHuHvNsFM86Tqg4zUJiZuhgV",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.800694863479639,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.019718307958216,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.921123112287711,
+            "feature_value": 12.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7787031394123607,
+            "feature_value": 0.02385304,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.3400104643017516,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.046884975232335,
+            "feature_value": 0.01192652,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.9015929493269013,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8147520593441907,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1HbPsPVHEaWkTdB4TBgqnHushtExnPKcd7",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.741751905669043,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.167011746245728,
+            "feature_value": 79.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8969267268691434,
+            "feature_value": 15.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8693757196866603,
+            "feature_value": 0.02638692,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2367603398350604,
+            "feature_value": 0.01319346,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2146387136691454,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.9744834506132483,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8008215663904135,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1HKMrLhr7nmRsXAyjbZDSbscRCtBrvchaT",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.3406381223935515,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.6500048717040503,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.844104191172277,
+            "feature_value": 76.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.815983184878452,
+            "feature_value": 0.02311983,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.0502405962011767,
+            "feature_value": 0.011559915,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.0217948719515395,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8759693144596341,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8053915303027529,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1HCx3xX3Ut7v6GjMEyjj7tivTnStWA4qRV",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.77988030792207,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.9973043981485115,
+            "feature_value": 76.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7444161157965326,
+            "feature_value": 0.02467673,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.3804187842631301,
+            "feature_value": 18.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2591293809672557,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.238511623195141,
+            "feature_value": 0.012338365,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.9097810244452715,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.7794816336883224,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1HChuubUD4pHscGrh9GTugjatjte3zHMZ6",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.77988030792207,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.9973043981485115,
+            "feature_value": 76.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7444161157965326,
+            "feature_value": 0.02467673,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.3804187842631301,
+            "feature_value": 18.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2591293809672557,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.238511623195141,
+            "feature_value": 0.012338365,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.9097810244452715,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.7794816336883224,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1HBF4CtKJb242uN7X1Xw4cbhdZoDD8VJx6",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.3213564343355837,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.7038453513533733,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8041043398906638,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7736713630920176,
+            "feature_value": 0.02296623,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.0383131678421322,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9476897523203408,
+            "feature_value": 0.011483115,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9380657889912404,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8823824752266312,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1Ghg8HHnbpogrUVvoszbauAbPz7XhJGmWU",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.741751905669043,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.167011746245728,
+            "feature_value": 79.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8969267268691434,
+            "feature_value": 15.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8693757196866603,
+            "feature_value": 0.02638692,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2367603398350604,
+            "feature_value": 0.01319346,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2146387136691454,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.9744834506132483,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8008215663904135,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1GeZLc2CxDWKPEwV7iACNkBRcMtqB16UHD",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.3269601980419052,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.70362302100189,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8121441146547363,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7729997232364403,
+            "feature_value": 0.022955339999999998,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.0347482839608382,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9381140230053429,
+            "feature_value": 0.011477669999999999,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9374630355381686,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8812038889037747,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1GZLvXqWWKNxvvobTHVk6pW5UkTridDhTf",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.1962707301541187,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.646281079790996,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8024132513205153,
+            "feature_value": 0.023023409999999998,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.3906703710646897,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.1804291531579796,
+            "feature_value": 0.011511704999999999,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9455232189320779,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8899469902051285,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.8257424998333537,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1GMg8djKtSCxxyoEmCRhoTMDzoALQw1TL1",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.3213564343355837,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.7038453513533733,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8041043398906638,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7736713630920176,
+            "feature_value": 0.02292183,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.0383131678421322,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9476897523203408,
+            "feature_value": 0.011460915,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9380657889912404,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8823824752266312,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1G1664BuvZyrCLhKQc7TYCUCiAPRuvdiMf",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.576804119695011,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.648304568467336,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7846640604990962,
+            "feature_value": 0.023553829999999998,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.5929095212537552,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.065185310722613,
+            "feature_value": 0.011776914999999999,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9364078822697502,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.8843044347831985,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.7335642346710102,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1Fpv8p2fFMpNvGSnXW6KmykCVmzvbRqAQG",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 3.322174024305083,
+            "feature_value": 1.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.7040021243984524,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.7875205051192786,
+            "feature_value": 76.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.769810711337069,
+            "feature_value": 0.02293358,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 1.0268798214744717,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9410094199587267,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.9229091414057579,
+            "feature_value": 0.01146679,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8535801450243755,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      },
+      {
+        "address": "1FgyzmYmJCJ8EfAh3BsWiB8gsgswXYWRZz",
+        "base_value": -9.281093890362616,
+        "contributions": [
+          {
+            "feature": "tx_per_active_timestep_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.7648067240593672,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "input_fanin_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 2.114946423963466,
+            "feature_value": 77.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "output_fanout_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.9731560182622352,
+            "feature_value": 15.5,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.8167054490035415,
+            "feature_value": 0.02510803,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "n_txs_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.2187938366225102,
+            "feature_value": 2.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "fees_mean_asof_t",
+            "feature_group": "M0",
+            "contribution": 1.1493200302540783,
+            "feature_value": 0.012554015,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "cluster_size_asof_t",
+            "feature_group": "M1",
+            "contribution": 0.9694225551147991,
+            "feature_value": 148.0,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          },
+          {
+            "feature": "btc_sent_total_asof_t",
+            "feature_group": "M0",
+            "contribution": 0.8317576547217475,
+            "feature_value": 0.82954757,
+            "signal_category": "MODEL_SIGNAL",
+            "value_category": "BLOCKCHAIN_CONTEXT"
+          }
+        ]
+      }
+    ]
+  },
+  "evidence": {
+    "aggregate": {
+      "category": "BLOCKCHAIN_CONTEXT",
+      "transactions": 299,
+      "btc_sent_total": 122.77304036,
+      "btc_received_total": 225.27581338000002,
+      "unique_counterparties": 549,
+      "peel_chain_members": 0
+    },
+    "groups": {
+      "M0": {
+        "category": "BLOCKCHAIN_CONTEXT",
+        "features": [
+          "n_txs_asof_t",
+          "n_txs_as_sender_asof_t",
+          "n_txs_as_receiver_asof_t",
+          "btc_sent_total_asof_t",
+          "btc_sent_mean_asof_t",
+          "btc_sent_max_asof_t",
+          "btc_received_total_asof_t",
+          "btc_received_mean_asof_t",
+          "btc_received_max_asof_t",
+          "fees_total_asof_t",
+          "fees_mean_asof_t",
+          "tx_size_mean_asof_t",
+          "input_fanin_mean_asof_t",
+          "output_fanout_mean_asof_t",
+          "active_timesteps_asof_t",
+          "timesteps_since_first_seen_asof_t",
+          "tx_per_active_timestep_asof_t",
+          "gap_mean_timesteps_asof_t",
+          "gap_max_timesteps_asof_t",
+          "sent_share_of_tx_asof_t"
+        ],
+        "members": [
+          {
+            "address": "121yHE9JRzMBKxd8JSsoRd8JT2sSRNn5EG",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.00804036,
+              "btc_received_mean_asof_t": 0.00804036,
+              "btc_received_max_asof_t": 0.00804036,
+              "fees_total_asof_t": 0.02290747,
+              "fees_mean_asof_t": 0.011453735,
+              "tx_size_mean_asof_t": 11273.0,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1LerB2XAgE4A3fH87ppdzdcvJBXkAJsZez",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.021825,
+              "btc_received_mean_asof_t": 0.021825,
+              "btc_received_max_asof_t": 0.021825,
+              "fees_total_asof_t": 0.02309979,
+              "fees_mean_asof_t": 0.011549895,
+              "tx_size_mean_asof_t": 11347.0,
+              "input_fanin_mean_asof_t": 76.5,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1KqH5e5i6GAL4G5Mrf7JYiNw96dX7eiAzP",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.00817,
+              "btc_received_mean_asof_t": 0.00817,
+              "btc_received_max_asof_t": 0.00817,
+              "fees_total_asof_t": 0.02293791,
+              "fees_mean_asof_t": 0.011468955,
+              "tx_size_mean_asof_t": 11256.0,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.0,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1KjrSw3bx6NTUs1hpjf63Kj5phzihakqyM",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 9.11698203,
+              "btc_received_mean_asof_t": 9.11698203,
+              "btc_received_max_asof_t": 9.11698203,
+              "fees_total_asof_t": 0.02376343,
+              "fees_mean_asof_t": 0.011881715,
+              "tx_size_mean_asof_t": 11392.0,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 5.0,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1KdarcbS1cyARfXQEcEomffsL8d9PQ7Kmh",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 3.02117894,
+              "btc_received_mean_asof_t": 3.02117894,
+              "btc_received_max_asof_t": 3.02117894,
+              "fees_total_asof_t": 0.02638692,
+              "fees_mean_asof_t": 0.01319346,
+              "tx_size_mean_asof_t": 12835.5,
+              "input_fanin_mean_asof_t": 79.5,
+              "output_fanout_mean_asof_t": 15.0,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "12gaVnYYcZfRhZ7Ctikpz7sZE9QkonDDED",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.00429625,
+              "btc_received_mean_asof_t": 0.00429625,
+              "btc_received_max_asof_t": 0.00429625,
+              "fees_total_asof_t": 0.02293358,
+              "fees_mean_asof_t": 0.01146679,
+              "tx_size_mean_asof_t": 11273.5,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1KF9PAKche2zFyv2fAUMs1kFH9P9LiHnp1",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.01701239,
+              "btc_received_mean_asof_t": 0.01701239,
+              "btc_received_max_asof_t": 0.01701239,
+              "fees_total_asof_t": 0.02313603,
+              "fees_mean_asof_t": 0.011568015,
+              "tx_size_mean_asof_t": 11347.5,
+              "input_fanin_mean_asof_t": 76.5,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1Jotg1Ct6yBbkJHLeoKoCXtETh7PVuUbWL",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 3.02117894,
+              "btc_received_mean_asof_t": 3.02117894,
+              "btc_received_max_asof_t": 3.02117894,
+              "fees_total_asof_t": 0.02638692,
+              "fees_mean_asof_t": 0.01319346,
+              "tx_size_mean_asof_t": 12835.5,
+              "input_fanin_mean_asof_t": 79.5,
+              "output_fanout_mean_asof_t": 15.0,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1JnNu6zcyVgRokGd5J7F9hwAvmrNPTCd2p",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.008906,
+              "btc_received_mean_asof_t": 0.008906,
+              "btc_received_max_asof_t": 0.008906,
+              "fees_total_asof_t": 0.02292183,
+              "fees_mean_asof_t": 0.011460915,
+              "tx_size_mean_asof_t": 11273.5,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1JWL2McP6YYqGpUE2pRhdan5YNZNrq8aWR",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 1.45687857,
+              "btc_received_mean_asof_t": 1.45687857,
+              "btc_received_max_asof_t": 1.45687857,
+              "fees_total_asof_t": 0.02305532,
+              "fees_mean_asof_t": 0.01152766,
+              "tx_size_mean_asof_t": 11345.0,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1J3zZ7vD1VLpvnRGuZL5g274D8cZWGG61A",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 1.48452694,
+              "btc_received_mean_asof_t": 1.48452694,
+              "btc_received_max_asof_t": 1.48452694,
+              "fees_total_asof_t": 0.02354377,
+              "fees_mean_asof_t": 0.011771885,
+              "tx_size_mean_asof_t": 11477.5,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 7.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1Hx9K4JNvsRS3JNqALPdBvB2VNWaYB79pv",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.00513569,
+              "btc_received_mean_asof_t": 0.00513569,
+              "btc_received_max_asof_t": 0.00513569,
+              "fees_total_asof_t": 0.02293414,
+              "fees_mean_asof_t": 0.01146707,
+              "tx_size_mean_asof_t": 11256.0,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.0,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1Hqy6vCcpThHuHvNsFM86Tqg4zUJiZuhgV",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.57484853,
+              "btc_received_mean_asof_t": 0.57484853,
+              "btc_received_max_asof_t": 0.57484853,
+              "fees_total_asof_t": 0.02385304,
+              "fees_mean_asof_t": 0.01192652,
+              "tx_size_mean_asof_t": 11703.0,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 12.0,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1HbPsPVHEaWkTdB4TBgqnHushtExnPKcd7",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 3.02117894,
+              "btc_received_mean_asof_t": 3.02117894,
+              "btc_received_max_asof_t": 3.02117894,
+              "fees_total_asof_t": 0.02638692,
+              "fees_mean_asof_t": 0.01319346,
+              "tx_size_mean_asof_t": 12835.5,
+              "input_fanin_mean_asof_t": 79.5,
+              "output_fanout_mean_asof_t": 15.0,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1HKMrLhr7nmRsXAyjbZDSbscRCtBrvchaT",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.01284836,
+              "btc_received_mean_asof_t": 0.01284836,
+              "btc_received_max_asof_t": 0.01284836,
+              "fees_total_asof_t": 0.02311983,
+              "fees_mean_asof_t": 0.011559915,
+              "tx_size_mean_asof_t": 11347.0,
+              "input_fanin_mean_asof_t": 76.5,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1HCx3xX3Ut7v6GjMEyjj7tivTnStWA4qRV",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.99145124,
+              "btc_received_mean_asof_t": 0.99145124,
+              "btc_received_max_asof_t": 0.99145124,
+              "fees_total_asof_t": 0.02467673,
+              "fees_mean_asof_t": 0.012338365,
+              "tx_size_mean_asof_t": 12068.5,
+              "input_fanin_mean_asof_t": 76.5,
+              "output_fanout_mean_asof_t": 18.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1HChuubUD4pHscGrh9GTugjatjte3zHMZ6",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.99145124,
+              "btc_received_mean_asof_t": 0.99145124,
+              "btc_received_max_asof_t": 0.99145124,
+              "fees_total_asof_t": 0.02467673,
+              "fees_mean_asof_t": 0.012338365,
+              "tx_size_mean_asof_t": 12068.5,
+              "input_fanin_mean_asof_t": 76.5,
+              "output_fanout_mean_asof_t": 18.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1HBF4CtKJb242uN7X1Xw4cbhdZoDD8VJx6",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.0083152,
+              "btc_received_mean_asof_t": 0.0083152,
+              "btc_received_max_asof_t": 0.0083152,
+              "fees_total_asof_t": 0.02296623,
+              "fees_mean_asof_t": 0.011483115,
+              "tx_size_mean_asof_t": 11273.0,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1Ghg8HHnbpogrUVvoszbauAbPz7XhJGmWU",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 3.02117894,
+              "btc_received_mean_asof_t": 3.02117894,
+              "btc_received_max_asof_t": 3.02117894,
+              "fees_total_asof_t": 0.02638692,
+              "fees_mean_asof_t": 0.01319346,
+              "tx_size_mean_asof_t": 12835.5,
+              "input_fanin_mean_asof_t": 79.5,
+              "output_fanout_mean_asof_t": 15.0,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1GeZLc2CxDWKPEwV7iACNkBRcMtqB16UHD",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.01008133,
+              "btc_received_mean_asof_t": 0.01008133,
+              "btc_received_max_asof_t": 0.01008133,
+              "fees_total_asof_t": 0.022955339999999998,
+              "fees_mean_asof_t": 0.011477669999999999,
+              "tx_size_mean_asof_t": 11273.5,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1GZLvXqWWKNxvvobTHVk6pW5UkTridDhTf",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 15.61223284,
+              "btc_received_mean_asof_t": 15.61223284,
+              "btc_received_max_asof_t": 15.61223284,
+              "fees_total_asof_t": 0.023023409999999998,
+              "fees_mean_asof_t": 0.011511704999999999,
+              "tx_size_mean_asof_t": 11273.0,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1GMg8djKtSCxxyoEmCRhoTMDzoALQw1TL1",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.008247,
+              "btc_received_mean_asof_t": 0.008247,
+              "btc_received_max_asof_t": 0.008247,
+              "fees_total_asof_t": 0.02292183,
+              "fees_mean_asof_t": 0.011460915,
+              "tx_size_mean_asof_t": 11273.5,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1G1664BuvZyrCLhKQc7TYCUCiAPRuvdiMf",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.103572,
+              "btc_received_mean_asof_t": 0.103572,
+              "btc_received_max_asof_t": 0.103572,
+              "fees_total_asof_t": 0.023553829999999998,
+              "fees_mean_asof_t": 0.011776914999999999,
+              "tx_size_mean_asof_t": 11273.0,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1Fpv8p2fFMpNvGSnXW6KmykCVmzvbRqAQG",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.00665268,
+              "btc_received_mean_asof_t": 0.00665268,
+              "btc_received_max_asof_t": 0.00665268,
+              "fees_total_asof_t": 0.02293358,
+              "fees_mean_asof_t": 0.01146679,
+              "tx_size_mean_asof_t": 11273.5,
+              "input_fanin_mean_asof_t": 76.0,
+              "output_fanout_mean_asof_t": 1.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          },
+          {
+            "address": "1FgyzmYmJCJ8EfAh3BsWiB8gsgswXYWRZz",
+            "values": {
+              "n_txs_asof_t": 2,
+              "n_txs_as_sender_asof_t": 1,
+              "n_txs_as_receiver_asof_t": 1,
+              "btc_sent_total_asof_t": 0.82954757,
+              "btc_sent_mean_asof_t": 0.82954757,
+              "btc_sent_max_asof_t": 0.82954757,
+              "btc_received_total_asof_t": 0.57872089,
+              "btc_received_mean_asof_t": 0.57872089,
+              "btc_received_max_asof_t": 0.57872089,
+              "fees_total_asof_t": 0.02510803,
+              "fees_mean_asof_t": 0.012554015,
+              "tx_size_mean_asof_t": 12266.0,
+              "input_fanin_mean_asof_t": 77.5,
+              "output_fanout_mean_asof_t": 15.5,
+              "active_timesteps_asof_t": 1,
+              "timesteps_since_first_seen_asof_t": 0,
+              "tx_per_active_timestep_asof_t": 2.0,
+              "gap_mean_timesteps_asof_t": null,
+              "gap_max_timesteps_asof_t": null,
+              "sent_share_of_tx_asof_t": 0.5
+            },
+            "unavailable": [
+              "gap_mean_timesteps_asof_t",
+              "gap_max_timesteps_asof_t"
+            ]
+          }
+        ]
+      },
+      "M1": {
+        "category": "BLOCKCHAIN_CONTEXT",
+        "features": [
+          "in_degree_asof_t",
+          "out_degree_asof_t",
+          "weighted_in_degree_asof_t",
+          "weighted_out_degree_asof_t",
+          "unique_counterparties_asof_t",
+          "counterparty_growth_rate_asof_t",
+          "local_clustering_coefficient_asof_t",
+          "cluster_size_asof_t"
+        ],
+        "members": [
+          {
+            "address": "121yHE9JRzMBKxd8JSsoRd8JT2sSRNn5EG",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.00804036,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1LerB2XAgE4A3fH87ppdzdcvJBXkAJsZez",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.021825,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 3,
+              "counterparty_growth_rate_asof_t": 3.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1KqH5e5i6GAL4G5Mrf7JYiNw96dX7eiAzP",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.00817,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1KjrSw3bx6NTUs1hpjf63Kj5phzihakqyM",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 9.11698203,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1KdarcbS1cyARfXQEcEomffsL8d9PQ7Kmh",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 3.02117894,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 9,
+              "counterparty_growth_rate_asof_t": 9.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "12gaVnYYcZfRhZ7Ctikpz7sZE9QkonDDED",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.00429625,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1KF9PAKche2zFyv2fAUMs1kFH9P9LiHnp1",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.01701239,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 3,
+              "counterparty_growth_rate_asof_t": 3.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1Jotg1Ct6yBbkJHLeoKoCXtETh7PVuUbWL",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 3.02117894,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 9,
+              "counterparty_growth_rate_asof_t": 9.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1JnNu6zcyVgRokGd5J7F9hwAvmrNPTCd2p",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.008906,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1JWL2McP6YYqGpUE2pRhdan5YNZNrq8aWR",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 1.45687857,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1J3zZ7vD1VLpvnRGuZL5g274D8cZWGG61A",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 1.48452694,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1Hx9K4JNvsRS3JNqALPdBvB2VNWaYB79pv",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.00513569,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1Hqy6vCcpThHuHvNsFM86Tqg4zUJiZuhgV",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.57484853,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1HbPsPVHEaWkTdB4TBgqnHushtExnPKcd7",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 3.02117894,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 9,
+              "counterparty_growth_rate_asof_t": 9.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1HKMrLhr7nmRsXAyjbZDSbscRCtBrvchaT",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.01284836,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 3,
+              "counterparty_growth_rate_asof_t": 3.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1HCx3xX3Ut7v6GjMEyjj7tivTnStWA4qRV",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.99145124,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 3,
+              "counterparty_growth_rate_asof_t": 3.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1HChuubUD4pHscGrh9GTugjatjte3zHMZ6",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.99145124,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 3,
+              "counterparty_growth_rate_asof_t": 3.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1HBF4CtKJb242uN7X1Xw4cbhdZoDD8VJx6",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.0083152,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1Ghg8HHnbpogrUVvoszbauAbPz7XhJGmWU",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 3.02117894,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 9,
+              "counterparty_growth_rate_asof_t": 9.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1GeZLc2CxDWKPEwV7iACNkBRcMtqB16UHD",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.01008133,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1GZLvXqWWKNxvvobTHVk6pW5UkTridDhTf",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 15.61223284,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1GMg8djKtSCxxyoEmCRhoTMDzoALQw1TL1",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.008247,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1G1664BuvZyrCLhKQc7TYCUCiAPRuvdiMf",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.103572,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1Fpv8p2fFMpNvGSnXW6KmykCVmzvbRqAQG",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.00665268,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 2,
+              "counterparty_growth_rate_asof_t": 2.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          },
+          {
+            "address": "1FgyzmYmJCJ8EfAh3BsWiB8gsgswXYWRZz",
+            "values": {
+              "in_degree_asof_t": 1,
+              "out_degree_asof_t": 1,
+              "weighted_in_degree_asof_t": 0.57872089,
+              "weighted_out_degree_asof_t": 0.82954757,
+              "unique_counterparties_asof_t": 5,
+              "counterparty_growth_rate_asof_t": 5.0,
+              "local_clustering_coefficient_asof_t": 0.0,
+              "cluster_size_asof_t": 148.0
+            },
+            "unavailable": []
+          }
+        ]
+      },
+      "M2": {
+        "category": "BLOCKCHAIN_CONTEXT",
+        "features": [
+          "in_chain",
+          "chain_depth_max",
+          "position_in_chain",
+          "chain_count",
+          "chain_fanout_mean",
+          "hop_gap_median",
+          "value_retention_ratio",
+          "value_retention_available"
+        ],
+        "members": [
+          {
+            "address": "121yHE9JRzMBKxd8JSsoRd8JT2sSRNn5EG",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1LerB2XAgE4A3fH87ppdzdcvJBXkAJsZez",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1KqH5e5i6GAL4G5Mrf7JYiNw96dX7eiAzP",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1KjrSw3bx6NTUs1hpjf63Kj5phzihakqyM",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1KdarcbS1cyARfXQEcEomffsL8d9PQ7Kmh",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "12gaVnYYcZfRhZ7Ctikpz7sZE9QkonDDED",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1KF9PAKche2zFyv2fAUMs1kFH9P9LiHnp1",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1Jotg1Ct6yBbkJHLeoKoCXtETh7PVuUbWL",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1JnNu6zcyVgRokGd5J7F9hwAvmrNPTCd2p",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1JWL2McP6YYqGpUE2pRhdan5YNZNrq8aWR",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1J3zZ7vD1VLpvnRGuZL5g274D8cZWGG61A",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1Hx9K4JNvsRS3JNqALPdBvB2VNWaYB79pv",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1Hqy6vCcpThHuHvNsFM86Tqg4zUJiZuhgV",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1HbPsPVHEaWkTdB4TBgqnHushtExnPKcd7",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1HKMrLhr7nmRsXAyjbZDSbscRCtBrvchaT",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1HCx3xX3Ut7v6GjMEyjj7tivTnStWA4qRV",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1HChuubUD4pHscGrh9GTugjatjte3zHMZ6",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1HBF4CtKJb242uN7X1Xw4cbhdZoDD8VJx6",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1Ghg8HHnbpogrUVvoszbauAbPz7XhJGmWU",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1GeZLc2CxDWKPEwV7iACNkBRcMtqB16UHD",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1GZLvXqWWKNxvvobTHVk6pW5UkTridDhTf",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1GMg8djKtSCxxyoEmCRhoTMDzoALQw1TL1",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1G1664BuvZyrCLhKQc7TYCUCiAPRuvdiMf",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1Fpv8p2fFMpNvGSnXW6KmykCVmzvbRqAQG",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          },
+          {
+            "address": "1FgyzmYmJCJ8EfAh3BsWiB8gsgswXYWRZz",
+            "values": {
+              "in_chain": false,
+              "chain_depth_max": 0.0,
+              "position_in_chain": 0.0,
+              "chain_count": 0,
+              "chain_fanout_mean": null,
+              "hop_gap_median": null,
+              "value_retention_ratio": null,
+              "value_retention_available": false
+            },
+            "unavailable": [
+              "chain_fanout_mean",
+              "hop_gap_median",
+              "value_retention_ratio"
+            ]
+          }
+        ]
+      },
+      "M3": {
+        "category": "NETWORK_CONTEXT",
+        "features": [
+          "net_pooled_observations",
+          "net_has_evidence",
+          "net_observer_coverage",
+          "net_observers_present",
+          "net_arrival_dispersion_mean",
+          "net_arrival_dispersion_max",
+          "net_reaches_production_minimum"
+        ],
+        "members": [
+          {
+            "address": "121yHE9JRzMBKxd8JSsoRd8JT2sSRNn5EG",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1LerB2XAgE4A3fH87ppdzdcvJBXkAJsZez",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1KqH5e5i6GAL4G5Mrf7JYiNw96dX7eiAzP",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1KjrSw3bx6NTUs1hpjf63Kj5phzihakqyM",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1KdarcbS1cyARfXQEcEomffsL8d9PQ7Kmh",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "12gaVnYYcZfRhZ7Ctikpz7sZE9QkonDDED",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1KF9PAKche2zFyv2fAUMs1kFH9P9LiHnp1",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1Jotg1Ct6yBbkJHLeoKoCXtETh7PVuUbWL",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1JnNu6zcyVgRokGd5J7F9hwAvmrNPTCd2p",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1JWL2McP6YYqGpUE2pRhdan5YNZNrq8aWR",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1J3zZ7vD1VLpvnRGuZL5g274D8cZWGG61A",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1Hx9K4JNvsRS3JNqALPdBvB2VNWaYB79pv",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1Hqy6vCcpThHuHvNsFM86Tqg4zUJiZuhgV",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1HbPsPVHEaWkTdB4TBgqnHushtExnPKcd7",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1HKMrLhr7nmRsXAyjbZDSbscRCtBrvchaT",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1HCx3xX3Ut7v6GjMEyjj7tivTnStWA4qRV",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1HChuubUD4pHscGrh9GTugjatjte3zHMZ6",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1HBF4CtKJb242uN7X1Xw4cbhdZoDD8VJx6",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1Ghg8HHnbpogrUVvoszbauAbPz7XhJGmWU",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1GeZLc2CxDWKPEwV7iACNkBRcMtqB16UHD",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1GZLvXqWWKNxvvobTHVk6pW5UkTridDhTf",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1GMg8djKtSCxxyoEmCRhoTMDzoALQw1TL1",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1G1664BuvZyrCLhKQc7TYCUCiAPRuvdiMf",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1Fpv8p2fFMpNvGSnXW6KmykCVmzvbRqAQG",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          },
+          {
+            "address": "1FgyzmYmJCJ8EfAh3BsWiB8gsgswXYWRZz",
+            "values": {
+              "net_pooled_observations": 0,
+              "net_has_evidence": false,
+              "net_observer_coverage": null,
+              "net_observers_present": 0,
+              "net_arrival_dispersion_mean": null,
+              "net_arrival_dispersion_max": null,
+              "net_reaches_production_minimum": false
+            },
+            "unavailable": [
+              "net_observer_coverage",
+              "net_arrival_dispersion_mean",
+              "net_arrival_dispersion_max"
+            ]
+          }
+        ]
+      }
+    },
+    "insufficient_evidence_meaning": "The quantity could not be established for this address from the available data. It is reported as insufficient evidence rather than as zero, because 'not measured' and 'measured as none' are different answers and conflating them would invent a fact."
+  },
+  "relationships": {
+    "supported": {
+      "CO_SPEND_COMPONENT": "Both addresses were inputs to a common transaction, directly or transitively, so the common-input-ownership heuristic groups them. This is a HEURISTIC about spending, not proof of shared ownership.",
+      "FUNDED_VIA_TRANSACTION": "One address was an input to a transaction that paid the other. This is an observed ledger fact and says nothing about who controls either address."
+    },
+    "count": 147,
+    "edges": [
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "121yHE9JRzMBKxd8JSsoRd8JT2sSRNn5EG",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "12NSws7zYWiAe43Qz2Ra7cESP143V81Cxk",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "12gaVnYYcZfRhZ7Ctikpz7sZE9QkonDDED",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "12jvaTJifZparc5znmwvJ8a3tDR6WWmic7",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "12zxDA7CqDSsDsThZKfJggvRcgzB2PSjKT",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "137vCeQBaLBhCt8RnwrhAkaabHtVJdnZVX",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "13BAF111yUWxwP4V9UkCfKQiuEs5v75PEg",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "13RJTTLoS1Gj8DxD6ZJWMpByxQLCN3iBvp",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "13Z41w8dPNgoyKJmMDXSxZwdcSjYK8N2A4",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "13fDrLd5HszbFo2x9XyyA4B9RwjSESkJSL",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "13xW4smmquT3ipSYmYsyEonsPhqpcp9fcM",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "14FLkudvztaUJzCatbPJi3WLigZLcYvs5H",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "14TtsPGtd4iHoycjf6ZeX51oaY8Qk7igAJ",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "14gpCTgfykk8EJXLrGFxQDqDs2zrFDRfk2",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "14qF7pW9tkMHFh7ZyJ4VtoHT4z854JTRmY",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "14w5K8H7qMgYC5NNJ1MgoSEk2qYEZv2Ku8",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "15748kJk76qa3VmsDJLaELE8TvphVDST2k",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "15CQxUp3ed71KT6UT2CZcuDJoMJT9j71xh",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "15EAoA6V3WcNyLsG8c3s6MtazPvrC6GTVu",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "15H9ZHyicgMM3og6Qmf2MdCFJ6DgEBvcjQ",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "15L1QDh7TWjC5hhifVqo8VhAkMVriKYMJU",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "15Neg1sGQYjFZhDPxGzYk2aJ4jd4hHiL6x",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "15T4cxtnpT3RNYG8zTpSsQ51yqaUCvvtS6",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "15VKb3dVakifbMtbk2J4mcNhazCsWpdhZb",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "15dtKtxmyANac1uuspy7vnJhFC9HZdHzpV",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "15hhNxy4JbHeFvZYWBiW439PDzDCWt2kwr",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "15kRWVagxpKLdwYtGAsfbN82z5rp6EAePE",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "165r92N8n3jdPCXV3c8NYPZzp2ztGYJDjy",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "16HXmw3Nk6fXsmJe2RAjtE936E2JSidwhP",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "16Q7WaCAsQvUELwAZh4j9LH68yeTGwhmjX",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "16ZzNDaTxpdqDsh5xAYZZ4QEE1BpTaay8w",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "16hsttCKnMDnB1Hyo2bs9JYekgPXBstTVz",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "16rXNLk8KLvTmH6kojZKhBW6Fz8Bd452by",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "17cZ7T6h8VgoRvXBffHtPT6L5R4q6PnnTF",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "17d1QXgavdfjCeiJswjoHRae4hq5d3dqPm",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "17dRRJusyEydXib2NgD138FfqAj5ovpUCU",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "17nhaHkuEsf51rnQkt31HcqVwVEvEm75Bm",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "187hcqpdDUWWLS3dNDZwWrtz5wkA8RwdSd",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "18KtybAEfKREUnnZAQ3J5YQemxyJZX2Ldt",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "18MeZX4tN1DvV9Ptxg8ds8jw5iK9BebvJX",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "18WWMKLW14oubpCJzexdAF865BagEDcXDz",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "18dAKp6nXQEpaNygAqWPtLHxPiPGxk3sG6",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "18ihBYQLmUKMRVMhKEvdCNZc8GcpeE1k13",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "18jxgt8cwT7UYCWgtpNRsvitJDQrDSM1S4",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "18rmmAVt2CTKiPZfDdNAgMemYj9p8PzkX",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "18sSab2cSUpYMtgL3BAxdERqbAucH8oLHV",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "18ugKF91J4Ya4NHw1okSwJsBoYKVtfwvLw",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1919RXC4ey3y6UUbcjMYSwxK9BgfWnNDRL",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "192DCHUf2bm4DEGs7X2oi5SRFpTAPvfvH5",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "195sXBREXpNc4zishy1MFPsHdHGKS463xw",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "19oBJwb5xRimM6jwDoxcTMQ5TBKMnJa5rz",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "19u4mGADE44RLLeDz5A2Dnv5C7j9S8xuZY",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1A8JMfAnmJJDmYaPrQdo6T9ww5TnNpCT7",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1A8qrHD9egDJMfM2Df7N8MeVexNBDQzsmi",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1AMhAeSwRj6kh4G6DDNNRHrbsUrsPHbeKF",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1AR1Z1nLSoN7v7F1j85Bmivpw77qH6hxWq",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1AggCdjQa19kKWSAC67BwX5TeRt1P8LSAu",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1AoyPDDkpZN77Gru4jdvE8Nt3otiigabhQ",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1AtT9qKo8MzJmUv9AvY7JruaQNwWHV4dvx",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1AzA4asTp1JxnnabAB3ERFvShqH6cdbZLo",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1B5SNyUL62exuqeq9eNc7YKD6tgKiccWnv",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1BKZFEHbb7kShbczAq4JV4nRVwWTxmN69D",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1BSZXXqi5yj7xETqPRGPtk1zniykwQmdoB",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1BueSoqEcvWHPeJojNhQiLJK3L1o8Rkciq",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1C8DadzfyiGtm8ns9tUKZN5rDuFNPAK68q",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1CAYGi7rEL91Mfmf9bSZYtLHDc8RKziwhX",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1CKC69YKKdHuAKVpZajD89AzJWNWMPrKmq",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Cfm29BFFyYCRasETSawb5JGopwaj7xMej",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1D2KcnyxejarzYmYL3PtEniaiZdFQE49p3",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1DEeAuTgT54kjr5PbqS6KgHnvHUPuk6nUS",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1DHkQXV2CK9XBYLGyWXZfVNQh7ernbtDmm",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1DPQCNgdwuKTWo125XaBrRoC43x9ktuUFY",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Dwa2UHaB3fDzvw3hqvjDMdPVZA1ExP9cx",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1E6b4dZmGZUovVci1Cn3i1qxiGdgVKBxSq",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1EMTix6EKvBRKFrcKi2Hqr4vYfzHA3awcs",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1EXhtENwBJSvvJ5fKYMj9AtAxVuUY6bHsD",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1EY5mEoYYCeBBJ7N8mFH8mV7QEYwmG6VCT",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1EYG3UrrjbsfBiu8DduTeDXCtS2kVQ2HM9",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1EqRzYjVd5VjJe9ToZQcMVc7JSrQquLjw2",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1EyLDxCaWCpic3EbqDGwVRRKjiNvf6PtSv",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1EyQLM1YNweSZWK8Y7URFMm6wvS617q5ht",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1F9xXer4M78q8MoZdXB6f1NCv7HyhFqQCV",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1FBoYi7uF6G9vpU3KvQBmqjTgPWRfqhtph",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1FMLHAt7u7vBanyFUtSsVVkkhog9GNa8xj",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1FgyzmYmJCJ8EfAh3BsWiB8gsgswXYWRZz",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Fpv8p2fFMpNvGSnXW6KmykCVmzvbRqAQG",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1G1664BuvZyrCLhKQc7TYCUCiAPRuvdiMf",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1G5oL4TAVk6wwd5dxoWqpZKkxdQ4Eyfcw6",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1GMg8djKtSCxxyoEmCRhoTMDzoALQw1TL1",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1GZLvXqWWKNxvvobTHVk6pW5UkTridDhTf",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1GeZLc2CxDWKPEwV7iACNkBRcMtqB16UHD",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Ghg8HHnbpogrUVvoszbauAbPz7XhJGmWU",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1HBF4CtKJb242uN7X1Xw4cbhdZoDD8VJx6",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1HChuubUD4pHscGrh9GTugjatjte3zHMZ6",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1HCx3xX3Ut7v6GjMEyjj7tivTnStWA4qRV",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1HKMrLhr7nmRsXAyjbZDSbscRCtBrvchaT",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1HbPsPVHEaWkTdB4TBgqnHushtExnPKcd7",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Hq95hkp7MCQeUQkNQEoe19PMikFmTXnoT",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Hqy6vCcpThHuHvNsFM86Tqg4zUJiZuhgV",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1HrVadBipcfHqpKFAoJUvusAFh4VBJmjmq",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Hx9K4JNvsRS3JNqALPdBvB2VNWaYB79pv",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1J3zZ7vD1VLpvnRGuZL5g274D8cZWGG61A",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1JWL2McP6YYqGpUE2pRhdan5YNZNrq8aWR",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1JnNu6zcyVgRokGd5J7F9hwAvmrNPTCd2p",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Jotg1Ct6yBbkJHLeoKoCXtETh7PVuUbWL",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1KF9PAKche2zFyv2fAUMs1kFH9P9LiHnp1",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1KS2KcRRPch1nVDs6k9SNgWovSDPfXgwBe",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1KYFfwYi2HiCrrEBWd9Mvex6T2yTadT6D2",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1KdarcbS1cyARfXQEcEomffsL8d9PQ7Kmh",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1KjrSw3bx6NTUs1hpjf63Kj5phzihakqyM",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1KqH5e5i6GAL4G5Mrf7JYiNw96dX7eiAzP",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Kuprz8EKEVX85a1m6j5ZRJzcbHE8YANWP",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1LADzovLKmJvbXgEPLX2HHNd5UK3DS9MxV",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1LerB2XAgE4A3fH87ppdzdcvJBXkAJsZez",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1LghASU7K6CtU2RnahRx9DPNnK7xR2mLVX",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1LwkSh3tdW5Pfe9GuxatEqAyix6iuGVsYA",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1M59JNykWz3vAnmgfeJ4HhmyKcGUaVDu6X",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1MGM38dxZTjopqjWUKYYdDHkxnZwpymSV3",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1MJUnhyULugay92DgdVn9iZ3h2THAr6BRJ",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1MLJm5XXv7E7zX3iBLzC27YSbpj7SKB9H",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1MNFp1je7nemAFonbHxhwPrawFVaE3BoSY",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1MUEYeXdUNrz1zvhAjEp1i6TN2JpNci9xA",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1MUMv9YPXhUgbiu2EUc4hVomTxRdUe7AC3",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1MVwAnkzNCmFUMo8iSm6b7EZfofLkY3X41",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1McTEZgWCnJ1ZSrVaYxHnTDuzUAxAwsZPV",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1MjeHbZ1wcxC3fg2nj9FwYkwfaRbgsBxCv",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1MnE9hvPo43zMWXGXqmRW4Vfp5gk2DJiyZ",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1MsRdhPGp8dxEUc4gtcz2BuafeoeHMuMwr",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1MzYBVBdwNVhCVgud3VJa9vwyMHvzPBJMc",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1N3cb8bs6iRawa4HTgXLdHEZHifwL3yfnH",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1N6cBZSdFQbMvpt4jSjo6DiFejYnMSjH5A",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1NJyKcrdqnNNfUQ4jP2JcWkKTdLnGviHWN",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1NWdkxqrjtpCdFYbhWsVUf35dZRDLgSCy3",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1NhdNj1TPcuVrXERexkgAWEzf2fM2mf8HD",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Nxip6wh6dtvh6KDAwVrEUXz1XzYoX5ocs",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1P2DUeMjtHwkpFj2g7fLJ32X5n79txxyTH",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1P67ks4WtnAhzMoNd5ykwbmgyH8f1q4Jhu",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1P9u48s7SLNtAWTkEHQ2N47CduuTRPu4rs",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1PK1QDGsf7vrTWx7Nifpi8f1WrrQ7R74MB",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1PhVGzn6DF3PTnxbZ6w3yRozWoHAcb9QJ1",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Po7J9mvUhRZh4wR7XPShEqpR8eYeVWhPy",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Q3QwbB6oP19mo7TFLmshpBskLG9cyDrS2",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1Q4TmHH3KZu2kAha6PXVAXSji4RDcNedVA",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1QHAXXE9RSgoNpa4VdNwkLnQs7v27xHoVs",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1RLaw2bbzUnoHAt3HG8EQVDiQd8fTzcsi",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1mw8V8rQEfEJKgPyghNwN6oJFZ8N4q3AA",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      },
+      {
+        "address_a": "113UD7kW6Tm6eGUSdx1nxbyJUXDmPgh9YY",
+        "address_b": "1t3bca9MTgZxUk87kXcihKY5udNMi1wbw",
+        "relationship": "CO_SPEND_COMPONENT",
+        "timestep": 44,
+        "category": "BLOCKCHAIN_CONTEXT"
+      }
+    ],
+    "note": "Co-spend membership is a HEURISTIC about spending, not proof of shared ownership. No relationship here is derived from network observations: the network layer emits cannot-link only and can never establish that two addresses are the same party."
+  },
+  "timeline": {
+    "category": "BLOCKCHAIN_CONTEXT",
+    "unit": "Elliptic timestep (about two weeks each)",
+    "points": [
+      {
+        "timestep": 44,
+        "transactions": 82,
+        "active_addresses": 148,
+        "btc_sent": 122.77304036,
+        "btc_received": 225.27581338000002
+      }
+    ]
+  },
+  "network_context": {
+    "category": "NETWORK_CONTEXT",
+    "members_with_observations": 1,
+    "members_reaching_production_minimum": 0,
+    "available": true,
+    "status": "NETWORK_CONTEXT",
+    "meaning": "Network observations describe when and where transaction announcements were seen by passive observers. They are INVESTIGATIVE CONTEXT only. They do not establish that an IP address owns, controls or sent from a wallet, and two addresses sharing network characteristics are not thereby the same person: one server can broadcast for tens of thousands of unrelated users. The network layer can only ever say that two groups look DIFFERENT, never that they are the same.",
+    "synthetic_warning": "All network observations in this deployment are SYNTHETIC. They demonstrate the mechanism and validate nothing about Bitcoin. Any network figure shown here is a property of a generated dataset.",
+    "insufficient_evidence_meaning": null
+  },
+  "members": {
+    "shown": 25,
+    "total_scored": 148,
+    "withheld": 123,
+    "rows": [
+      {
+        "address": "121yHE9JRzMBKxd8JSsoRd8JT2sSRNn5EG",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1LerB2XAgE4A3fH87ppdzdcvJBXkAJsZez",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1KqH5e5i6GAL4G5Mrf7JYiNw96dX7eiAzP",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1KjrSw3bx6NTUs1hpjf63Kj5phzihakqyM",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1KdarcbS1cyARfXQEcEomffsL8d9PQ7Kmh",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "12gaVnYYcZfRhZ7Ctikpz7sZE9QkonDDED",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1KF9PAKche2zFyv2fAUMs1kFH9P9LiHnp1",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1Jotg1Ct6yBbkJHLeoKoCXtETh7PVuUbWL",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1JnNu6zcyVgRokGd5J7F9hwAvmrNPTCd2p",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1JWL2McP6YYqGpUE2pRhdan5YNZNrq8aWR",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1J3zZ7vD1VLpvnRGuZL5g274D8cZWGG61A",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1Hx9K4JNvsRS3JNqALPdBvB2VNWaYB79pv",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1Hqy6vCcpThHuHvNsFM86Tqg4zUJiZuhgV",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1HbPsPVHEaWkTdB4TBgqnHushtExnPKcd7",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1HKMrLhr7nmRsXAyjbZDSbscRCtBrvchaT",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1HCx3xX3Ut7v6GjMEyjj7tivTnStWA4qRV",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1HChuubUD4pHscGrh9GTugjatjte3zHMZ6",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1HBF4CtKJb242uN7X1Xw4cbhdZoDD8VJx6",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1Ghg8HHnbpogrUVvoszbauAbPz7XhJGmWU",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1GeZLc2CxDWKPEwV7iACNkBRcMtqB16UHD",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1GZLvXqWWKNxvvobTHVk6pW5UkTridDhTf",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1GMg8djKtSCxxyoEmCRhoTMDzoALQw1TL1",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1G1664BuvZyrCLhKQc7TYCUCiAPRuvdiMf",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1Fpv8p2fFMpNvGSnXW6KmykCVmzvbRqAQG",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      },
+      {
+        "address": "1FgyzmYmJCJ8EfAh3BsWiB8gsgswXYWRZz",
+        "risk_score": 1.0,
+        "severity": "CRITICAL",
+        "observed_at_timestep": 44,
+        "first_timestep": 44
+      }
+    ]
+  },
+  "provenance": {
+    "provenance_type": "PRODUCTION",
+    "dataset_id": "elliptic++/frozen-september-2026",
+    "dataset_sha256": null,
+    "synthetic_network": true,
+    "run_fingerprint": "043ea584e99daf998f29f7566089a98039354fd5984cd7279ea44096bf2a3e2a",
+    "public_run_fingerprint": "043ea584e99daf99",
+    "phase6_dataset_fingerprint": "043ea584e99daf998f29f7566089a98039354fd5984cd7279ea44096bf2a3e2a",
+    "artifact_schema": "obsidianchain.alerts/1",
+    "model": {
+      "family": "LightGBM",
+      "calibration": "isotonic, fitted on the VALIDATION split only",
+      "n_features": 43,
+      "explainability": "TreeSHAP via LightGBM pred_contrib (log-odds)"
+    },
+    "feature_semantics": "Every feature is as-of the address's LAST active timestep, computed only from transactions with Time step <= t. Boundary-spanning addresses were removed entirely, so the splits are address-disjoint.",
+    "split": {
+      "train": "t1-t34",
+      "validation": "t35-t41",
+      "test": "t42-t49"
+    },
+    "scored_split": "test",
+    "severity_bands": [
+      {
+        "band": "CRITICAL",
+        "target": 0.9,
+        "threshold": 0.21052631578947367,
+        "support": 1843,
+        "validation_precision": 0.9001627780792186,
+        "populated": true
+      },
+      {
+        "band": "HIGH",
+        "target": 0.75,
+        "threshold": 0.19088937093275488,
+        "support": 2337,
+        "validation_precision": 0.750106974753958,
+        "populated": true
+      },
+      {
+        "band": "MEDIUM",
+        "target": 0.5,
+        "threshold": 0.08970976253298153,
+        "support": 3840,
+        "validation_precision": 0.5,
+        "populated": true
+      }
+    ],
+    "ranking_aggregation": "AGG-TOPK",
+    "git_revision": null,
+    "notes": [
+      "Network observations are SYNTHETIC and are investigative context only. They never establish that an IP owns, controls or sent from a wallet.",
+      "A cluster is an inference from the common-input-ownership heuristic, not a person or a legal entity.",
+      "No artifact here carries a ground-truth label: on real data there is none, and displaying one would make this a label viewer.",
+      "Scores are out-of-sample; only the TEST split is ranked."
+    ]
+  }
+}

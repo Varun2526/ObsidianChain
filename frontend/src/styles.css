@@ -1,0 +1,262 @@
+/* ObsidianChain investigation console.
+ *
+ * Dark, dense, desktop-first. The palette is deliberately narrow: one
+ * accent, four severity colours, and two semantic colours that separate
+ * BLOCKCHAIN_CONTEXT from NETWORK_CONTEXT. Nothing decorative - every colour
+ * carries a meaning an investigator has to be able to read at a glance.
+ */
+
+:root {
+  --bg: #0b0e14;
+  --bg-raised: #11151f;
+  --bg-panel: #151a26;
+  --bg-hover: #1b2130;
+  --border: #232a3a;
+  --border-strong: #313a4f;
+
+  --text: #dbe2f0;
+  --text-dim: #8b97ae;
+  --text-faint: #5d6880;
+
+  --accent: #4da3ff;
+  --accent-dim: #1f4a7a;
+
+  /* Severity. Ordered, and only used for severity. */
+  --critical: #ff4d5e;
+  --high: #ff9f45;
+  --medium: #ffd54a;
+  --low: #5d6880;
+
+  /* Evidence provenance. Blue = ledger fact, violet = network context. */
+  --blockchain: #4da3ff;
+  --network: #b388ff;
+  --model: #4ddba4;
+  --insufficient: #6b7688;
+
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code, .mono { font-family: var(--mono); font-size: 0.92em; }
+
+/* ---- layout ---------------------------------------------------------- */
+
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+
+.topbar {
+  display: flex; align-items: center; gap: 20px;
+  padding: 0 20px; height: 52px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 20;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand-name { font-weight: 650; letter-spacing: 0.02em; font-size: 15px; }
+.brand-sub { color: var(--text-faint); font-size: 12px; }
+.topbar nav { display: flex; gap: 4px; margin-left: 8px; }
+.topbar nav a {
+  padding: 6px 12px; border-radius: 6px; color: var(--text-dim);
+  font-size: 13px;
+}
+.topbar nav a:hover { background: var(--bg-hover); text-decoration: none; }
+.topbar nav a.active { background: var(--accent-dim); color: #fff; }
+.topbar .spacer { flex: 1; }
+
+.content { flex: 1; padding: 20px; max-width: 1680px; width: 100%; margin: 0 auto; }
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+.panel-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.panel-head h2 { margin: 0; font-size: 13px; font-weight: 650;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+.panel-body { padding: 16px; }
+.panel-body.flush { padding: 0; }
+/* Wide content scrolls inside its own panel; the page body never does. */
+.panel { overflow: hidden; }
+.panel-body.flush { padding: 0; }
+
+.grid-2 { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; align-items: start; }
+/* A grid item defaults to min-width:auto, so a wide child - the 20-column
+ * evidence table - stretches its column past the viewport and scrolls the
+ * whole page sideways instead of scrolling inside its own container. */
+.grid-2 > * { min-width: 0; }
+@media (max-width: 1180px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* ---- severity -------------------------------------------------------- */
+
+.sev {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+  border: 1px solid currentColor;
+}
+.sev::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+}
+.sev-CRITICAL { color: var(--critical); }
+.sev-HIGH { color: var(--high); }
+.sev-MEDIUM { color: var(--medium); }
+.sev-LOW { color: var(--low); }
+
+/* ---- category chips -------------------------------------------------- */
+
+.cat {
+  display: inline-block; padding: 1px 7px; border-radius: 3px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+  border: 1px solid currentColor; white-space: nowrap;
+}
+.cat-MODEL_SIGNAL { color: var(--model); }
+.cat-BLOCKCHAIN_CONTEXT { color: var(--blockchain); }
+.cat-NETWORK_CONTEXT { color: var(--network); }
+.cat-INSUFFICIENT_EVIDENCE { color: var(--insufficient); }
+
+/* ---- tables ---------------------------------------------------------- */
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  text-align: left; padding: 9px 14px; color: var(--text-dim);
+  font-size: 11px; font-weight: 650; text-transform: uppercase;
+  letter-spacing: 0.05em; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--text); }
+td { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr.clickable { cursor: pointer; }
+tbody tr.clickable:hover { background: var(--bg-hover); }
+.num { text-align: right; font-family: var(--mono); }
+
+/* ---- controls -------------------------------------------------------- */
+
+.controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label {
+  font-size: 11px; color: var(--text-dim); text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+input[type="number"], select {
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 5px;
+  padding: 6px 9px; font-size: 13px; font-family: var(--sans);
+}
+input:focus, select:focus, button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+.toggles { display: flex; gap: 6px; }
+.toggle {
+  padding: 6px 11px; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--border-strong); background: var(--bg);
+  color: var(--text-dim); font-size: 12px; font-weight: 650;
+  font-family: var(--sans);
+}
+.toggle[aria-pressed="true"] { background: var(--accent-dim); color: #fff;
+  border-color: var(--accent); }
+
+button {
+  background: var(--bg-hover); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 5px;
+  padding: 6px 13px; font-size: 13px; cursor: pointer; font-family: var(--sans);
+}
+button:hover:not(:disabled) { background: var(--border); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+button.primary { background: var(--accent-dim); border-color: var(--accent); }
+
+/* ---- risk bar -------------------------------------------------------- */
+
+.riskbar {
+  position: relative; height: 6px; width: 92px; border-radius: 3px;
+  background: var(--bg); overflow: hidden; display: inline-block;
+  vertical-align: middle; border: 1px solid var(--border);
+}
+.riskbar > span { display: block; height: 100%; }
+
+/* ---- states ---------------------------------------------------------- */
+
+.state { padding: 44px 20px; text-align: center; color: var(--text-dim); }
+.state h3 { margin: 0 0 8px; color: var(--text); font-size: 15px; }
+.state p { margin: 0 auto; max-width: 620px; font-size: 13px; }
+.state .mono { display: block; margin-top: 12px; color: var(--text-faint);
+  font-size: 12px; word-break: break-all; }
+
+.banner {
+  border-radius: 6px; padding: 12px 14px; margin-bottom: 16px;
+  border: 1px solid; font-size: 13px;
+}
+.banner h4 { margin: 0 0 5px; font-size: 13px; }
+.banner p { margin: 0; }
+.banner-stale { border-color: var(--high); background: rgba(255,159,69,0.08);
+  color: var(--high); }
+.banner-stale p { color: var(--text); }
+.banner-synthetic { border-color: var(--network);
+  background: rgba(179,136,255,0.07); color: var(--network); }
+.banner-synthetic p { color: var(--text-dim); }
+.banner-error { border-color: var(--critical); background: rgba(255,77,94,0.08);
+  color: var(--critical); }
+.banner-error p { color: var(--text); }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-hover), var(--bg-panel));
+  border-radius: 4px; height: 13px; margin: 9px 0;
+}
+
+/* ---- explanation rows ------------------------------------------------ */
+
+.contrib { display: grid; grid-template-columns: 1fr auto; gap: 10px;
+  align-items: center; padding: 6px 0; }
+.contrib-bar { position: relative; height: 18px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.contrib-bar .fill { position: absolute; top: 0; bottom: 0; }
+.contrib-bar .fill.pos { background: rgba(255,77,94,0.4); }
+.contrib-bar .fill.neg { background: rgba(77,219,164,0.35); }
+.contrib-bar .zero { position: absolute; top: 0; bottom: 0; width: 1px;
+  background: var(--border-strong); }
+.contrib-label { position: absolute; inset: 0; display: flex;
+  align-items: center; padding: 0 8px; font-size: 12px; gap: 8px; }
+
+dl.kv { margin: 0; display: grid; grid-template-columns: auto 1fr;
+  gap: 6px 16px; font-size: 13px; }
+dl.kv dt { color: var(--text-dim); }
+dl.kv dd { margin: 0; font-family: var(--mono); word-break: break-all; }
+
+.muted { color: var(--text-dim); }
+.faint { color: var(--text-faint); }
+.small { font-size: 12px; }
+.note { font-size: 12px; color: var(--text-dim); margin: 10px 0 0;
+  line-height: 1.55; }
+.stat-row { display: flex; flex-wrap: wrap; gap: 26px; }
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat .v { font-family: var(--mono); font-size: 19px; }
+.stat .k { font-size: 11px; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.05em; }
+
+.graph-host { height: 460px; width: 100%; background: var(--bg); }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px;
+  color: var(--text-dim); padding: 10px 16px;
+  border-top: 1px solid var(--border); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.legend i.edge { width: 16px; height: 0; border-top: 2px solid; border-radius: 0; }
