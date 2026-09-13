@@ -41,6 +41,7 @@ MEMBER_SCHEMA = "obsidianchain.alert_members/1"
 EXPLANATION_SCHEMA = "obsidianchain.alert_explanations/1"
 TIMELINE_SCHEMA = "obsidianchain.alert_timeline/1"
 RELATIONSHIP_SCHEMA = "obsidianchain.alert_relationships/1"
+NETWORK_SCHEMA = "obsidianchain.alert_network/1"
 
 #: ``<16 hex run fingerprint>:<cluster id>``. Anchored, no sign, no leading
 #: zeros, so exactly one string addresses one alert.
@@ -133,6 +134,16 @@ NETWORK_CONTEXT_MEANING = (
     "thereby the same person: one server can broadcast for tens of thousands "
     "of unrelated users. The network layer can only ever say that two groups "
     "look DIFFERENT, never that they are the same."
+)
+
+ANNOUNCING_PEER_MEANING = (
+    "An announcing peer is the node an OBSERVER first heard this transaction "
+    "from. It is a relay vantage point, not the originator and not the "
+    "sender. Measured on this dataset, 170,899 of 202,804 transactions "
+    "(84.3%) were announced by more than one peer, which is what gossip "
+    "relay looks like. Do not read a peer IP as the party who made the "
+    "payment, and do not read two transactions sharing a peer as being sent "
+    "by the same person."
 )
 
 SYNTHETIC_NETWORK_WARNING = (

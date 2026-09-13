@@ -1,17 +1,24 @@
 /**
  * The investigation graph, drawn with Cytoscape.js.
  *
- * What is rendered, and what is NOT
- * ---------------------------------
- * The API exposes address-to-address relationships only. There are no
- * transaction ids in the alert contract, so there are no transaction nodes
- * here: inventing one per edge would draw a node the backend never
- * described. The legend says so rather than leaving a reader to assume the
- * graph is complete.
+ * What is rendered
+ * ----------------
+ * Four node kinds, every one of them backed by a field the API returns:
  *
- * Two node kinds are real and drawn: the CLUSTER (the alert itself - an
- * inference from the common-input-ownership heuristic, not a person) and the
- * ADDRESS nodes that belong to it.
+ *   CLUSTER      the alert - an inference from the common-input-ownership
+ *                heuristic, not a person
+ *   ADDRESS      a member wallet
+ *   TRANSACTION  a txid from the network correlation
+ *   IP           a peer that ANNOUNCED a transaction
+ *
+ * The IP -> TRANSACTION -> ADDRESS chain is the correlation the problem
+ * statement asks for, and each link is an observed fact: an observer heard
+ * this transaction from this peer, and this address took part in it.
+ *
+ * An IP edge is labelled ANNOUNCED_BY and never "sent". 84.3% of
+ * transactions in this dataset were announced by more than one peer, which
+ * is what gossip relay looks like - so a peer is a vantage point, not an
+ * originator, and the panel says so.
  *
  * Readability
  * -----------
@@ -36,7 +43,12 @@ export interface GraphModel {
   withheldAddresses: number;
   renderedEdges: number;
   withheldEdges: number;
+  renderedTransactions: number;
+  renderedIps: number;
 }
+
+/** Transactions pulled into the graph. Beyond this it stops being readable. */
+export const TRANSACTIONS_IN_GRAPH = 12;
 
 /**
  * Pure: build the Cytoscape elements from an alert.
@@ -139,12 +151,65 @@ export function buildGraphModel(alert: AlertDetail, cap: number): GraphModel {
     });
   }
 
+  // ---- the network correlation: IP -> TRANSACTION -> ADDRESS ----------
+  //
+  // Only transactions that actually touch a rendered address are drawn.
+  // Pulling in a transaction whose wallets are all off-graph would add a
+  // node with nothing to connect to.
+  let renderedTransactions = 0;
+  const ips = new Set<string>();
+  if (alert.correlation?.available) {
+    for (const tx of alert.correlation.transactions.slice(0, TRANSACTIONS_IN_GRAPH)) {
+      const involved = tx.addresses.filter((a) => chosen.has(a.address));
+      if (involved.length === 0) continue;
+      const txNode = `tx:${tx.txid}`;
+      elements.push({
+        data: {
+          id: txNode, kind: "transaction", label: `tx ${tx.txid.slice(0, 8)}`,
+          txid: tx.txid, announcingPeers: tx.announcing_peers_total,
+          firstSeenMs: tx.first_seen_ms,
+        },
+      });
+      renderedTransactions += 1;
+      for (const involvement of involved) {
+        elements.push({
+          data: {
+            id: `involves:${tx.txid}:${involvement.address}:${involvement.role}`,
+            source: txNode, target: involvement.address,
+            kind: "INVOLVES", role: involvement.role,
+          },
+        });
+      }
+      for (const peer of tx.peers) {
+        const ipNode = `ip:${peer.ip}`;
+        if (!ips.has(peer.ip)) {
+          ips.add(peer.ip);
+          elements.push({
+            data: {
+              id: ipNode, kind: "ip", label: peer.ip, ip: peer.ip,
+              asn: peer.asn, port: peer.port, observers: peer.observers,
+            },
+          });
+        }
+        elements.push({
+          data: {
+            id: `announced:${peer.ip}:${tx.txid}`,
+            source: ipNode, target: txNode, kind: "ANNOUNCED_BY",
+            observers: peer.observers,
+          },
+        });
+      }
+    }
+  }
+
   return {
     elements,
     renderedAddresses: chosen.size,
     withheldAddresses: Math.max(0, alert.members.total_scored - chosen.size),
     renderedEdges: keptEdges.length,
     withheldEdges,
+    renderedTransactions,
+    renderedIps: ips.size,
   };
 }
 
@@ -211,6 +276,38 @@ export function InvestigationGraph({ alert }: { alert: AlertDetail }) {
             opacity: 0.8,
           },
         },
+        {
+          selector: 'node[kind="transaction"]',
+          style: {
+            "background-color": "#1b2130", "border-width": 1,
+            "border-color": "#8b97ae", shape: "diamond",
+            width: 22, height: 22, label: "data(label)",
+            "font-size": 8, color: "#8b97ae", "text-valign": "bottom",
+            "text-margin-y": 3,
+          },
+        },
+        {
+          selector: 'node[kind="ip"]',
+          style: {
+            "background-color": "#b388ff", shape: "hexagon",
+            width: 18, height: 18, label: "data(label)",
+            "font-size": 8, color: "#b388ff", "text-valign": "top",
+            "text-margin-y": -3,
+          },
+        },
+        {
+          selector: 'edge[kind="INVOLVES"]',
+          style: { width: 1.5, "line-color": "#5d6880", "curve-style": "bezier",
+                   opacity: 0.6 },
+        },
+        {
+          selector: 'edge[kind="ANNOUNCED_BY"]',
+          style: {
+            width: 1.5, "line-color": "#b388ff", "curve-style": "bezier",
+            "target-arrow-color": "#b388ff", "target-arrow-shape": "vee",
+            "line-style": "dashed", opacity: 0.7,
+          },
+        },
         { selector: ":selected", style: { "border-width": 3, "border-color": "#fff" } },
       ],
       layout: {
@@ -238,6 +335,9 @@ export function InvestigationGraph({ alert }: { alert: AlertDetail }) {
         <h2>Investigation graph</h2>
         <span className="small muted">
           {model.renderedAddresses} addresses · {model.renderedEdges} relationships
+          {model.renderedTransactions > 0
+            ? ` · ${model.renderedTransactions} transactions · ${model.renderedIps} peers`
+            : ""}
         </span>
         <span className="spacer" style={{ flex: 1 }} />
         <div className="toggles" role="group" aria-label="Node cap">
@@ -260,6 +360,11 @@ export function InvestigationGraph({ alert }: { alert: AlertDetail }) {
         <span><i style={{ background: "#3b445a" }} /> Unscored (outside the capped member list)</span>
         <span><i className="edge" style={{ borderColor: "#4da3ff" }} /> CO_SPEND_COMPONENT</span>
         <span><i className="edge" style={{ borderColor: "#4ddba4" }} /> FUNDED_VIA_TRANSACTION</span>
+        <span><i style={{ background: "#1b2130", border: "1px solid #8b97ae",
+          transform: "rotate(45deg)", borderRadius: 0 }} /> Transaction</span>
+        <span><i style={{ background: "#b388ff" }} /> Announcing peer (relay, not sender)</span>
+        <span><i className="edge" style={{ borderColor: "#b388ff",
+          borderTopStyle: "dashed" }} /> ANNOUNCED_BY</span>
       </div>
 
       <div className="panel-body">
@@ -277,8 +382,21 @@ export function InvestigationGraph({ alert }: { alert: AlertDetail }) {
                 ? <span className="faint">not in the scored member list</span>
                 : Number(inspected.risk).toFixed(4)}
             </dd>
-            {inspected.observedAt !== undefined ? (
+            {inspected.observedAt !== undefined && inspected.observedAt !== null ? (
               <><dt>Observed at</dt><dd>t{String(inspected.observedAt)}</dd></>
+            ) : null}
+            {inspected.txid ? (
+              <><dt>Transaction</dt><dd>{String(inspected.txid)}</dd>
+                <dt>Announcing peers</dt>
+                <dd>{String(inspected.announcingPeers)}{" "}
+                  <span className="faint">(a peer is a relay vantage point, not a sender)</span>
+                </dd></>
+            ) : null}
+            {inspected.ip ? (
+              <><dt>Peer IP</dt><dd>{String(inspected.ip)}</dd>
+                <dt>ASN</dt><dd>{String(inspected.asn ?? "n/a")}</dd>
+                <dt>Port</dt><dd>{String(inspected.port ?? "n/a")}</dd>
+                <dt>Seen by</dt><dd>{String(inspected.observers)} observers</dd></>
             ) : null}
           </dl>
         ) : (
@@ -297,9 +415,22 @@ export function InvestigationGraph({ alert }: { alert: AlertDetail }) {
               raise the cap above to include more.{" "}
             </>
           ) : null}
-          <strong>No transaction nodes are shown.</strong> The alert API exposes
-          address-to-address relationships only, so drawing transaction nodes
-          would mean inventing objects the backend never described.
+          {model.renderedTransactions > 0 ? (
+            <>
+              <strong>Transaction and peer nodes come from the network
+              correlation.</strong> An <span style={{ color: "var(--network)" }}>
+              ANNOUNCED_BY</span> edge means an observer heard that transaction
+              from that peer. It does <strong>not</strong> mean the peer sent
+              it, and two transactions sharing a peer are not thereby the same
+              party.
+            </>
+          ) : (
+            <>
+              <strong>No transaction or peer nodes are shown.</strong> No
+              announcement observations correlated to this alert's
+              transactions, so there is nothing truthful to draw.
+            </>
+          )}
         </p>
         <p className="note">{alert.relationships.note}</p>
       </div>

@@ -18,6 +18,7 @@ import type {
   AlertFilters,
   AlertListResponse,
   ApiErrorKind,
+  IngestResult,
 } from "./types";
 
 const BASE = "/api";
@@ -108,4 +109,43 @@ export function fetchAlert(
   signal?: AbortSignal,
 ): Promise<AlertDetail> {
   return request<AlertDetail>(`/alerts/${encodeURIComponent(alertId)}`, signal);
+}
+
+
+/**
+ * Upload one bulk metadata file for validation.
+ *
+ * The body is the file's raw bytes, not multipart: `python-multipart` is not
+ * in the vendored wheel set and the backend image builds with no network, so
+ * a raw body keeps the offline guarantee and needs no new dependency.
+ *
+ * This validates and correlates. It does NOT score - the response says so in
+ * its own body, and the UI repeats it rather than implying an upload
+ * produced the alerts on screen.
+ */
+export async function ingestFile(file: File, format?: string): Promise<IngestResult> {
+  const params = new URLSearchParams({ filename: file.name });
+  if (format) params.set("format", format);
+  let response: Response;
+  try {
+    response = await fetch(`${BASE}/ingest?${params}`, {
+      method: "POST",
+      body: file,
+      headers: { "Content-Type": "application/octet-stream" },
+    });
+  } catch {
+    throw new ApiError("network", 0,
+      "Could not reach the ObsidianChain API. Start it with `make serve`.");
+  }
+  if (!response.ok) {
+    let kind: ApiErrorKind = "unknown";
+    let detail = `Upload failed with status ${response.status}.`;
+    try {
+      const body = await response.json();
+      if (typeof body?.error === "string") kind = body.error as ApiErrorKind;
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch { /* non-JSON body: a proxy or a crash, not a handled refusal */ }
+    throw new ApiError(kind, response.status, detail);
+  }
+  return (await response.json()) as IngestResult;
 }

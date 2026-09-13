@@ -182,6 +182,17 @@ EXPECTED_IMPORT_GRAPH = {
     # library only (asserted in tests/test_phase7_alerts.py); the latter
     # exists precisely so the API can name a feature's group without
     # importing the builders that define it.
+    # Phase 9, reviewed: ingestion validates an uploaded file and reports on
+    # it. That is not recomputation - it produces no score, touches no
+    # artifact, and cannot be done offline because the file does not exist
+    # until the request arrives. io.ingest is a parser (pandas, json,
+    # xml.etree) and imports nothing from this project. geoip resolves an
+    # address against the IANA special-purpose registry and is standard
+    # library only.
+    "obsidianchain.api.ingest",
+    "obsidianchain.io",
+    "obsidianchain.io.ingest",
+    "obsidianchain.geoip",
     "obsidianchain.alerts",
     "obsidianchain.alerts.contract",
     "obsidianchain.alerts.feature_groups",

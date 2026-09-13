@@ -476,3 +476,139 @@ def test_a_missing_alert_artifact_is_503_naming_the_command(tmp_path) -> None:
     response = client.get(f"{API_PREFIX}/alerts")
     assert response.status_code == 503
     assert "phase7-alerts" in response.json()["detail"]
+
+
+# ---- Phase 9: the IP <-> transaction <-> wallet correlation -------------
+
+
+def test_the_correlation_artifact_exists_and_is_identity_stamped() -> None:
+    path = DATA_ROOT / "processed" / "alert_network.parquet"
+    assert path.is_file(), f"{path} is absent; run 'phase7-alerts'"
+    meta = provenance_gate.require_production(path)
+    assert meta["artifact"]["artifact_schema"] == contract.NETWORK_SCHEMA
+    embedded = prov.read_artifact_identity(path)
+    assert embedded[prov.FINGERPRINT_METADATA_KEY] == meta["run_fingerprint"]
+
+
+def test_the_correlation_carries_every_ps_network_field() -> None:
+    """timestamp, src ip, src port, ASN and txid - the PS minimum set."""
+    frame = pd.read_parquet(DATA_ROOT / "processed" / "alert_network.parquet")
+    for column in ("txid", "peer_ip", "peer_port", "peer_asn",
+                   "first_seen_ms", "observers", "announcing_peers",
+                   "address", "address_role"):
+        assert column in frame.columns, column
+    assert set(frame["address_role"]) <= {"input", "output"}
+
+
+def test_announcing_peers_is_never_one_everywhere(one_alert) -> None:
+    """Guards the honesty claim with the data behind it.
+
+    If every transaction had exactly one announcing peer, calling a peer a
+    relay rather than a sender would be a distinction without a difference.
+    Measured: 84.3% of transactions here have more than one.
+    """
+    frame = pd.read_parquet(DATA_ROOT / "processed" / "alert_network.parquet")
+    assert int(frame["announcing_peers"].max()) > 1
+
+
+def test_the_detail_response_carries_the_three_node_correlation(one_alert) -> None:
+    block = one_alert["correlation"]
+    assert block["category"] == contract.NETWORK_CONTEXT
+    if not block["available"]:
+        assert block["status"] == contract.INSUFFICIENT_EVIDENCE
+        return
+    tx = block["transactions"][0]
+    assert tx["txid"]
+    assert tx["peers"] and tx["peers"][0]["ip"]
+    assert tx["addresses"] and tx["addresses"][0]["role"] in ("input", "output")
+    assert tx["announcing_peers_total"] >= 1
+
+
+def test_the_correlation_never_calls_a_peer_a_sender(one_alert) -> None:
+    """Tested as the property, not as a word ban.
+
+    The caveat itself contains "sent by" - "do not read two transactions
+    sharing a peer as being sent by the same person" - which is the sentence
+    protecting against the claim. So every occurrence must sit inside a
+    negation; deleting the caveat would leave one unnegated and fail this.
+    """
+    block = one_alert["correlation"]
+    assert "not the originator and not the sender" in block["meaning"]
+    rendered = json.dumps(block).lower()
+    for phrase in ("sent by", "sender is", "owned by"):
+        start = 0
+        while (found := rendered.find(phrase, start)) != -1:
+            window = rendered[max(0, found - 110):found]
+            assert any(n in window for n in ("not ", "never", "cannot", "no ")), (
+                f"correlation uses {phrase!r} without a negation: "
+                f"...{window[-80:]}[{phrase}]"
+            )
+            start = found + len(phrase)
+
+
+def test_geoip_reports_the_documentation_range_rather_than_a_country(one_alert) -> None:
+    block = one_alert["correlation"]
+    if not block["available"]:
+        pytest.skip("no correlation on this alert")
+    geo = block["summary"]["geo"]
+    assert geo["countries"] == [], (
+        "a country was reported for RFC 5737 documentation addresses"
+    )
+    assert "not globally routable" in geo["country_note"]
+    assert geo["all_private_asns"] is True
+
+
+# ---- Phase 9: the ingest endpoint --------------------------------------
+
+
+def test_the_ingest_endpoint_validates_a_csv_upload(client) -> None:
+    body = (
+        b"txid,src_ip,src_port,input_addresses,output_addresses,asn\n"
+        b"1076,198.51.100.191,8333,1aaa;1bbb,1ccc,65162\n"
+    )
+    response = client.post(f"{API_PREFIX}/ingest?filename=s.csv", content=body)
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["validation"]["ok"] is True
+    assert payload["validation"]["rows_valid"] == 1
+    assert payload["correlation"]["correlatable_records"] == 1
+
+
+def test_the_ingest_endpoint_states_that_it_did_not_score(client) -> None:
+    """The claim that matters. An upload screen handing back a green tick
+    invites the reader to assume the alerts came from their file."""
+    body = b"txid\n1076\n"
+    payload = client.post(
+        f"{API_PREFIX}/ingest?filename=s.csv", content=body
+    ).json()
+    assert payload["next_step"]["scored"] is False
+    assert "offline pipeline run" in payload["next_step"]["why"]
+    assert "phase6-dataset" in payload["next_step"]["command"]
+
+
+def test_an_empty_upload_is_a_400(client) -> None:
+    response = client.post(f"{API_PREFIX}/ingest?filename=s.csv", content=b"")
+    assert response.status_code == 400
+    assert response.json()["error"] == "upload_empty"
+
+
+def test_an_unparseable_upload_is_a_422(client) -> None:
+    response = client.post(
+        f"{API_PREFIX}/ingest?filename=s.json", content=b"{not json"
+    )
+    assert response.status_code == 422
+    assert response.json()["error"] == "ingest_failed"
+
+
+def test_the_ingest_endpoint_accepts_json_and_xml(client) -> None:
+    payload = client.post(
+        f"{API_PREFIX}/ingest?filename=s.json",
+        content=b'[{"txid": "1076", "src_ip": "198.51.100.1"}]',
+    ).json()
+    assert payload["validation"]["rows_valid"] == 1
+
+    payload = client.post(
+        f"{API_PREFIX}/ingest?filename=s.xml",
+        content=b"<records><record><txid>1076</txid></record></records>",
+    ).json()
+    assert payload["validation"]["rows_valid"] == 1

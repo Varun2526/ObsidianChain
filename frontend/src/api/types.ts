@@ -189,6 +189,84 @@ export interface Members {
   rows: MemberRow[];
 }
 
+export interface GeoFacts {
+  unique_ips: number;
+  unique_asns: number;
+  countries: string[];
+  country_resolution: string;
+  country_note: string;
+  reserved_ranges: string[];
+  all_private_asns: boolean;
+  geoip_database_installed: boolean;
+}
+
+export interface AnnouncingPeer {
+  ip: string;
+  port: number | null;
+  asn: number | null;
+  first_seen_ms: number | null;
+  last_seen_ms: number | null;
+  observers: number;
+}
+
+export interface CorrelatedTransaction {
+  txid: string;
+  /** How many DISTINCT peers announced it. Never read one peer as "the sender". */
+  announcing_peers_total: number;
+  peers_shown: number;
+  first_seen_ms: number | null;
+  addresses: { address: string; role: "input" | "output" }[];
+  peers: AnnouncingPeer[];
+}
+
+export interface Correlation {
+  category: Category;
+  status: Category;
+  available: boolean;
+  transactions: CorrelatedTransaction[];
+  summary: {
+    transactions: number;
+    announcing_peers: number;
+    asns: number;
+    observers: number;
+    geo: GeoFacts;
+  } | null;
+  meaning: string;
+  synthetic_warning?: string;
+  insufficient_evidence_meaning: string;
+}
+
+export interface IngestValidation {
+  source_format: string;
+  rows_read: number;
+  rows_valid: number;
+  rows_rejected: number;
+  columns_present: string[];
+  columns_missing: string[];
+  required_missing: string[];
+  errors: string[];
+  warnings: string[];
+  ok: boolean;
+}
+
+export interface IngestResult {
+  filename: string;
+  bytes: number;
+  validation: IngestValidation;
+  correlation: {
+    records: number;
+    transactions: number;
+    addresses: number;
+    source_ips: number;
+    asns: number;
+    correlatable_records: number;
+    time_span: { first: unknown; last: unknown; unit: string } | null;
+  };
+  preview: Record<string, unknown>[];
+  canonical_columns: string[];
+  next_step: { scored: boolean; why: string; command: string };
+}
+
 export interface AlertDetail {
   alert_id: string;
   run_fingerprint: string;
@@ -207,6 +285,7 @@ export interface AlertDetail {
   relationships: Relationships;
   timeline: Timeline;
   network_context: NetworkContext;
+  correlation: Correlation;
   members: Members;
   provenance: Provenance;
 }
