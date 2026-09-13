@@ -34,6 +34,7 @@ ALERT_TABLES = {
     "alert_explanations": Path("processed") / "alert_explanations.parquet",
     "alert_timeline": Path("processed") / "alert_timeline.parquet",
     "alert_relationships": Path("processed") / "alert_relationships.parquet",
+    "alert_network": Path("processed") / "alert_network.parquet",
 }
 
 #: Command that regenerates each, named in the error so an operator is not

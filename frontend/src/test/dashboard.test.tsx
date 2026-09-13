@@ -311,20 +311,33 @@ describe("NetworkContextPanel", () => {
 // ---- the graph ---------------------------------------------------------
 
 describe("buildGraphModel", () => {
-  it("draws a cluster node and the capped address nodes", () => {
+  it("draws only node kinds the API actually backs", () => {
+    // Phase 9 added transaction and ip nodes, because the alert contract now
+    // returns txids and announcing peers. Before that it returned neither
+    // and this test asserted their ABSENCE - the contract changed for a
+    // reason, so the assertion follows it rather than being relaxed.
     const model = buildGraphModel(detail, 10);
     const nodes = model.elements.filter((e) => !("source" in (e.data as object)));
     const kinds = new Set(nodes.map((n) => (n.data as any).kind));
-    expect(kinds).toEqual(new Set(["cluster", "address"]));
-    expect(model.renderedAddresses).toBe(
-      Math.min(10, detail.members.rows.length),
-    );
+    for (const kind of kinds) {
+      expect(["cluster", "address", "transaction", "ip"]).toContain(kind);
+    }
+    expect(kinds.has("cluster")).toBe(true);
+    expect(kinds.has("address")).toBe(true);
   });
 
-  it("never invents a transaction node, because the API exposes none", () => {
+  it("invents no node kind the API never described", () => {
     const model = buildGraphModel(detail, 250);
-    const kinds = model.elements.map((e) => (e.data as any).kind);
-    expect(kinds).not.toContain("transaction");
+    const kinds = new Set(
+      model.elements
+        .filter((e) => !("source" in (e.data as object)))
+        .map((e) => (e.data as any).kind),
+    );
+    // No "person", "entity", "owner" or any other node standing for an
+    // identity the backend does not assert.
+    for (const invented of ["person", "owner", "entity", "wallet_owner"]) {
+      expect(kinds.has(invented)).toBe(false);
+    }
   });
 
   it("actually renders relationships, not an empty graph", () => {
@@ -377,8 +390,8 @@ describe("buildGraphModel", () => {
         .map((e) => (e.data as any).kind),
     );
     for (const kind of edgeKinds) {
-      expect(["MEMBER_OF", "CO_SPEND_COMPONENT", "FUNDED_VIA_TRANSACTION"])
-        .toContain(kind);
+      expect(["MEMBER_OF", "CO_SPEND_COMPONENT", "FUNDED_VIA_TRANSACTION",
+              "INVOLVES", "ANNOUNCED_BY"]).toContain(kind);
     }
   });
 
@@ -398,5 +411,175 @@ describe("buildGraphModel", () => {
     const once = buildGraphModel(detail, 250);
     const twice = buildGraphModel(doubled, 250);
     expect(twice.renderedEdges).toBe(once.renderedEdges);
+  });
+});
+
+// ---- Phase 9: onboarding, ingestion, correlation -----------------------
+
+import ingestFixture from "../../fixtures/ingest_csv.json";
+import { Home } from "../components/Home";
+import { IngestPage } from "../components/IngestPage";
+import { CorrelationPanel } from "../components/CorrelationPanel";
+import type { IngestResult } from "../api/types";
+
+const ingested = ingestFixture as unknown as IngestResult;
+
+describe("Home (onboarding)", () => {
+  it("shows the three steps in order so a new user knows what to do", async () => {
+    vi.stubGlobal("fetch", mockFetch(() => ({ body: list })));
+    render(<MemoryRouter><Home /></MemoryRouter>);
+    expect(screen.getByText("Load data")).toBeInTheDocument();
+    expect(screen.getByText("Analyse")).toBeInTheDocument();
+    expect(screen.getByText("Investigate")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/A scored dataset is loaded/)).toBeInTheDocument());
+  });
+
+  it("never implies that opening the dashboard scored anything", async () => {
+    vi.stubGlobal("fetch", mockFetch(() => ({ body: list })));
+    render(<MemoryRouter><Home /></MemoryRouter>);
+    expect(
+      screen.getByText(/Scoring is an offline pipeline run, not a button/),
+    ).toBeInTheDocument();
+  });
+
+  it("says the network data is synthetic on the landing page", () => {
+    vi.stubGlobal("fetch", mockFetch(() => ({ body: list })));
+    render(<MemoryRouter><Home /></MemoryRouter>);
+    expect(screen.getByText(/synthetic/i)).toBeInTheDocument();
+  });
+
+  it("tells the user how to start the API when it is unreachable", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("down"); }));
+    render(<MemoryRouter><Home /></MemoryRouter>);
+    await waitFor(() =>
+      expect(screen.getByText(/make serve/)).toBeInTheDocument());
+  });
+});
+
+describe("IngestPage", () => {
+  it("reports what parsed, using a real endpoint response", async () => {
+    vi.stubGlobal("fetch", mockFetch(() => ({ body: ingested })));
+    render(<MemoryRouter><IngestPage /></MemoryRouter>);
+    const file = new File(["txid\n1\n"], "sample.csv", { type: "text/csv" });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, file);
+    await waitFor(() => expect(screen.getByText("Validation")).toBeInTheDocument());
+    expect(screen.getByText("Rows valid")).toBeInTheDocument();
+  });
+
+  it("states prominently that the upload was NOT scored", async () => {
+    vi.stubGlobal("fetch", mockFetch(() => ({ body: ingested })));
+    render(<MemoryRouter><IngestPage /></MemoryRouter>);
+    const file = new File(["txid\n1\n"], "sample.csv", { type: "text/csv" });
+    await userEvent.upload(
+      document.querySelector('input[type="file"]') as HTMLInputElement, file,
+    );
+    await waitFor(() =>
+      expect(screen.getByText(/validated, not scored/)).toBeInTheDocument());
+    expect(screen.getByText(/phase6-dataset/)).toBeInTheDocument();
+  });
+
+  it("offers all three formats the PS names", () => {
+    vi.stubGlobal("fetch", mockFetch(() => ({ body: ingested })));
+    render(<MemoryRouter><IngestPage /></MemoryRouter>);
+    expect(screen.getByText(/CSV · JSON · XML/)).toBeInTheDocument();
+  });
+});
+
+describe("CorrelationPanel", () => {
+  it("shows the IP -> transaction -> wallet chain from the API", () => {
+    render(<CorrelationPanel correlation={detail.correlation} />);
+    expect(screen.getByText(/IP → transaction → wallet/)).toBeInTheDocument();
+    const tx = detail.correlation.transactions[0]!;
+    expect(screen.getByText(tx.txid)).toBeInTheDocument();
+  });
+
+  it("leads with the caveat that a peer is not a sender", () => {
+    render(<CorrelationPanel correlation={detail.correlation} />);
+    expect(screen.getByText(/An announcing peer is not a sender/)).toBeInTheDocument();
+  });
+
+  it("reports no country rather than an empty one for reserved ranges", () => {
+    render(<CorrelationPanel correlation={detail.correlation} />);
+    expect(screen.getByText(/not globally routable/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/reported as unavailable rather than guessed/),
+    ).toBeInTheDocument();
+  });
+
+  it("says insufficient evidence when nothing correlated", () => {
+    render(
+      <CorrelationPanel
+        correlation={{ ...detail.correlation, available: false,
+                       status: "INSUFFICIENT_EVIDENCE", transactions: [],
+                       summary: null }}
+      />,
+    );
+    expect(screen.getByText(/Insufficient evidence/)).toBeInTheDocument();
+  });
+});
+
+describe("graph with network correlation", () => {
+  it("draws transaction and peer nodes from the correlation", () => {
+    const model = buildGraphModel(detail, 60);
+    const kinds = new Set(
+      model.elements
+        .filter((e) => !("source" in (e.data as object)))
+        .map((e) => (e.data as any).kind),
+    );
+    expect(kinds.has("transaction")).toBe(true);
+    expect(kinds.has("ip")).toBe(true);
+    expect(model.renderedTransactions).toBeGreaterThan(0);
+    expect(model.renderedIps).toBeGreaterThan(0);
+  });
+
+  it("uses ANNOUNCED_BY, never a 'sent' edge", () => {
+    const model = buildGraphModel(detail, 60);
+    const edgeKinds = new Set(
+      model.elements
+        .filter((e) => "source" in (e.data as object))
+        .map((e) => (e.data as any).kind),
+    );
+    for (const kind of edgeKinds) {
+      expect(String(kind).toLowerCase()).not.toContain("sent");
+      expect(["MEMBER_OF", "CO_SPEND_COMPONENT", "FUNDED_VIA_TRANSACTION",
+              "INVOLVES", "ANNOUNCED_BY"]).toContain(kind);
+    }
+  });
+
+  it("draws no transaction node when nothing correlated", () => {
+    const model = buildGraphModel(
+      { ...detail, correlation: { ...detail.correlation, available: false,
+                                  transactions: [] } },
+      60,
+    );
+    expect(model.renderedTransactions).toBe(0);
+    expect(model.renderedIps).toBe(0);
+  });
+
+  it("only draws a transaction whose wallets are on the graph", () => {
+    // With a tiny cap the member set is small, so most correlated
+    // transactions have no rendered endpoint and must be skipped rather
+    // than drawn floating.
+    const small = buildGraphModel(detail, 3);
+    const txNodes = small.elements.filter(
+      (e) => (e.data as any).kind === "transaction",
+    );
+    const addressIds = new Set(
+      small.elements
+        .filter((e) => (e.data as any).kind === "address")
+        .map((e) => (e.data as any).id),
+    );
+    for (const node of txNodes) {
+      const involved = small.elements.filter(
+        (e) => (e.data as any).kind === "INVOLVES" &&
+               (e.data as any).source === (node.data as any).id,
+      );
+      expect(involved.length).toBeGreaterThan(0);
+      for (const edge of involved) {
+        expect(addressIds.has((edge.data as any).target)).toBe(true);
+      }
+    }
   });
 });

@@ -24,6 +24,7 @@ from obsidianchain import __version__
 from obsidianchain.alerts import contract as alerts_contract
 from obsidianchain.api import (
     alerts as alerts_api,
+    ingest as ingest_api,
     artifacts,
     boundary,
     demo,
@@ -160,6 +161,20 @@ def create_app(data_root=None) -> FastAPI:
             content={"error": "alert_filter_invalid", "detail": str(exc)},
         )
 
+    @app.exception_handler(ingest_api.UploadTooLargeError)
+    async def _too_large(request: Request, exc):
+        return JSONResponse(
+            status_code=413,
+            content={"error": "upload_too_large", "detail": str(exc)},
+        )
+
+    @app.exception_handler(ingest_api.UploadEmptyError)
+    async def _empty_upload(request: Request, exc):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "upload_empty", "detail": str(exc)},
+        )
+
     @app.exception_handler(provenance_gate.ProvenanceRefusedError)
     async def _refused(
         request: Request, exc: provenance_gate.ProvenanceRefusedError
@@ -199,6 +214,34 @@ def create_app(data_root=None) -> FastAPI:
         return JSONResponse(
             content=evidence.get_evidence(evidence_id, app.state.data_root)
         )
+
+    @app.post(
+        f"{API_PREFIX}/ingest",
+        summary="Validate an uploaded bulk metadata file (CSV, JSON or XML)",
+        response_description=(
+            "What the file contained, what validated, what could be "
+            "correlated, and an explicit statement that the upload was NOT "
+            "scored - scoring is an offline pipeline run."
+        ),
+    )
+    async def ingest_upload(
+        request: Request,
+        filename: str = Query(default="upload"),
+        format: str | None = Query(default=None),
+    ) -> JSONResponse:
+        """Parse, normalise and validate. Nothing is scored here."""
+        from obsidianchain.io import ingest as ingest_io
+
+        body = await request.body()
+        try:
+            payload = ingest_api.ingest_bytes(body, filename, format)
+        except ingest_io.IngestError as exc:
+            return JSONResponse(
+                status_code=422,
+                content={"error": "ingest_failed", "detail": str(exc)},
+            )
+        boundary.assert_no_truth_fields(payload)
+        return JSONResponse(content=payload)
 
     @app.get(
         f"{API_PREFIX}/alerts",

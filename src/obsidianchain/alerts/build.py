@@ -37,7 +37,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from obsidianchain.alerts import contract
+from obsidianchain.alerts import contract, correlate
 from obsidianchain.features import dataset as ds
 
 #: Ranking aggregation. AGG-TOPK is robust to a single outlier dominating a
@@ -68,6 +68,7 @@ class AlertArtifacts:
     explanations: pd.DataFrame
     timeline: pd.DataFrame
     relationships: pd.DataFrame
+    network: pd.DataFrame
 
     def named(self) -> dict[str, pd.DataFrame]:
         return {
@@ -75,6 +76,7 @@ class AlertArtifacts:
             "alert_explanations": self.explanations,
             "alert_timeline": self.timeline,
             "alert_relationships": self.relationships,
+            "alert_network": self.network,
         }
 
 
@@ -110,6 +112,9 @@ def build(data_root, dataset_frame: pd.DataFrame, run_fingerprint: str,
     explanations = _explanations(joined, alerts, contributions)
     timeline = _timeline(data_root, joined, alerts)
     relationships = _relationships(data_root, joined, alerts)
+    # The IP <-> transaction <-> wallet correlation the PS asks for.
+    # Rolled up here so a request never touches 1.59M observations.
+    network = correlate.build(data_root, joined, alerts)
 
     summary = {
         "n_alerts": int(len(alerts)),
@@ -125,10 +130,14 @@ def build(data_root, dataset_frame: pd.DataFrame, run_fingerprint: str,
             for b in trained.bands
         ],
         "n_features": len(trained.features),
+        "n_network_rows": int(len(network)),
+        "n_correlated_transactions": (
+            int(network["txid"].nunique()) if len(network) else 0
+        ),
     }
     return AlertArtifacts(
         alerts=alerts, members=members, explanations=explanations,
-        timeline=timeline, relationships=relationships,
+        timeline=timeline, relationships=relationships, network=network,
     ), summary
 
 

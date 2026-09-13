@@ -189,6 +189,9 @@ def get_alert(raw_id: str, root=None) -> dict:
     explanations = explanations[
         explanations["address"].isin(set(shown["address"]))
     ]
+    network_rows = artifacts.load_alert_table(root, "alert_network")
+    network_rows = network_rows[network_rows["alert_id"] == raw_id]
+
     timeline = artifacts.load_alert_table(root, "alert_timeline")
     timeline = timeline[timeline["alert_id"] == raw_id].sort_values("timestep")
     relationships = artifacts.load_alert_table(root, "alert_relationships")
@@ -215,7 +218,8 @@ def get_alert(raw_id: str, root=None) -> dict:
         "evidence": _evidence(alert, shown),
         "relationships": _relationships(relationships),
         "timeline": _timeline(timeline),
-        "network_context": _network(alert),
+        "network_context": _network(alert, network_rows, root),
+        "correlation": _correlation(network_rows, root),
         "members": {
             "shown": int(len(shown)),
             "total_scored": int(len(members)),
@@ -369,7 +373,82 @@ def _timeline(frame) -> dict:
     }
 
 
-def _network(alert) -> dict:
+def _correlation(frame, root) -> dict:
+    """IP <-> transaction <-> wallet, the three-node relation the PS asks for.
+
+    Every row is an observed announcement: an observer heard transaction T
+    from peer P at time t, and address A took part in T. The peer is a RELAY
+    VANTAGE POINT - 84.3% of transactions in this dataset were announced by
+    more than one peer - so ``announcing_peers`` travels with every row and
+    the meaning text says plainly that a peer is not a sender.
+    """
+    from obsidianchain import geoip
+    from obsidianchain.alerts import contract as c
+
+    if frame is None or len(frame) == 0:
+        return {
+            "category": c.NETWORK_CONTEXT,
+            "status": c.INSUFFICIENT_EVIDENCE,
+            "available": False,
+            "transactions": [],
+            "summary": None,
+            "meaning": c.ANNOUNCING_PEER_MEANING,
+            "insufficient_evidence_meaning": c.INSUFFICIENT_EVIDENCE_MEANING,
+        }
+
+    transactions = []
+    for txid, block in frame.groupby("txid", sort=False):
+        first = block.iloc[0]
+        peers = block[[
+            "peer_ip", "peer_port", "peer_asn", "first_seen_ms",
+            "last_seen_ms", "observers",
+        ]].drop_duplicates(subset=["peer_ip"])
+        transactions.append({
+            "txid": str(txid),
+            "announcing_peers_total": int(first["announcing_peers"]),
+            "peers_shown": int(len(peers)),
+            "first_seen_ms": _clean(block["first_seen_ms"].min()),
+            "addresses": [
+                {"address": r.address, "role": r.address_role}
+                for r in block[["address", "address_role"]]
+                .drop_duplicates().itertuples(index=False)
+            ],
+            "peers": [
+                {
+                    "ip": r.peer_ip,
+                    "port": _clean(r.peer_port),
+                    "asn": _clean(r.peer_asn),
+                    "first_seen_ms": _clean(r.first_seen_ms),
+                    "last_seen_ms": _clean(r.last_seen_ms),
+                    "observers": int(r.observers),
+                }
+                for r in peers.itertuples(index=False)
+            ],
+        })
+
+    return {
+        "category": c.NETWORK_CONTEXT,
+        "status": c.NETWORK_CONTEXT,
+        "available": True,
+        "transactions": transactions,
+        "summary": {
+            "transactions": int(frame["txid"].nunique()),
+            "announcing_peers": int(frame["peer_ip"].nunique()),
+            "asns": int(frame["peer_asn"].nunique()),
+            "observers": int(frame["observers"].max()),
+            "geo": geoip.summarise(
+                frame["peer_ip"].dropna().tolist(),
+                frame["peer_asn"].dropna().tolist(),
+                data_root=root,
+            ),
+        },
+        "meaning": c.ANNOUNCING_PEER_MEANING,
+        "synthetic_warning": c.SYNTHETIC_NETWORK_WARNING,
+        "insufficient_evidence_meaning": c.INSUFFICIENT_EVIDENCE_MEANING,
+    }
+
+
+def _network(alert, network_rows=None, root=None) -> dict:
     """Investigative context. Never an ownership or identity claim."""
     members_with = int(alert["net_evidence_members"])
     return {

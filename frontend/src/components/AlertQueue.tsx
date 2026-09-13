@@ -94,7 +94,7 @@ export function AlertQueue() {
   return (
     <>
       <section className="panel">
-        <div className="panel-head"><h2>Filters</h2></div>
+        <div className="panel-head"><h2>Filters</h2><span className="small muted">Narrow the queue. Leave empty to see every alert.</span></div>
         <div className="panel-body">
           <div className="controls">
             <div className="field">

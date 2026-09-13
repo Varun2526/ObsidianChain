@@ -14,6 +14,7 @@ import type { AlertDetail as AlertDetailData } from "../api/types";
 import { ErrorState } from "./ErrorState";
 import { EvidencePanel } from "./EvidencePanel";
 import { InvestigationGraph } from "./InvestigationGraph";
+import { CorrelationPanel } from "./CorrelationPanel";
 import { NetworkContextPanel } from "./NetworkContextPanel";
 import { ProvenancePanel } from "./ProvenancePanel";
 import { Timeline } from "./Timeline";
@@ -45,7 +46,7 @@ export function AlertDetailPage() {
   if (error) {
     return (
       <>
-        <p><Link to="/">← Back to the alert queue</Link></p>
+        <p><Link to="/alerts">← Back to the alert queue</Link></p>
         <section className="panel">
           <ErrorState error={error} onRetry={() => setReloads((n) => n + 1)} />
         </section>
@@ -58,7 +59,7 @@ export function AlertDetailPage() {
 
   return (
     <>
-      <p><Link to="/">← Back to the alert queue</Link></p>
+      <p><Link to="/alerts">← Back to the alert queue</Link></p>
 
       <section className="panel">
         <div className="panel-head">
@@ -126,6 +127,7 @@ export function AlertDetailPage() {
           <WhyFlagged data={data.why_flagged} />
           <EvidencePanel evidence={data.evidence} />
           <InvestigationGraph alert={data} />
+          <CorrelationPanel correlation={data.correlation} />
         </div>
         <div>
           <MembersPanel data={data} />

@@ -1,0 +1,122 @@
+{
+  "filename": "sample.csv",
+  "bytes": 250,
+  "validation": {
+    "source_format": "csv",
+    "rows_read": 3,
+    "rows_valid": 2,
+    "rows_rejected": 1,
+    "columns_present": [
+      "timestamp",
+      "src_ip",
+      "src_port",
+      "txid",
+      "input_addresses",
+      "output_addresses",
+      "input_amounts",
+      "output_amounts",
+      "asn"
+    ],
+    "columns_missing": [
+      "dst_ip",
+      "dst_port",
+      "fee",
+      "script_type",
+      "geo_country"
+    ],
+    "required_missing": [],
+    "errors": [
+      "1 row(s) have no txid and were rejected"
+    ],
+    "warnings": [],
+    "ok": true
+  },
+  "correlation": {
+    "records": 2,
+    "transactions": 2,
+    "addresses": 6,
+    "source_ips": 2,
+    "asns": 2,
+    "correlatable_records": 2,
+    "time_span": {
+      "first": 1500152257183.0,
+      "last": 1500152257999.0,
+      "unit": "numeric as supplied"
+    }
+  },
+  "preview": [
+    {
+      "timestamp": "1500152257183",
+      "src_ip": "198.51.100.191",
+      "dst_ip": null,
+      "src_port": 8333.0,
+      "dst_port": null,
+      "txid": "1076",
+      "input_addresses": [
+        "1aaa",
+        "1bbb"
+      ],
+      "output_addresses": [
+        "1ccc"
+      ],
+      "input_amounts": [
+        "0.5",
+        "0.25"
+      ],
+      "output_amounts": [
+        "0.74"
+      ],
+      "fee": null,
+      "script_type": null,
+      "geo_country": null,
+      "asn": 65162.0
+    },
+    {
+      "timestamp": "1500152257999",
+      "src_ip": "203.0.113.7",
+      "dst_ip": null,
+      "src_port": 8333.0,
+      "dst_port": null,
+      "txid": "1077",
+      "input_addresses": [
+        "1ddd"
+      ],
+      "output_addresses": [
+        "1eee",
+        "1fff"
+      ],
+      "input_amounts": [
+        "1.0"
+      ],
+      "output_amounts": [
+        "0.6",
+        "0.39"
+      ],
+      "fee": null,
+      "script_type": null,
+      "geo_country": null,
+      "asn": 65001.0
+    }
+  ],
+  "canonical_columns": [
+    "timestamp",
+    "src_ip",
+    "dst_ip",
+    "src_port",
+    "dst_port",
+    "txid",
+    "input_addresses",
+    "output_addresses",
+    "input_amounts",
+    "output_amounts",
+    "fee",
+    "script_type",
+    "geo_country",
+    "asn"
+  ],
+  "next_step": {
+    "scored": false,
+    "why": "This endpoint validates and correlates an upload. It does not score it: producing risk requires building the as-of-t feature matrix over the whole dataset and fitting on the temporal split, which is an offline pipeline run, not a request. Scoring here would produce numbers no manifest describes.",
+    "command": "make run ARGS=\"phase6-dataset\" && make run ARGS=\"phase7-alerts\""
+  }
+}

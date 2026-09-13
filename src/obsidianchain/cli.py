@@ -2185,6 +2185,8 @@ def phase7_alerts(
     typer.echo(f"  explanation rows          {len(artifacts.explanations):>12,}")
     typer.echo(f"  timeline points           {len(artifacts.timeline):>12,}")
     typer.echo(f"  relationship edges        {len(artifacts.relationships):>12,}")
+    typer.echo(f"  network correlation rows  {len(artifacts.network):>12,}")
+    typer.echo(f"  correlated transactions   {summary['n_correlated_transactions']:>12,}")
     typer.echo(f"  ranking aggregation       {summary['ranking_aggregation']:>12}")
     typer.echo("")
     for band, count in sorted(summary["severity_counts"].items()):
@@ -2199,6 +2201,7 @@ def phase7_alerts(
         "alert_explanations": alert_contract.EXPLANATION_SCHEMA,
         "alert_timeline": alert_contract.TIMELINE_SCHEMA,
         "alert_relationships": alert_contract.RELATIONSHIP_SCHEMA,
+        "alert_network": alert_contract.NETWORK_SCHEMA,
     }
     artifact_block = {
         "index_schema": alert_contract.ALERT_SCHEMA,
@@ -2221,6 +2224,7 @@ def phase7_alerts(
         "severity_bands": summary["bands"],
         "explanation_categories": list(alert_contract.CATEGORIES),
         "relationships_supported": list(alert_contract.RELATIONSHIPS),
+        "announcing_peer_meaning": alert_contract.ANNOUNCING_PEER_MEANING,
         "alert_meaning": alert_contract.ALERT_MEANING,
         "network_context_meaning": alert_contract.NETWORK_CONTEXT_MEANING,
         "score_scope": alert_contract.SCORE_SCOPE,
@@ -2256,6 +2260,6 @@ def phase7_alerts(
 
     typer.echo("")
     typer.echo(f"run fingerprint  {fingerprint[:16]}")
-    typer.echo(f"wrote 5 artifacts -> {processed}")
+    typer.echo(f"wrote {len(named)} artifacts -> {processed}")
     typer.echo(f"peak memory {_peak_rss_mb():.1f} MB   "
                f"wall time {time.perf_counter() - started:.1f} s")
