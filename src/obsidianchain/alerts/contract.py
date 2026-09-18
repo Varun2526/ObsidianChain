@@ -64,6 +64,10 @@ GROUP_CATEGORY = {
     "M1": BLOCKCHAIN_CONTEXT,
     "M2": BLOCKCHAIN_CONTEXT,
     "M3": NETWORK_CONTEXT,
+    # M4 is mixing / CoinJoin-like STRUCTURE: an observed property of a
+    # transaction's inputs and outputs, true of the ledger and independent of
+    # any model - so BLOCKCHAIN_CONTEXT, exactly like M2's chain structure.
+    "M4": BLOCKCHAIN_CONTEXT,
 }
 
 SEVERITIES = ("CRITICAL", "HIGH", "MEDIUM", "LOW")
@@ -164,6 +168,76 @@ INSUFFICIENT_EVIDENCE_MEANING = (
     "available data. It is reported as insufficient evidence rather than as "
     "zero, because 'not measured' and 'measured as none' are different "
     "answers and conflating them would invent a fact."
+)
+
+#: The mixing detector's four outcomes. Named here, not in the detector, so
+#: the API can speak about them without importing a module that can compute
+#: one - the same separation alerts/feature_groups.py exists for.
+MIXING_PATTERN = "MIXING_PATTERN"
+MIXING_LIKELIHOOD = "MIXING_LIKELIHOOD"
+NO_MIXING_SIGNAL = "NO_MIXING_SIGNAL"
+MIXING_INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
+
+MIXING_CLASSES = (
+    MIXING_PATTERN, MIXING_LIKELIHOOD, NO_MIXING_SIGNAL,
+    MIXING_INSUFFICIENT_DATA,
+)
+
+SUPPRESSOR_NONE = ""
+SUPPRESSOR_BATCH = "BATCH_SHAPE"
+SUPPRESSOR_CONSOLIDATION = "CONSOLIDATION_SHAPE"
+SUPPRESSOR_ORDINARY = "ORDINARY_SHAPE"
+SUPPRESSOR_UNIFORM_PAYOUT = "UNIFORM_PAYOUT_SHAPE"
+
+#: Why a structurally-similar transaction was NOT called a mixing pattern.
+#: Recorded per transaction so the reason is auditable rather than implied.
+MIXING_SUPPRESSORS = {
+    SUPPRESSOR_BATCH: (
+        "One or two inputs paying many outputs. That is an exchange or "
+        "merchant batch, not a collaborative spend: a mixing pattern needs "
+        "many INDEPENDENT funders."
+    ),
+    SUPPRESSOR_CONSOLIDATION: (
+        "Many inputs paying one or two outputs. That is a consolidation - a "
+        "wallet sweeping its own UTXOs - and it produces the fan-in of a "
+        "mixing transaction with none of the fan-out."
+    ),
+    SUPPRESSOR_ORDINARY: (
+        "Few inputs and few outputs: the ordinary payment-plus-change shape, "
+        "which is the majority of all transactions."
+    ),
+    SUPPRESSOR_UNIFORM_PAYOUT: (
+        "Outputs are near-identical but the inputs are not numerous enough "
+        "for the outputs to belong to different parties. A single payer "
+        "sending one amount to many recipients looks like this."
+    ),
+}
+
+MIXING_INSUFFICIENT_DATA_MEANING = (
+    "The input and output value summaries needed to measure this "
+    "transaction's structure were not available, so no classification was "
+    "made. Reported as insufficient data rather than as no signal, because "
+    "an unmeasured transaction and a measured-and-clean one are different "
+    "answers."
+)
+
+MIXING_PATTERN_MEANING = (
+    "A mixing-like pattern is a STRUCTURAL observation: several "
+    "independent-looking inputs, several outputs of near-identical value, "
+    "and input values that are not themselves uniform. It is not proof that "
+    "a mixing service was used, and using one is not itself unlawful. "
+    "Benign shapes that produce the same fan-in or fan-out - exchange "
+    "batches, consolidations, uniform payouts - are detected separately and "
+    "suppressed, with the reason recorded."
+)
+
+PEEL_STRUCTURE_MEANING = (
+    "A peeling-chain-like structure is a repeated ordered sequence of "
+    "transactions, each with two or three outputs, in which one address is "
+    "an output of one and an input of the next at a strictly later timestep. "
+    "It is structural candidate generation, not laundering classification: "
+    "the depth of a chain is an observation about the ledger's shape and "
+    "says nothing about intent or legality."
 )
 
 SCORE_SCOPE = (

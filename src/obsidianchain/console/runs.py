@@ -1,0 +1,177 @@
+"""AnalysisRun: the object that makes "not scored" a fact, not a footnote.
+
+Why this exists before any job runner does
+------------------------------------------
+There is no queue, no worker and no automatic ``upload -> phase6 -> phase7``
+path, deliberately. What was missing was not execution but HONESTY: the UI
+implied that an upload had produced the 2,128 baseline alerts, because there
+was no object capable of saying otherwise.
+
+Every dataset gets a run row at upload time with ``status = NOT_RUN`` and
+``run_fingerprint = NULL``. The schema's CHECK constraints make that pairing
+structural - a fingerprint may exist only on a COMPLETE run - so "this
+dataset has not been scored" is something the database enforces rather than
+something a template remembers to say.
+
+When offline execution is wired in later, it fills these same rows. Nothing
+here has to change.
+"""
+
+from __future__ import annotations
+
+import secrets
+import sqlite3
+from dataclasses import dataclass
+
+from obsidianchain.console import db, errors
+
+STATUSES = ("NOT_RUN", "QUEUED", "RUNNING", "COMPLETE", "FAILED")
+
+#: The command that actually produces scored artifacts. Named in the API
+#: response for the same reason the artifact loaders name their build
+#: commands: an operator should never have to guess.
+OFFLINE_COMMAND = (
+    'make run ARGS="phase6-dataset" && make run ARGS="phase7-alerts"'
+)
+
+NOT_RUN_MEANING = (
+    "This dataset was received, parsed and validated. It has NOT been "
+    "scored. Producing risk requires building the as-of-t feature matrix "
+    "over the whole dataset and fitting on the temporal split, which is an "
+    "offline pipeline run, not a request. No alert shown anywhere in this "
+    "console was generated from this dataset."
+)
+
+
+@dataclass(frozen=True)
+class AnalysisRun:
+    id: str
+    dataset_id: str
+    status: str
+    run_fingerprint: str | None
+    started_at: str | None
+    completed_at: str | None
+    error: str | None
+    created_at: str
+
+    @property
+    def produced_alerts(self) -> bool:
+        return self.status == "COMPLETE" and bool(self.run_fingerprint)
+
+    def as_dict(self) -> dict:
+        payload = {
+            "id": self.id,
+            "dataset_id": self.dataset_id,
+            "status": self.status,
+            "run_fingerprint": self.run_fingerprint,
+            "started_at": self.started_at,
+            "completed_at": self.completed_at,
+            "error": self.error,
+            "created_at": self.created_at,
+            "produced_alerts": self.produced_alerts,
+        }
+        if self.status == "NOT_RUN":
+            payload["meaning"] = NOT_RUN_MEANING
+            payload["command"] = OFFLINE_COMMAND
+        return payload
+
+
+def _row(row: sqlite3.Row) -> AnalysisRun:
+    return AnalysisRun(
+        id=row["id"],
+        dataset_id=row["dataset_id"],
+        status=row["status"],
+        run_fingerprint=row["run_fingerprint"],
+        started_at=row["started_at"],
+        completed_at=row["completed_at"],
+        error=row["error"],
+        created_at=row["created_at"],
+    )
+
+
+def create_not_run(conn: sqlite3.Connection, dataset_id: str) -> dict:
+    """The run every upload gets. Caller supplies the transaction."""
+    run_id = "run_" + secrets.token_hex(8)
+    conn.execute(
+        "INSERT INTO analysis_runs (id, dataset_id, status, created_at)"
+        " VALUES (?, ?, 'NOT_RUN', ?)",
+        (run_id, dataset_id, db.utcnow()),
+    )
+    return _row(
+        conn.execute(
+            "SELECT * FROM analysis_runs WHERE id = ?", (run_id,)
+        ).fetchone()
+    ).as_dict()
+
+
+def get(conn: sqlite3.Connection, run_id: str) -> AnalysisRun | None:
+    row = conn.execute(
+        "SELECT * FROM analysis_runs WHERE id = ?", (run_id,)
+    ).fetchone()
+    return _row(row) if row else None
+
+
+def for_dataset(conn: sqlite3.Connection, dataset_id: str) -> list[AnalysisRun]:
+    rows = conn.execute(
+        "SELECT * FROM analysis_runs WHERE dataset_id = ?"
+        " ORDER BY created_at DESC",
+        (dataset_id,),
+    ).fetchall()
+    return [_row(row) for row in rows]
+
+
+def latest_for_dataset(
+    conn: sqlite3.Connection, dataset_id: str
+) -> AnalysisRun | None:
+    found = for_dataset(conn, dataset_id)
+    return found[0] if found else None
+
+
+def for_investigation(
+    conn: sqlite3.Connection, investigation_id: str
+) -> list[AnalysisRun]:
+    rows = conn.execute(
+        "SELECT r.* FROM analysis_runs r"
+        " JOIN datasets d ON d.id = r.dataset_id"
+        " WHERE d.investigation_id = ? ORDER BY r.created_at DESC",
+        (investigation_id,),
+    ).fetchall()
+    return [_row(row) for row in rows]
+
+
+def set_status(
+    conn: sqlite3.Connection, run_id: str, status: str,
+    *, run_fingerprint: str | None = None, error: str | None = None,
+) -> AnalysisRun:
+    """Advance a run. The only writer today is the future offline integration.
+
+    Kept small and total: the CHECK constraints in the schema refuse a
+    COMPLETE run without a fingerprint and a fingerprint on anything else, so
+    this function cannot record a result it did not get.
+    """
+    target = (status or "").strip().upper()
+    if target not in STATUSES:
+        raise errors.ValidationFailed(
+            f"{status!r} is not an analysis-run status; expected one of "
+            f"{list(STATUSES)}"
+        )
+    now = db.utcnow()
+    started = now if target == "RUNNING" else None
+    completed = now if target in ("COMPLETE", "FAILED") else None
+    try:
+        with db.transaction(conn):
+            conn.execute(
+                "UPDATE analysis_runs SET status = ?, run_fingerprint = ?,"
+                " started_at = COALESCE(?, started_at),"
+                " completed_at = ?, error = ? WHERE id = ?",
+                (target, run_fingerprint, started, completed, error, run_id),
+            )
+    except sqlite3.IntegrityError as exc:
+        raise errors.ValidationFailed(
+            f"refused: a run fingerprint may exist only on a COMPLETE run "
+            f"({exc})"
+        ) from exc
+    found = get(conn, run_id)
+    if found is None:
+        raise errors.NotFound(f"no analysis run {run_id!r}")
+    return found

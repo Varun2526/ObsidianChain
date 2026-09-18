@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ObsidianChain — Investigation Console</title>
+    <!--
+      No remote stylesheet, no remote font. This application is built with
+      --network none and deployed air-gapped; a Google Fonts <link> renders in
+      fallback faces on a genuinely offline machine and leaks a request per
+      page load on a connected one. The font stacks in styles.css resolve
+      against system faces instead. tests/test_frontend_offline.py fails if an
+      external URL reappears in any frontend asset.
+    -->
+    <title>OBSIDIANCHAIN — Bitcoin Transaction Intelligence</title>
+    <meta name="description" content="ObsidianChain Investigation Console — Bitcoin transaction intelligence and network analysis" />
   </head>
   <body>
     <div id="root"></div>

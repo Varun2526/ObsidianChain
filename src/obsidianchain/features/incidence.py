@@ -40,9 +40,15 @@ import pandas as pd
 TX_COLUMNS = [
     "txId", "Time step", "total_BTC", "fees", "size",
     "num_input_addresses", "num_output_addresses",
-    "in_BTC_total", "in_BTC_max", "in_BTC_mean",
-    "out_BTC_total", "out_BTC_max", "out_BTC_mean",
+    "in_BTC_total", "in_BTC_min", "in_BTC_max", "in_BTC_mean",
+    "out_BTC_total", "out_BTC_min", "out_BTC_max", "out_BTC_mean",
 ]
+
+#: ``*_BTC_min`` joined the list for M4, which measures whether a
+#: transaction's outputs are near-identical and cannot do that from the mean
+#: alone. Same family and same provenance as the max and mean already here;
+#: no existing feature reads them, so the M0-M3 matrix is byte-identical
+#: with or without this line.
 
 ROLE_IN = 0
 ROLE_OUT = 1

@@ -36,6 +36,13 @@ from obsidianchain.api import alerts as alerts_api
 from obsidianchain.api import artifacts, boundary, provenance_gate
 from obsidianchain.api.app import API_PREFIX, create_app
 
+# The analytical routes now require a session. Reaching them changed; what
+# they return did not, and every assertion below is unchanged. See
+# tests/console_helpers.py, and tests/test_api_access.py for the boundary
+# itself.
+from tests.console_helpers import signed_client
+
+
 DATA_ROOT = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
 
 #: Phrases a response must never contain. Checked against the whole rendered
@@ -118,10 +125,13 @@ def test_the_feature_group_table_matches_the_live_contract() -> None:
     from obsidianchain.alerts import feature_groups
     from obsidianchain.features import dataset as ds
 
-    live = {c: g for g, cols in ds.FEATURE_GROUPS.items() for c in cols}
+    # ALL_FEATURE_GROUPS, not FEATURE_GROUPS: the literal must cover every
+    # group that can appear in a served artifact, including the optional M4,
+    # or an artifact built with mixing features could not be grouped.
+    live = {c: g for g, cols in ds.ALL_FEATURE_GROUPS.items() for c in cols}
     assert feature_groups.GROUP_OF == live, (
         "alerts/feature_groups.py is stale; regenerate it from "
-        "features.dataset.FEATURE_GROUPS"
+        "features.dataset.ALL_FEATURE_GROUPS"
     )
 
 
@@ -168,7 +178,7 @@ def alerts_frame() -> pd.DataFrame:
 
 @pytest.fixture(scope="module")
 def client() -> TestClient:
-    return TestClient(create_app(DATA_ROOT), raise_server_exceptions=False)
+    return signed_client(DATA_ROOT, raise_server_exceptions=False)
 
 
 @pytest.mark.parametrize("name", [
@@ -464,7 +474,7 @@ def test_a_torn_alert_artifact_is_refused(tmp_path) -> None:
     meta["run_fingerprint"] = "b" * 64
     sidecar.write_text(json.dumps(meta), encoding="utf-8")
 
-    client = TestClient(create_app(tmp_path), raise_server_exceptions=False)
+    client = signed_client(tmp_path, raise_server_exceptions=False)
     response = client.get(f"{API_PREFIX}/alerts?limit=1")
     assert response.status_code == 500
     assert response.json()["error"] == "provenance_refused"
@@ -472,7 +482,7 @@ def test_a_torn_alert_artifact_is_refused(tmp_path) -> None:
 
 
 def test_a_missing_alert_artifact_is_503_naming_the_command(tmp_path) -> None:
-    client = TestClient(create_app(tmp_path), raise_server_exceptions=False)
+    client = signed_client(tmp_path, raise_server_exceptions=False)
     response = client.get(f"{API_PREFIX}/alerts")
     assert response.status_code == 503
     assert "phase7-alerts" in response.json()["detail"]

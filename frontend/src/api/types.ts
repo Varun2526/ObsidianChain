@@ -308,5 +308,369 @@ export type ApiErrorKind =
   | "alert_filter_invalid"
   | "provenance_refused"
   | "artifact_missing"
+  | "separation_basis_mismatch"
+  // ---- application layer (obsidianchain.console) ----
+  | "authentication_required"
+  | "invalid_credentials"
+  | "session_expired"
+  | "access_denied"
+  | "investigation_not_found"
+  | "not_found"
+  | "validation_failed"
+  | "conflict"
+  | "run_mismatch"
+  | "upload_rejected"
+  | "append_only"
+  | "console_error"
   | "network"
   | "unknown";
+
+/* ==========================================================================
+   APPLICATION LAYER - mutable investigator state
+   ==========================================================================
+   Everything above this line describes IMMUTABLE ANALYTICAL TRUTH read from
+   pipeline artifacts. Everything below describes state recorded by a named
+   person in SQLite. The two are never merged in a response and are never
+   merged here.
+   ========================================================================== */
+
+export type Role = "ADMIN" | "INVESTIGATOR" | "REVIEWER";
+
+export type InvestigationStatus =
+  | "DRAFT" | "VALIDATING" | "ACTIVE" | "REVIEW" | "CLOSED";
+
+export type DispositionState =
+  | "NEW" | "TRIAGED" | "IN_REVIEW" | "CONFIRMED" | "DISMISSED" | "ESCALATED";
+
+/** How a case's stored analytical run compares to the artifact on disk. */
+export type RunStatus = "UNBOUND" | "CURRENT" | "STALE" | "UNVERIFIABLE";
+
+export type AnalysisRunStatus =
+  | "NOT_RUN" | "QUEUED" | "RUNNING" | "COMPLETE" | "FAILED";
+
+export interface AccountRef {
+  id: string;
+  username: string;
+  display_name: string;
+}
+
+export interface Identity {
+  user: AccountRef & { role: Role; active: boolean; created_at: string };
+  /** For RENDERING only. The backend re-derives and re-checks every request. */
+  capabilities: string[];
+}
+
+export interface AnalysisRun {
+  id: string;
+  dataset_id: string;
+  status: AnalysisRunStatus;
+  run_fingerprint: string | null;
+  produced_alerts: boolean;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  error: string | null;
+  /** Present only while NOT_RUN: why, and the offline command that changes it. */
+  meaning?: string;
+  command?: string;
+}
+
+export interface UploadedDataset {
+  id: string;
+  investigation_id: string;
+  filename: string;
+  sha256: string;
+  size_bytes: number;
+  format: string;
+  uploaded_by: string;
+  uploaded_at: string;
+  status: "RECEIVED" | "VALIDATED" | "REJECTED";
+  validation: IngestResult | Record<string, unknown>;
+  analysis_run?: AnalysisRun | null;
+}
+
+export interface CaseSummary {
+  alerts_referenced: number;
+  dispositions_by_state: Record<DispositionState, number>;
+  outstanding: number;
+  notes: number;
+}
+
+export interface AnalyticalRunBinding {
+  bound_run_fingerprint: string | null;
+  bound_run_at?: string | null;
+  current_artifact_run: string | null;
+  status: RunStatus;
+  meaning?: string;
+}
+
+export interface Investigation {
+  id: string;
+  case_number: number;
+  case_label: string;
+  name: string;
+  description: string;
+  owner_id: string;
+  owner?: AccountRef;
+  status: InvestigationStatus;
+  bound_run_fingerprint: string | null;
+  created_at: string;
+  updated_at: string;
+  closed_at: string | null;
+  analytical_run?: AnalyticalRunBinding;
+  datasets?: UploadedDataset[];
+  summary?: CaseSummary;
+  run_status?: RunStatus;
+}
+
+export interface Disposition {
+  id: string;
+  state: DispositionState;
+  rationale: string;
+  decided_by: string;
+  decided_by_username: string | null;
+  decided_by_display_name: string | null;
+  decided_at: string;
+  superseded_by: string | null;
+  active: boolean;
+}
+
+export interface InvestigatorNote {
+  id: string;
+  investigation_id: string;
+  alert_id: string | null;
+  body: string;
+  author_id: string;
+  author_username: string | null;
+  author_display_name: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface CaseAlertRow {
+  alert_id: string;
+  run_fingerprint: string;
+  added_by: string;
+  added_by_username: string | null;
+  added_at: string;
+  assigned_to: string | null;
+  assigned_to_username: string | null;
+  assigned_to_display_name: string | null;
+  assigned_at: string | null;
+  disposition: Disposition | null;
+  /** null means the artifact could not be read, which is NOT the same as false. */
+  stale: boolean | null;
+}
+
+/**
+ * The analytical half of a case-scoped alert.
+ *
+ * Never silently absent. When the reference has gone stale, or the artifact
+ * cannot be read, `available` is false and `reason` says which - the failure
+ * the old report page hid behind a swallowed 409.
+ */
+export type CaseAlertAnalytical =
+  | { available: true; alert: AlertDetail }
+  | {
+      available: false;
+      reason: "STALE_REFERENCE" | "ARTIFACT_UNAVAILABLE" | "ALERT_NOT_IN_RUN";
+      referenced_run: string;
+      current_artifact_run: string | null;
+      detail: string;
+    };
+
+export interface CaseAlertInvestigator {
+  reference: {
+    alert_id: string;
+    run_fingerprint: string;
+    added_by: string;
+    added_at: string;
+  };
+  assignment: {
+    assigned_to: string | null;
+    assigned_at: string | null;
+    assignee: AccountRef | null;
+  };
+  disposition: Disposition | null;
+  disposition_history: Disposition[];
+  notes: InvestigatorNote[];
+  states: DispositionState[];
+  meaning: string;
+}
+
+export interface CaseAlertDetail {
+  alert_id: string;
+  investigation_id: string;
+  analytical: CaseAlertAnalytical;
+  investigator: CaseAlertInvestigator;
+}
+
+export interface StoredReport {
+  id: string;
+  investigation_id: string;
+  version: number;
+  title: string;
+  executive_summary: string;
+  content: string;
+  run_fingerprint: string | null;
+  generated_by: string;
+  generated_at: string;
+  content_sha256: string;
+  status: "DRAFT" | "FINAL";
+  finalised_by: string | null;
+  finalised_at: string | null;
+}
+
+export interface ReportPayload {
+  case: Investigation;
+  analytical_run: AnalyticalRunBinding;
+  report: StoredReport | null;
+  versions: {
+    id: string;
+    version: number;
+    title: string;
+    status: "DRAFT" | "FINAL";
+    generated_at: string;
+    content_sha256: string;
+    generated_by_username: string | null;
+  }[];
+  alert_references: CaseAlertRow[];
+  stale_references: (CaseAlertRow & { warning: string })[];
+  unverifiable_references: CaseAlertRow[];
+  notes: InvestigatorNote[];
+  summary: CaseSummary;
+  disposition_meaning: string;
+  separation_note: string;
+  may_finalise: boolean;
+}
+
+export interface AuditEvent {
+  id: number;
+  actor_id: string | null;
+  actor_username: string | null;
+  actor_display_name: string | null;
+  action: string;
+  object_type: string;
+  object_id: string | null;
+  investigation_id: string | null;
+  at: string;
+  detail: Record<string, unknown>;
+}
+
+/**
+ * Network-separation records for one cluster's proposed merges.
+ *
+ * The vocabulary is the pipeline's own and is not simplified here:
+ * SEPARATED is the only verdict carrying a constraint, and that constraint
+ * is CANNOT-LINK. NOT_SEPARATED and NO_EVIDENCE are not evidence of common
+ * ownership, and the backend's frozen wordings travel with the payload so
+ * the UI cannot paraphrase them into one.
+ */
+export interface SeparationRow {
+  evidence_id: string;
+  edge_index: number;
+  node_a: number;
+  node_b: number;
+  verdict: "SEPARATED" | "NOT_SEPARATED" | "NO_EVIDENCE" | string;
+  reason_code: string;
+  reason: string;
+  min_pooled: number | null;
+  size_a: number | null;
+  size_b: number | null;
+  chi2: number | null;
+  p_value: number | null;
+  effect: number | null;
+}
+
+export interface SeparationEvidence {
+  alert_id: string;
+  cluster_id: number;
+  alert_run_fingerprint: string;
+  evidence_run_fingerprint: string;
+  statement: string;
+  join_basis: string;
+  proposed_merges_total: number;
+  verdicts: Record<string, number>;
+  reason_codes: Record<string, number>;
+  separated_count: number;
+  cannot_link_meaning: string;
+  not_separated_meaning: string;
+  verdict_scope: string;
+  verdict_definition: string;
+  frozen_run_limitation: string;
+  reason_code_catalogue: Record<string, string>;
+  unreachable_reason_codes: Record<string, string>;
+  rows_shown: number;
+  rows_withheld: number;
+  rows: SeparationRow[];
+}
+
+/* ==========================================================================
+   STRUCTURAL PATTERNS - peeling and mixing, behind one alert
+   ========================================================================== */
+
+/**
+ * Which evidence layer the investigator is looking at.
+ *
+ * A VIEW mode, not three models. One analytical run produced everything
+ * below; the toggle selects which already-fetched evidence is shown and
+ * recomputes nothing.
+ */
+export type AnalysisLayer = "CHAIN" | "NETWORK" | "FUSED";
+
+export type MixingClass =
+  | "MIXING_PATTERN" | "MIXING_LIKELIHOOD" | "NO_MIXING_SIGNAL"
+  | "INSUFFICIENT_DATA";
+
+export interface MixingTransaction {
+  txid: string;
+  mixing_class: MixingClass;
+  mixing_score: number | null;
+  output_uniformity: number | null;
+  input_heterogeneity: number | null;
+  participant_symmetry: number | null;
+  /** Why a structurally-similar transaction was NOT called a pattern. */
+  suppressor: string | null;
+  n_inputs: number | null;
+  n_outputs: number | null;
+}
+
+export type PeelingBlock =
+  | {
+      available: true;
+      members_scored: number;
+      members_in_chain: number;
+      peel_chain_members_recorded: number;
+      max_chain_depth: number | null;
+      fields: string[];
+      members: Record<string, string | number | null>[];
+      meaning: string;
+    }
+  | { available: false; status: string; detail: string; meaning: string };
+
+export type MixingBlock =
+  | {
+      available: true;
+      scan_id: string;
+      detector: string | null;
+      join_basis: string;
+      transactions_measured: number;
+      transactions_correlated: number;
+      classes: Record<string, number>;
+      pattern_count: number;
+      suppressed: Record<string, number>;
+      suppressor_meanings: Record<string, string>;
+      transactions: MixingTransaction[];
+      meaning: string;
+      insufficient_data_meaning: string;
+    }
+  | { available: false; status: string; detail: string; meaning: string };
+
+export interface AlertPatterns {
+  alert_id: string;
+  cluster_id: number;
+  run_fingerprint: string;
+  peeling: PeelingBlock;
+  mixing: MixingBlock;
+  category: Category;
+}

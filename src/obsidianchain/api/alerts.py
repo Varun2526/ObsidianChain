@@ -282,6 +282,12 @@ def _evidence(alert, shown) -> dict:
     groups = {}
     for group, category in c.GROUP_CATEGORY.items():
         columns = [col for col in shown.columns if _group_of(col) == group]
+        if not columns:
+            # The artifact predates this group, or was built without it.
+            # Emitting an empty group would show a reader an evidence tab
+            # with nothing in it, which reads as "measured, found nothing"
+            # rather than "this run did not compute it".
+            continue
         groups[group] = {
             "category": category,
             "features": columns,
@@ -308,6 +314,11 @@ def _evidence(alert, shown) -> dict:
             "peel_chain_members": int(alert["peel_chain_members"]),
         },
         "groups": groups,
+        "groups_available": sorted(groups),
+        "structural_meanings": {
+            "M2": c.PEEL_STRUCTURE_MEANING,
+            "M4": c.MIXING_PATTERN_MEANING,
+        },
         "insufficient_evidence_meaning": c.INSUFFICIENT_EVIDENCE_MEANING,
     }
 

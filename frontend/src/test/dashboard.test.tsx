@@ -414,78 +414,17 @@ describe("buildGraphModel", () => {
   });
 });
 
-// ---- Phase 9: onboarding, ingestion, correlation -----------------------
+// ---- Phase 9: ingestion, correlation ----------------------------------
+//
+// The `Home` and `IngestPage` tests that used to sit here moved to
+// console.test.tsx when those two components were retired. They were never
+// routed by App.tsx, so they tested a surface no investigator could reach;
+// the assertions they carried - that an upload reports what parsed, that the
+// UI states the upload was NOT scored, and that all three PS formats are
+// offered - now run against NewInvestigation, which is the component a user
+// actually reaches.
 
-import ingestFixture from "../../fixtures/ingest_csv.json";
-import { Home } from "../components/Home";
-import { IngestPage } from "../components/IngestPage";
 import { CorrelationPanel } from "../components/CorrelationPanel";
-import type { IngestResult } from "../api/types";
-
-const ingested = ingestFixture as unknown as IngestResult;
-
-describe("Home (onboarding)", () => {
-  it("shows the three steps in order so a new user knows what to do", async () => {
-    vi.stubGlobal("fetch", mockFetch(() => ({ body: list })));
-    render(<MemoryRouter><Home /></MemoryRouter>);
-    expect(screen.getByText("Load data")).toBeInTheDocument();
-    expect(screen.getByText("Analyse")).toBeInTheDocument();
-    expect(screen.getByText("Investigate")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.getByText(/A scored dataset is loaded/)).toBeInTheDocument());
-  });
-
-  it("never implies that opening the dashboard scored anything", async () => {
-    vi.stubGlobal("fetch", mockFetch(() => ({ body: list })));
-    render(<MemoryRouter><Home /></MemoryRouter>);
-    expect(
-      screen.getByText(/Scoring is an offline pipeline run, not a button/),
-    ).toBeInTheDocument();
-  });
-
-  it("says the network data is synthetic on the landing page", () => {
-    vi.stubGlobal("fetch", mockFetch(() => ({ body: list })));
-    render(<MemoryRouter><Home /></MemoryRouter>);
-    expect(screen.getByText(/synthetic/i)).toBeInTheDocument();
-  });
-
-  it("tells the user how to start the API when it is unreachable", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("down"); }));
-    render(<MemoryRouter><Home /></MemoryRouter>);
-    await waitFor(() =>
-      expect(screen.getByText(/make serve/)).toBeInTheDocument());
-  });
-});
-
-describe("IngestPage", () => {
-  it("reports what parsed, using a real endpoint response", async () => {
-    vi.stubGlobal("fetch", mockFetch(() => ({ body: ingested })));
-    render(<MemoryRouter><IngestPage /></MemoryRouter>);
-    const file = new File(["txid\n1\n"], "sample.csv", { type: "text/csv" });
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-    await userEvent.upload(input, file);
-    await waitFor(() => expect(screen.getByText("Validation")).toBeInTheDocument());
-    expect(screen.getByText("Rows valid")).toBeInTheDocument();
-  });
-
-  it("states prominently that the upload was NOT scored", async () => {
-    vi.stubGlobal("fetch", mockFetch(() => ({ body: ingested })));
-    render(<MemoryRouter><IngestPage /></MemoryRouter>);
-    const file = new File(["txid\n1\n"], "sample.csv", { type: "text/csv" });
-    await userEvent.upload(
-      document.querySelector('input[type="file"]') as HTMLInputElement, file,
-    );
-    await waitFor(() =>
-      expect(screen.getByText(/validated, not scored/)).toBeInTheDocument());
-    expect(screen.getByText(/phase6-dataset/)).toBeInTheDocument();
-  });
-
-  it("offers all three formats the PS names", () => {
-    vi.stubGlobal("fetch", mockFetch(() => ({ body: ingested })));
-    render(<MemoryRouter><IngestPage /></MemoryRouter>);
-    expect(screen.getByText(/CSV · JSON · XML/)).toBeInTheDocument();
-  });
-});
 
 describe("CorrelationPanel", () => {
   it("shows the IP -> transaction -> wallet chain from the API", () => {

@@ -33,6 +33,12 @@ GENERATOR_MODULES = {
     "network/worlds.py",
     "network/reach_stress.py",
     "demo/scenarios.py",
+    # The coherent synthetic world. It invents the entity, the origin and the
+    # behaviour behind every transaction, then writes them to world_truth/.
+    # Like network/synthetic.py it cannot avoid naming what it creates; what
+    # matters is that no INFERENCE module reads that directory, which the
+    # rest of this file checks.
+    "world/generate.py",
 }
 
 DISPATCH_MODULES = {

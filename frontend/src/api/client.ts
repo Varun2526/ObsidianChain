@@ -11,6 +11,13 @@
  * them and the alert they are looking at no longer refers to the same
  * cluster, which is exactly the silent re-pointing the fingerprint exists to
  * prevent.
+ *
+ * These routes require a session. They did not always: the alerts, the risk
+ * scores, the SHAP explanations and the separation evidence were readable
+ * with one unauthenticated GET, which meant the console's login, its roles
+ * and its case ownership could all be stepped around. Every request
+ * therefore carries the session cookie, and a 401 is reported once to the
+ * whole application rather than handled differently in each caller.
  */
 
 import type {
@@ -22,6 +29,38 @@ import type {
 } from "./types";
 
 const BASE = "/api";
+
+/**
+ * One place the application learns that its session has ended.
+ *
+ * Any call may be the one that discovers it - a background refresh as
+ * readily as a click - so the discovery is broadcast instead of being
+ * handled locally. `AuthProvider` subscribes and clears the identity, which
+ * sends the router to /login. Without this a lapsed session leaves the shell
+ * drawn and every panel failing individually, which reads as the application
+ * being broken rather than as having been signed out.
+ *
+ * Only 401 fires it. A 403 means the session is perfectly valid and this
+ * user may not have that thing - logging them out over it would be wrong.
+ */
+type SessionListener = () => void;
+const sessionListeners = new Set<SessionListener>();
+
+export function onSessionLost(listener: SessionListener): () => void {
+  sessionListeners.add(listener);
+  return () => sessionListeners.delete(listener);
+}
+
+export function reportUnauthenticated(status: number): void {
+  if (status !== 401) return;
+  for (const listener of [...sessionListeners]) {
+    try {
+      listener();
+    } catch {
+      // A misbehaving subscriber must not stop the others from learning.
+    }
+  }
+}
 
 export class ApiError extends Error {
   readonly kind: ApiErrorKind;
@@ -51,6 +90,9 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${BASE}${path}`, {
+      // Without this the session cookie is not sent and every analytical
+      // call would 401 while looking like a permissions bug.
+      credentials: "same-origin",
       signal,
       headers: { Accept: "application/json" },
     });
@@ -76,6 +118,7 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
       // JSON, so this is a proxy or a crash rather than a handled refusal.
     }
     if (kind === "unknown" && response.status === 503) kind = "artifact_missing";
+    reportUnauthenticated(response.status);
     throw new ApiError(kind, response.status, detail);
   }
   return (await response.json()) as T;
@@ -130,6 +173,7 @@ export async function ingestFile(file: File, format?: string): Promise<IngestRes
   try {
     response = await fetch(`${BASE}/ingest?${params}`, {
       method: "POST",
+      credentials: "same-origin",
       body: file,
       headers: { "Content-Type": "application/octet-stream" },
     });
@@ -145,6 +189,7 @@ export async function ingestFile(file: File, format?: string): Promise<IngestRes
       if (typeof body?.error === "string") kind = body.error as ApiErrorKind;
       if (typeof body?.detail === "string") detail = body.detail;
     } catch { /* non-JSON body: a proxy or a crash, not a handled refusal */ }
+    reportUnauthenticated(response.status);
     throw new ApiError(kind, response.status, detail);
   }
   return (await response.json()) as IngestResult;

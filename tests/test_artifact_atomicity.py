@@ -51,6 +51,13 @@ from obsidianchain import provenance as prov
 from obsidianchain.api import artifacts, provenance_gate
 from obsidianchain.api.app import API_PREFIX, create_app
 
+# The analytical routes now require a session. Reaching them changed; what
+# they return did not, and every assertion below is unchanged. See
+# tests/console_helpers.py, and tests/test_api_access.py for the boundary
+# itself.
+from tests.console_helpers import signed_client
+
+
 DATA_ROOT = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
 
 FINGERPRINT_A = "a" * 64
@@ -483,7 +490,7 @@ def test_a_torn_evidence_artifact_is_refused_by_the_endpoint(
     meta["run_fingerprint"] = FINGERPRINT_B
     sidecar.write_text(json.dumps(meta), encoding="utf-8")
 
-    client = TestClient(create_app(served_root), raise_server_exceptions=False)
+    client = signed_client(served_root, raise_server_exceptions=False)
     response = client.get(f"{API_PREFIX}/evidence/{FINGERPRINT_B[:16]}:0")
 
     assert response.status_code == 500
@@ -507,6 +514,6 @@ def test_an_intact_real_artifact_still_serves(served_root) -> None:
     fingerprint = evidence.current_run_fingerprint(meta)
     edge = int(pd.read_parquet(path, columns=["edge_index"]).iloc[0]["edge_index"])
 
-    client = TestClient(create_app(served_root), raise_server_exceptions=False)
+    client = signed_client(served_root, raise_server_exceptions=False)
     response = client.get(f"{API_PREFIX}/evidence/{fingerprint}:{edge}")
     assert response.status_code == 200, response.text

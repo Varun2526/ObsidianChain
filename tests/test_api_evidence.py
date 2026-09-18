@@ -27,6 +27,13 @@ from obsidianchain import run_fingerprint as rf
 from obsidianchain.api import artifacts, boundary, evidence, provenance_gate
 from obsidianchain.api.app import create_app
 
+# The analytical routes now require a session. Reaching them changed; what
+# they return did not, and every assertion below is unchanged. See
+# tests/console_helpers.py, and tests/test_api_access.py for the boundary
+# itself.
+from tests.console_helpers import signed_client
+
+
 API_DIR = Path(__file__).resolve().parents[1] / "src" / "obsidianchain" / "api"
 
 
@@ -85,7 +92,7 @@ def root(real_root, tmp_path) -> Path:
 
 @pytest.fixture()
 def client(root) -> TestClient:
-    return TestClient(create_app(root), raise_server_exceptions=False)
+    return signed_client(root, raise_server_exceptions=False)
 
 
 @pytest.fixture(scope="module")
@@ -234,9 +241,7 @@ def test_a_stale_fingerprint_is_409_not_404(client, a_decidable_row) -> None:
 
 
 def test_a_missing_artifact_is_503_naming_the_command(tmp_path) -> None:
-    response = TestClient(
-        create_app(tmp_path), raise_server_exceptions=False
-    ).get(route(f"{'0' * 16}:1"))
+    response = signed_client(tmp_path, raise_server_exceptions=False).get(route(f"{'0' * 16}:1"))
     assert response.status_code == 503
     body = response.json()
     assert body["error"] == "artifact_not_generated"
@@ -264,9 +269,7 @@ def test_a_non_production_artifact_is_refused(
 ) -> None:
     """The realistic accident: reaching for phase33_decisions.csv."""
     rewrite_sidecar(root, artifacts.EVIDENCE_FUNNEL, provenance_type=declared)
-    response = TestClient(
-        create_app(root), raise_server_exceptions=False
-    ).get(route(f"{fingerprint}:{a_decidable_row}"))
+    response = signed_client(root, raise_server_exceptions=False).get(route(f"{fingerprint}:{a_decidable_row}"))
     assert response.status_code == 500
     assert response.json()["error"] == "provenance_refused"
 
@@ -274,9 +277,7 @@ def test_a_non_production_artifact_is_refused(
 def test_a_missing_sidecar_is_refused(root, fingerprint, a_decidable_row) -> None:
     """Absent provenance and production provenance must differ."""
     Path(str(root / artifacts.EVIDENCE_FUNNEL) + prov.META_SUFFIX).unlink()
-    response = TestClient(
-        create_app(root), raise_server_exceptions=False
-    ).get(route(f"{fingerprint}:{a_decidable_row}"))
+    response = signed_client(root, raise_server_exceptions=False).get(route(f"{fingerprint}:{a_decidable_row}"))
     assert response.status_code == 500
     assert response.json()["error"] == "provenance_refused"
 
@@ -285,18 +286,14 @@ def test_a_schema_1_sidecar_is_refused(root, fingerprint, a_decidable_row) -> No
     rewrite_sidecar(
         root, artifacts.EVIDENCE_FUNNEL, schema="obsidianchain.provenance/1"
     )
-    response = TestClient(
-        create_app(root), raise_server_exceptions=False
-    ).get(route(f"{fingerprint}:{a_decidable_row}"))
+    response = signed_client(root, raise_server_exceptions=False).get(route(f"{fingerprint}:{a_decidable_row}"))
     assert response.status_code == 500
     assert "provenance/2" in response.json()["detail"]
 
 
 def test_an_empty_inputs_block_is_refused(root, fingerprint, a_decidable_row) -> None:
     rewrite_sidecar(root, artifacts.EVIDENCE_FUNNEL, inputs={})
-    response = TestClient(
-        create_app(root), raise_server_exceptions=False
-    ).get(route(f"{fingerprint}:{a_decidable_row}"))
+    response = signed_client(root, raise_server_exceptions=False).get(route(f"{fingerprint}:{a_decidable_row}"))
     assert response.status_code == 500
     assert response.json()["error"] == "provenance_refused"
 
@@ -612,9 +609,7 @@ def test_an_index_from_a_different_chain_is_refused(
     meta = json.loads(path.read_text(encoding="utf-8"))
     meta["inputs"]["chain_addr_tx_sha256"] = "f" * 64
     path.write_text(json.dumps(meta), encoding="utf-8")
-    response = TestClient(
-        create_app(root), raise_server_exceptions=False
-    ).get(route(f"{fingerprint}:{a_decidable_row}"))
+    response = signed_client(root, raise_server_exceptions=False).get(route(f"{fingerprint}:{a_decidable_row}"))
     assert response.status_code == 500
     assert response.json()["error"] == "evidence_join_failed"
 
@@ -628,9 +623,7 @@ def test_an_unresolvable_code_fails_rather_than_inventing_an_address(
     index = pd.read_parquet(root / artifacts.ADDRESS_CLUSTERS)
     index = index[index["code"] != int(row["node_a"])]
     index.to_parquet(root / artifacts.ADDRESS_CLUSTERS, index=False)
-    response = TestClient(
-        create_app(root), raise_server_exceptions=False
-    ).get(route(f"{fingerprint}:{a_decidable_row}"))
+    response = signed_client(root, raise_server_exceptions=False).get(route(f"{fingerprint}:{a_decidable_row}"))
     assert response.status_code == 500
     assert response.json()["error"] == "evidence_join_failed"
     assert str(int(row["node_a"])) in response.json()["detail"]
@@ -862,7 +855,7 @@ def test_a_schema_1_evidence_artifact_is_refused_naming_the_command(
     meta["artifact"]["artifact_schema"] = contract.ARTIFACT_SCHEMA_V1
     path.write_text(json.dumps(meta), encoding="utf-8")
 
-    client = TestClient(create_app(root), raise_server_exceptions=False)
+    client = signed_client(root, raise_server_exceptions=False)
     response = client.get(route(f"{fingerprint}:{a_decidable_row}"))
     assert response.status_code == 500
     detail = response.json()["detail"]
@@ -882,7 +875,7 @@ def test_an_artifact_with_no_declared_schema_is_refused(
         meta["artifact"]["artifact_schema"] = declared
     path.write_text(json.dumps(meta), encoding="utf-8")
 
-    client = TestClient(create_app(root), raise_server_exceptions=False)
+    client = signed_client(root, raise_server_exceptions=False)
     response = client.get(route(f"{fingerprint}:{a_decidable_row}"))
     assert response.status_code == 500
     assert response.json()["error"] == "provenance_refused"
@@ -948,11 +941,23 @@ def test_the_served_run_is_the_frozen_input_manifest(
 # ---- 25-28. no computation, no mutation, determinism -------------------
 
 
-_PROBE = """
-import json, sys
+_PROBE = """import json, sys
 from fastapi.testclient import TestClient
 from obsidianchain.api.app import create_app
-TestClient(create_app(sys.argv[1]), raise_server_exceptions=False).get(sys.argv[2])
+from obsidianchain.console import db as _db, users as _users
+
+# The analytical routes require a session, so the probe establishes one the
+# same way a browser does. None of obsidianchain.console is on
+# FORBIDDEN_RECOMPUTATION, so this does not affect what is being measured.
+_root = sys.argv[1]
+_conn = _db.connect(_root)
+_users.create(_conn, username="probe", password="probe-password",
+              role="INVESTIGATOR")
+_conn.close()
+_client = TestClient(create_app(_root), raise_server_exceptions=False)
+_client.post("/api/auth/login",
+             json={"username": "probe", "password": "probe-password"})
+_client.get(sys.argv[2])
 print(json.dumps(sorted(n for n in sys.modules if n.startswith("obsidianchain"))))
 """
 
@@ -975,18 +980,38 @@ def test_serving_a_request_imports_no_computation_module(
     assert not leaked, f"serving the request imported {leaked}"
 
 
+def artifact_files(root):
+    """Every file under ``root`` EXCEPT the console's own database.
+
+    The read-only guarantee these tests pin is about ARTIFACTS: a request
+    must not rewrite a parquet, a sidecar or a payload. It was expressed as
+    "the whole data root is byte-identical", which was the same thing until
+    the application database moved in beside them.
+
+    A request now legitimately touches that database - resolving a session
+    stamps ``last_seen_at`` - and that is session bookkeeping, not an
+    artifact being modified. Excluding it keeps the assertion aimed at what
+    it was always aiming at; every artifact is still compared.
+    """
+    return [
+        p for p in root.rglob("*")
+        if p.is_file() and not p.name.startswith("obsidianchain.sqlite3")
+    ]
+
+
 def test_a_request_does_not_modify_any_artifact(
     root, client, fingerprint, a_decidable_row
 ) -> None:
     before = {
         p: (p.stat().st_mtime_ns, p.stat().st_size)
-        for p in root.rglob("*") if p.is_file()
+        for p in artifact_files(root)
     }
     client.get(route(f"{fingerprint}:{a_decidable_row}"))
     after = {
         p: (p.stat().st_mtime_ns, p.stat().st_size)
-        for p in root.rglob("*") if p.is_file()
+        for p in artifact_files(root)
     }
+    assert before, "nothing was compared; the fixture wrote no artifacts"
     assert after == before
 
 

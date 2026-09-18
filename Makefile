@@ -175,8 +175,12 @@ freeze: ## Print pinned versions derived from the vendored wheels
 		|| echo "$(VENDOR_REL) is empty - run 'make vendor'"
 
 dirs:
-	@mkdir -p $(DATA_DIR)/raw $(DATA_DIR)/processed
+	@mkdir -p $(DATA_DIR)/raw $(DATA_DIR)/processed $(DATA_DIR)/uploads
 
+# Deliberately leaves $(DATA_DIR)/obsidianchain.sqlite3 and
+# $(DATA_DIR)/uploads alone: those hold investigator state and the
+# datasets uploaded into cases, which must survive regenerating the
+# analytical artifacts. A case outlives the run it references.
 clean: ## Remove caches and processed outputs
 	find . -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
 	rm -rf .pytest_cache .ruff_cache *.egg-info src/*.egg-info
