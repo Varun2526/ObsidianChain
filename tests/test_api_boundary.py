@@ -36,6 +36,9 @@ TRUTH_ACCESS_PATTERNS = (
     "FOR_EVALUATION_ONLY",
     "network_truth",
     "worlds_truth",
+    # The synthetic world's quarantined truth: entity identity, origin
+    # identity and the behaviour that produced each transaction.
+    "world_truth",
     "true_entity_id",
     "true_origin_id",
 )
@@ -203,6 +206,59 @@ EXPECTED_IMPORT_GRAPH = {
     "obsidianchain.network",
     "obsidianchain.network.synthetic",
     "obsidianchain.provenance",
+    # Phase 10, reviewed: the alert -> separation-evidence join. Reads three
+    # artifacts the API already loads (alerts, address_clusters,
+    # evidence_funnel) and selects rows by address code. It derives no
+    # verdict - the production verdict and reason code are read from the
+    # persisted columns - and it refuses the join rather than guessing when
+    # the two artifacts cannot be shown to share a cluster space.
+    "obsidianchain.api.separation",
+    # Phase 11, reviewed: structural patterns behind one alert. Reads the
+    # alert tables and the ADDITIVE tx_mixing.parquet and groups rows. It
+    # classifies nothing - obsidianchain.features.mixing made the
+    # classification offline and is on FORBIDDEN_RECOMPUTATION, which is why
+    # the mixing vocabulary lives in alerts/contract.py where this layer can
+    # name a class without the detector being reachable from a handler.
+    "obsidianchain.api.patterns",
+    # Phase 11, reviewed: the controlled synthetic evaluation. Reads two JSON
+    # files the world commands wrote and reshapes them. It imports nothing
+    # from obsidianchain.world - the generator is not reachable from a
+    # request - and the payload is stamped SYNTHETIC_CONTROL so it can never
+    # be read as the production run.
+    "obsidianchain.api.evaluation",
+    # Phase 10, reviewed: the application layer. These modules hold MUTABLE
+    # investigator state - users, sessions, cases, datasets, dispositions,
+    # notes, reports, audit - in SQLite, and they are mounted on the same
+    # FastAPI application so one process serves one origin.
+    #
+    # They are reachable from the API package and that is the point to
+    # examine, so: none of them computes an analytical quantity, none copies
+    # one, and none is on FORBIDDEN_RECOMPUTATION. What they store about the
+    # analytical layer is identifiers - alert_id, run_fingerprint - so a
+    # score still lives in exactly one place. console.casework and
+    # console.deps read the analytical layer through api.alerts and
+    # api.artifacts, which are already in this set; console.datasets
+    # validates an upload through api.ingest, which is too.
+    #
+    # tests/test_console_boundary.py applies the same source-level denylist
+    # to this package that this file applies to obsidianchain.api.
+    "obsidianchain.console",
+    "obsidianchain.console.audit",
+    "obsidianchain.console.casework",
+    "obsidianchain.console.datasets",
+    "obsidianchain.console.db",
+    "obsidianchain.console.deps",
+    "obsidianchain.console.errors",
+    "obsidianchain.console.investigations",
+    "obsidianchain.console.passwords",
+    "obsidianchain.console.rbac",
+    "obsidianchain.console.reports",
+    "obsidianchain.console.routes_auth",
+    "obsidianchain.console.routes_casework",
+    "obsidianchain.console.routes_investigations",
+    "obsidianchain.console.runs",
+    "obsidianchain.console.sessions",
+    "obsidianchain.console.users",
 }
 
 

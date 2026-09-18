@@ -1,7 +1,9 @@
 """Feature -> M0/M1/M2/M3, as a plain literal.
 
-Generated from ``obsidianchain.features.dataset.FEATURE_GROUPS`` and checked
-against it by ``tests/test_phase7_alerts.py``. It exists as a literal because
+Generated from ``obsidianchain.features.dataset.ALL_FEATURE_GROUPS`` and
+checked against it by ``tests/test_phase7_alerts.py``. It covers M4 as well,
+so an artifact built with the optional mixing group can still be grouped -
+an artifact built without it simply has no M4 columns to place. It exists as a literal because
 ``api/boundary.py`` forbids the API package from importing the feature
 builders at all - and importing them just to read a column list would put
 the whole recomputation path one attribute away from a request handler.
@@ -56,4 +58,10 @@ GROUP_OF: dict[str, str] = {
     'net_arrival_dispersion_mean': 'M3',
     'net_arrival_dispersion_max': 'M3',
     'net_reaches_production_minimum': 'M3',
+    'mixing_tx_count_asof_t': 'M4',
+    'mixing_tx_share_asof_t': 'M4',
+    'mixing_score_max_asof_t': 'M4',
+    'mixing_score_mean_asof_t': 'M4',
+    'mixing_participants_max_asof_t': 'M4',
+    'mixing_signal_available': 'M4',
 }

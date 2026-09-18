@@ -11,7 +11,7 @@
  * are RFC 5737 documentation ranges, so no country exists for them and the
  * panel says exactly that instead of leaving an empty column.
  */
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { Correlation } from "../api/types";
 import { Address, CategoryChip, Value } from "./primitives";
 
@@ -111,8 +111,8 @@ export function CorrelationPanel({ correlation }: { correlation: Correlation }) 
           </thead>
           <tbody>
             {correlation.transactions.map((tx) => (
-              <>
-                <tr key={tx.txid} className="clickable"
+              <Fragment key={tx.txid}>
+                <tr className="clickable"
                   onClick={() => setExpanded(expanded === tx.txid ? null : tx.txid)}>
                   <td className="mono">{tx.txid}</td>
                   <td className="num">
@@ -170,7 +170,7 @@ export function CorrelationPanel({ correlation }: { correlation: Correlation }) 
                     </td>
                   </tr>
                 ) : null}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

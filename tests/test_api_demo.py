@@ -20,6 +20,13 @@ from fastapi.testclient import TestClient
 from obsidianchain.api import artifacts, boundary, demo
 from obsidianchain.api.app import create_app
 
+# The analytical routes now require a session. Reaching them changed; what
+# they return did not, and every assertion below is unchanged. See
+# tests/console_helpers.py, and tests/test_api_access.py for the boundary
+# itself.
+from tests.console_helpers import signed_client
+
+
 DATA_ROOT = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
 ROUTE = "/api/demo/scenarios"
 
@@ -49,7 +56,7 @@ def client(real_payload, tmp_path) -> TestClient:
     safe to put a damaged file.
     """
     write_payload(tmp_path, real_payload)
-    return TestClient(create_app(tmp_path))
+    return signed_client(tmp_path)
 
 
 # ---- 1. the endpoint responds ------------------------------------------
@@ -65,7 +72,15 @@ def test_returns_the_persisted_payload_unchanged(client, real_payload) -> None:
 
 
 def test_the_route_is_exactly_the_specified_path(client) -> None:
-    routes = {r.path for r in create_app(None).routes}
+    # getattr rather than attribute access: since the console routers are
+    # mounted, app.routes also holds FastAPI's own router-inclusion entries,
+    # which carry no path. The assertion below is unchanged - the demo route
+    # must be present under exactly this path, and a near-miss must 404.
+    routes = {
+        path for path in
+        (getattr(r, "path", None) for r in create_app(None).routes)
+        if path is not None
+    }
     assert ROUTE in routes
     assert client.get("/api/demo/scenario").status_code == 404
 
@@ -167,7 +182,7 @@ def test_decision_level_detail_survives(client) -> None:
 
 
 def test_missing_artifact_returns_503_naming_the_command(tmp_path) -> None:
-    response = TestClient(create_app(tmp_path), raise_server_exceptions=False).get(ROUTE)
+    response = signed_client(tmp_path, raise_server_exceptions=False).get(ROUTE)
     assert response.status_code == 503
     body = response.json()
     assert body["error"] == "artifact_not_generated"
@@ -186,9 +201,7 @@ def test_unparseable_json_is_rejected(tmp_path) -> None:
     path = tmp_path / artifacts.DEMO_SCENARIOS
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("{not json", encoding="utf-8")
-    response = TestClient(
-        create_app(tmp_path), raise_server_exceptions=False
-    ).get(ROUTE)
+    response = signed_client(tmp_path, raise_server_exceptions=False).get(ROUTE)
     assert response.status_code == 500
     assert response.json()["error"] == "artifact_invalid"
 
@@ -198,9 +211,7 @@ def test_an_unflagged_payload_is_rejected(real_payload, tmp_path) -> None:
     damaged = copy.deepcopy(real_payload)
     del damaged["demo"]
     write_payload(tmp_path, damaged)
-    response = TestClient(
-        create_app(tmp_path), raise_server_exceptions=False
-    ).get(ROUTE)
+    response = signed_client(tmp_path, raise_server_exceptions=False).get(ROUTE)
     assert response.status_code == 500
     assert response.json()["error"] in {"artifact_invalid",
                                         "demo_provenance_invalid"}
@@ -223,9 +234,7 @@ def test_a_weakened_marker_is_rejected(
     damaged = copy.deepcopy(real_payload)
     damaged[field] = value
     write_payload(tmp_path, damaged)
-    response = TestClient(
-        create_app(tmp_path), raise_server_exceptions=False
-    ).get(ROUTE)
+    response = signed_client(tmp_path, raise_server_exceptions=False).get(ROUTE)
     assert response.status_code == 500
     assert response.json()["error"] in {"artifact_invalid",
                                         "demo_provenance_invalid"}
@@ -238,9 +247,7 @@ def test_a_nested_object_losing_its_flag_is_rejected(
     damaged = copy.deepcopy(real_payload)
     del damaged["scenarios"][2]["decisions"][0]["demo"]
     write_payload(tmp_path, damaged)
-    response = TestClient(
-        create_app(tmp_path), raise_server_exceptions=False
-    ).get(ROUTE)
+    response = signed_client(tmp_path, raise_server_exceptions=False).get(ROUTE)
     assert response.status_code == 500
 
 
@@ -249,9 +256,7 @@ def test_a_truncated_scenario_set_is_rejected(real_payload, tmp_path) -> None:
     damaged = copy.deepcopy(real_payload)
     damaged["scenarios"] = damaged["scenarios"][:3]
     write_payload(tmp_path, damaged)
-    response = TestClient(
-        create_app(tmp_path), raise_server_exceptions=False
-    ).get(ROUTE)
+    response = signed_client(tmp_path, raise_server_exceptions=False).get(ROUTE)
     assert response.status_code == 500
     assert response.json()["error"] == "demo_provenance_invalid"
 
@@ -261,9 +266,7 @@ def test_an_injected_truth_field_is_blocked(real_payload, tmp_path) -> None:
     damaged = copy.deepcopy(real_payload)
     damaged["scenarios"][0]["decisions"][0]["truth_category"] = "PURE_SAME_ENTITY"
     write_payload(tmp_path, damaged)
-    response = TestClient(
-        create_app(tmp_path), raise_server_exceptions=False
-    ).get(ROUTE)
+    response = signed_client(tmp_path, raise_server_exceptions=False).get(ROUTE)
     assert response.status_code == 500
     assert response.json()["error"] == "truth_leak_blocked"
 
@@ -281,11 +284,24 @@ def test_the_real_payload_carries_no_truth_field(real_payload) -> None:
 # ---- 9. the endpoint computes nothing ----------------------------------
 
 
-_SERVE_PROBE = """
-import json, sys
+_SERVE_PROBE = """import json, sys
 from fastapi.testclient import TestClient
 from obsidianchain.api.app import create_app
-TestClient(create_app(sys.argv[1])).get("/api/demo/scenarios")
+from obsidianchain.console import db as _db, users as _users
+
+# The analytical routes require a session, so the probe establishes one the
+# same way a browser does. None of obsidianchain.console is on
+# FORBIDDEN_RECOMPUTATION, so this does not affect what is being measured.
+_root = sys.argv[1]
+_conn = _db.connect(_root)
+_users.create(_conn, username="probe", password="probe-password",
+              role="INVESTIGATOR")
+_conn.close()
+
+_client = TestClient(create_app(_root))
+_client.post("/api/auth/login",
+             json={"username": "probe", "password": "probe-password"})
+_client.get("/api/demo/scenarios")
 print(json.dumps(sorted(n for n in sys.modules if n.startswith("obsidianchain"))))
 """
 
@@ -312,15 +328,27 @@ def test_serving_a_request_imports_no_computation_module(
     assert not leaked, f"serving the request imported {leaked}"
 
 
+def artifact_files(root):
+    """Every file under ``root`` EXCEPT the console's own database.
+
+    The guarantee this pins is that a request does not rewrite an ARTIFACT.
+    It was expressed as "the whole data root is byte-identical", which was
+    the same thing until the application database moved in beside them.
+    Resolving a session stamps ``last_seen_at``; that is session
+    bookkeeping, not an artifact changing under a reader.
+    """
+    return [
+        p for p in root.rglob("*")
+        if p.is_file() and not p.name.startswith("obsidianchain.sqlite3")
+    ]
+
+
 def test_the_endpoint_does_not_write_anything(client, tmp_path) -> None:
-    """A read-only layer must leave the data root byte-identical."""
-    before = {
-        p: p.stat().st_mtime_ns for p in tmp_path.rglob("*") if p.is_file()
-    }
+    """A read-only layer must leave every artifact byte-identical."""
+    before = {p: p.stat().st_mtime_ns for p in artifact_files(tmp_path)}
     client.get(ROUTE)
-    after = {
-        p: p.stat().st_mtime_ns for p in tmp_path.rglob("*") if p.is_file()
-    }
+    after = {p: p.stat().st_mtime_ns for p in artifact_files(tmp_path)}
+    assert before, "nothing was compared; the fixture wrote no artifacts"
     assert after == before
 
 

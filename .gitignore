@@ -8,6 +8,21 @@ data/processed/*
 # from a seed (obsidianchain.demo.scenarios.DEMO_SEED), so there is nothing
 # to preserve here.
 data/demo/
+
+# The operational console's application database and the datasets
+# investigators upload into cases. This holds password hashes, session
+# rows, case notes and evidence files - none of it belongs in a repo.
+data/obsidianchain.sqlite3
+data/obsidianchain.sqlite3-wal
+data/obsidianchain.sqlite3-shm
+data/uploads/
+
+# The controlled synthetic world and the additive structural scan.
+# Both are generated artifacts: reproducible from a seed and a
+# command, and large enough that committing them would be noise.
+data/synthetic_world/
+data/processed/tx_mixing.parquet
+data/processed/tx_mixing.parquet.meta.json
 data/reach_stress/
 
 # ---- Vendored wheels (large, host-arch specific) ----

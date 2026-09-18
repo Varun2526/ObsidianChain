@@ -33,7 +33,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from obsidianchain.features import behaviour, graph, netfeat, peel
+from obsidianchain.features import behaviour, graph, mixing, netfeat, peel
 from obsidianchain.features.incidence import Incidence, load_incidence
 
 #: SPEC 6.1. Inclusive upper bounds on first appearance.
@@ -51,12 +51,32 @@ LABEL_LICIT = 2
 
 ARTIFACT_SCHEMA = "obsidianchain.phase6_dataset/1"
 
+#: The FROZEN production contract. The Phase 6 experiment, the model and the
+#: published dataset fingerprint are all defined over exactly these four
+#: groups, so this literal does not change.
 FEATURE_GROUPS = {
     "M0": behaviour.M0_COLUMNS,
     "M1": graph.M1_COLUMNS,
     "M2": peel.M2_COLUMNS,
     "M3": netfeat.M3_COLUMNS,
 }
+
+#: Groups a build may ADD on request. M4 is mixing / CoinJoin-like structure.
+#:
+#: Kept separate rather than appended to FEATURE_GROUPS on purpose. The
+#: dataset fingerprint is the SHA-256 of the written matrix and it is what
+#: every alert id, every case binding and every stored alert reference is
+#: addressed by; silently widening the default build would re-point all of
+#: them. A build that wants M4 asks for it, and the controlled synthetic
+#: evaluation does exactly that. Promoting M4 into the production contract is
+#: a deliberate model generation, not a side effect of adding a file.
+OPTIONAL_FEATURE_GROUPS = {
+    "M4": mixing.M4_COLUMNS,
+}
+
+#: Every group that exists. What the alert layer's group table is checked
+#: against, so a served artifact carrying M4 can be grouped correctly.
+ALL_FEATURE_GROUPS = {**FEATURE_GROUPS, **OPTIONAL_FEATURE_GROUPS}
 
 KEY_COLUMNS = ["code", "address", "split", "observed_at_t", "first_t", "y"]
 
@@ -85,9 +105,17 @@ def assign_split(first_t: pd.Series, last_t: pd.Series) -> pd.Series:
     return split
 
 
-def build_dataset(data_root: Path, min_depth: int = peel.PRIMARY_MIN_DEPTH
+def build_dataset(data_root: Path, min_depth: int = peel.PRIMARY_MIN_DEPTH,
+                  *, groups: dict | None = None,
                   ) -> tuple[pd.DataFrame, BuildReport]:
-    """Build the full feature matrix with keys, split and label."""
+    """Build the full feature matrix with keys, split and label.
+
+    ``groups`` defaults to the FROZEN four. Passing
+    :data:`ALL_FEATURE_GROUPS` adds M4; the controlled synthetic evaluation
+    does that, and the production build does not, so the published dataset
+    fingerprint is unaffected by M4 existing.
+    """
+    groups = FEATURE_GROUPS if groups is None else groups
     data_root = Path(data_root)
     incidence = load_incidence(data_root)
 
@@ -103,10 +131,16 @@ def build_dataset(data_root: Path, min_depth: int = peel.PRIMARY_MIN_DEPTH
     m2 = peel.build(incidence, cutoff, chains=chains, min_depth=min_depth)
     m3 = netfeat.build(data_root, incidence)
 
-    index = m0.index.union(m1.index).union(m2.index).union(m3.index)
+    blocks = [m0, m1, m2, m3]
+    if "M4" in groups:
+        blocks.append(mixing.build(incidence, cutoff))
+
+    index = blocks[0].index
+    for block in blocks[1:]:
+        index = index.union(block.index)
     frame = pd.DataFrame(index=index)
     frame.index.name = "code"
-    for block in (m0, m1, m2, m3):
+    for block in blocks:
         frame = frame.join(block, how="left")
 
     frame.insert(0, "first_t", first_t.reindex(index).astype("Int16"))
@@ -138,7 +172,7 @@ def build_dataset(data_root: Path, min_depth: int = peel.PRIMARY_MIN_DEPTH
         split_counts={k: int(v) for k, v in counts.items()},
         prevalence={k: float(v) for k, v in prevalence.items()},
     )
-    ordered = KEY_COLUMNS + [c for group in FEATURE_GROUPS.values() for c in group]
+    ordered = KEY_COLUMNS + [c for group in groups.values() for c in group]
     return usable[ordered].reset_index(drop=True), report
 
 

@@ -2263,3 +2263,317 @@ def phase7_alerts(
     typer.echo(f"wrote {len(named)} artifacts -> {processed}")
     typer.echo(f"peak memory {_peak_rss_mb():.1f} MB   "
                f"wall time {time.perf_counter() - started:.1f} s")
+
+
+# ---- the operational console: accounts and database -----------------------
+#
+# Account creation lives here and not behind an unauthenticated HTTP route.
+# An offline forensic workstation has no reason to let an anonymous caller
+# mint an identity, and the absence of that path is the simplest way to
+# guarantee it. The first ADMIN is therefore created by whoever has shell
+# access to the machine, which is the correct trust root for this deployment.
+
+
+@app.command("console-init")
+def console_init() -> None:
+    """Create or migrate the application database. Idempotent."""
+    from obsidianchain.console import db as console_db
+
+    conn = console_db.connect(DATA_ROOT)
+    try:
+        version = console_db.schema_version(conn)
+        tables = [
+            row[0] for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+                " AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            ).fetchall()
+        ]
+    finally:
+        conn.close()
+
+    typer.echo(f"database      {console_db.database_path(DATA_ROOT)}")
+    typer.echo(f"schema        v{version}")
+    typer.echo(f"tables        {', '.join(tables)}")
+    typer.echo("")
+    typer.echo("This database holds MUTABLE APPLICATION STATE only.")
+    typer.echo("No analytical artifact is ever written to it.")
+
+
+@app.command("console-user-add")
+def console_user_add(
+    username: str = typer.Argument(..., help="Login name."),
+    role: str = typer.Option(
+        "INVESTIGATOR", "--role",
+        help="ADMIN, INVESTIGATOR or REVIEWER.",
+    ),
+    display_name: str = typer.Option("", "--display-name"),
+    password: str = typer.Option(
+        None, "--password",
+        help="Omit to be prompted. Prompting keeps it out of shell history.",
+    ),
+) -> None:
+    """Create a console account."""
+    from obsidianchain.console import db as console_db, errors, users
+
+    if password is None:
+        password = typer.prompt("Password", hide_input=True,
+                                confirmation_prompt=True)
+
+    conn = console_db.connect(DATA_ROOT)
+    try:
+        created = users.create(
+            conn, username=username, password=password, role=role,
+            display_name=display_name,
+        )
+    except errors.ConsoleError as exc:
+        typer.echo(f"refused: {exc}", err=True)
+        raise typer.Exit(code=1)
+    finally:
+        conn.close()
+
+    typer.echo(f"created  {created.username}  {created.role.value}  "
+               f"({created.id})")
+
+
+@app.command("console-user-list")
+def console_user_list() -> None:
+    """List console accounts. Never prints a password hash."""
+    from obsidianchain.console import db as console_db, users
+
+    conn = console_db.connect(DATA_ROOT)
+    try:
+        found = users.listing(conn)
+    finally:
+        conn.close()
+
+    if not found:
+        typer.echo("no accounts. Create one with 'console-user-add'.")
+        return
+    for user in found:
+        state = "active" if user.active else "DISABLED"
+        typer.echo(f"{user.username:<24} {user.role.value:<14} {state:<9} "
+                   f"{user.id}")
+
+
+@app.command("console-user-password")
+def console_user_password(
+    username: str = typer.Argument(...),
+    password: str = typer.Option(None, "--password"),
+) -> None:
+    """Reset an account's password and revoke its open sessions.
+
+    Revocation is not optional: a password changed because it may be known
+    to someone else has achieved nothing while that person's session is
+    still open.
+    """
+    from obsidianchain.console import db as console_db, errors, sessions, users
+
+    if password is None:
+        password = typer.prompt("New password", hide_input=True,
+                                confirmation_prompt=True)
+
+    conn = console_db.connect(DATA_ROOT)
+    try:
+        user = users.by_username(conn, username)
+        if user is None:
+            typer.echo(f"no account {username!r}", err=True)
+            raise typer.Exit(code=1)
+        users.set_password(conn, user.id, password)
+        revoked = sessions.revoke_all_for_user(conn, user.id)
+    except errors.ConsoleError as exc:
+        typer.echo(f"refused: {exc}", err=True)
+        raise typer.Exit(code=1)
+    finally:
+        conn.close()
+
+    typer.echo(f"password updated for {username}; {revoked} session(s) revoked")
+
+
+# ---- structural pattern scan (additive, never mutates an alert artifact) --
+
+
+@app.command("mixing-scan")
+def mixing_scan(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+) -> None:
+    """Classify every transaction's mixing / CoinJoin-like structure.
+
+    Writes ``processed/tx_mixing.parquet``. ADDITIVE: it touches none of the
+    five Phase 7 alert artifacts, changes no run fingerprint and therefore
+    invalidates no alert id, no case binding and no stored alert reference.
+    An investigator can see the structural pattern behind an existing alert
+    without the whole analytical run being regenerated under them.
+
+    The classification is about transaction STRUCTURE. It does not assert
+    that a mixing service was used, and using one is not itself unlawful.
+    """
+    import hashlib
+
+    import pandas as pd
+
+    from obsidianchain import run_fingerprint as rf
+    from obsidianchain.features import mixing
+    from obsidianchain.features.incidence import TX_COLUMNS
+
+    started = time.perf_counter()
+    raw = data_root / "raw" / "txs_features.csv"
+    if not raw.is_file():
+        typer.echo(f"{raw} not found", err=True)
+        raise typer.Exit(code=1)
+
+    transactions = pd.read_csv(raw, usecols=TX_COLUMNS)
+    scored = mixing.score_transactions(transactions)
+    scored = scored[mixing.TX_COLUMNS]
+
+    counts = scored["mixing_class"].value_counts().to_dict()
+    suppressed = scored["suppressor"].value_counts().to_dict()
+    suppressed.pop(mixing.SUPPRESSOR_NONE, None)
+
+    fingerprint = hashlib.sha256(
+        pd.util.hash_pandas_object(scored, index=False).values.tobytes()
+    ).hexdigest()
+
+    provenance = _provenance(
+        "PRODUCTION",
+        dataset_id="elliptic++/frozen-september-2026",
+        inputs={"txs_features_sha256": rf.sha256_file(raw),
+                "detector": mixing.DEFAULT_CONFIG.label},
+        run_fingerprint=fingerprint,
+        artifact={
+            "artifact_schema": "obsidianchain.tx_mixing/1",
+            "detector": mixing.DEFAULT_CONFIG.label,
+            "signal_weights": dict(mixing.SIGNAL_WEIGHTS),
+            "classes": list(mixing.CLASSES),
+            "suppressors": dict(mixing.SUPPRESSORS),
+            "meaning": mixing.MEANING,
+            "insufficient_data_meaning": mixing.INSUFFICIENT_DATA_MEANING,
+        },
+        notes=(
+            "A mixing-like pattern is an observation about transaction "
+            "structure. It is not proof that a mixing service was used, and "
+            "mixing is not itself unlawful.",
+            "Individual output values are not present in the source data; "
+            "uniformity is measured from the min/max/mean summary and no "
+            "claim is made beyond it.",
+            "This artifact is ADDITIVE. It does not participate in the "
+            "Phase 7 alert run fingerprint and changes no alert id.",
+        ),
+    )
+
+    destination = data_root / "processed" / "tx_mixing.parquet"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    _publish_frame(scored, destination, provenance, fingerprint)
+
+    typer.echo(f"scanned {len(scored):,} transactions")
+    for name in mixing.CLASSES:
+        typer.echo(f"  {name:<20} {counts.get(name, 0):>8,}")
+    typer.echo("")
+    typer.echo("suppressed as a benign shape:")
+    for code, n in sorted(suppressed.items(), key=lambda kv: -kv[1]):
+        typer.echo(f"  {code:<24} {n:>8,}")
+    typer.echo("")
+    typer.echo(f"detector        {mixing.DEFAULT_CONFIG.label}")
+    typer.echo(f"scan id         {fingerprint[:16]}")
+    typer.echo(f"wrote           {destination}")
+    typer.echo(f"wall time       {time.perf_counter() - started:.1f} s")
+    typer.echo("")
+    typer.echo("A mixing-like pattern is a transaction STRUCTURE, not a")
+    typer.echo("finding about any person and not evidence of an offence.")
+
+
+# ---- the coherent TXID-correlated synthetic world -------------------------
+#
+# Named 'synthetic-world-*' to stay clearly apart from 'world-generate',
+# which builds the Phase 3.3 controlled network worlds A-E. Those are a
+# network-only experiment; this is a chain AND network world whose two layers
+# share transactions because both were produced from the same ones.
+
+
+@app.command("synthetic-world-build")
+def synthetic_world_build(
+    out: Path = typer.Option(None, "--out",
+                             help="Defaults to <data-root>/synthetic_world."),
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    seed: int = typer.Option(None, "--seed"),
+    entities_per_behaviour: int = typer.Option(None, "--entities"),
+) -> None:
+    """Generate the coherent synthetic world. SYNTHETIC_CONTROL throughout.
+
+    Writes an observable chain layer in the three filenames the Phase 6
+    loader already reads, an observable network layer over the SAME txids,
+    and a quarantined world_truth/ directory no inference stage may open.
+
+    Nothing here touches the production artifacts. Every number measured on
+    this world is a property of a generator, not of Bitcoin.
+    """
+    from obsidianchain.world import behaviours as bx
+    from obsidianchain.world.generate import WorldConfig, write_world
+
+    destination = out or (data_root / "synthetic_world")
+    overrides = {}
+    if seed is not None:
+        overrides["seed"] = seed
+    if entities_per_behaviour is not None:
+        overrides["entities_per_behaviour"] = entities_per_behaviour
+
+    started = time.perf_counter()
+    manifest = write_world(destination, WorldConfig(**overrides))
+
+    typer.echo(f"world            {destination}")
+    typer.echo(f"fingerprint      {manifest['world_fingerprint'][:16]}")
+    typer.echo(f"seed             {manifest['seed']}")
+    for key, value in manifest["counts"].items():
+        typer.echo(f"  {key:<14} {value:>8,}")
+    typer.echo("")
+    typer.echo(f"behaviours       {len(bx.BEHAVIOURS)} "
+               f"({len(bx.ADVERSARIAL)} adversarial)")
+    typer.echo(f"positive class   {', '.join(bx.POSITIVE_CLASS)}")
+    typer.echo(f"wall time        {time.perf_counter() - started:.1f} s")
+    typer.echo("")
+    typer.echo("SYNTHETIC_CONTROL. The positive-class designation is a")
+    typer.echo("labelling convention for a controlled experiment, not a claim")
+    typer.echo("that any behaviour is unlawful.")
+
+
+@app.command("synthetic-world-overlap")
+def synthetic_world_overlap(
+    world: Path = typer.Option(None, "--world",
+                               help="Defaults to <data-root>/synthetic_world."),
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+) -> None:
+    """Measure network-evidence coverage as chain/network overlap falls.
+
+    Runs the REAL M3 builder at each level rather than a bespoke coverage
+    calculation, so what is reported is what the pipeline actually sees.
+
+    Falling coverage is expected. The property under test is that missing
+    evidence stays missing - it must never become a negative finding.
+    """
+    from obsidianchain.world import overlap as overlap_mod
+
+    root = world or (data_root / "synthetic_world")
+    if not (root / "raw" / "txs_features.csv").is_file():
+        typer.echo(f"no world at {root}; run 'synthetic-world-build' first",
+                   err=True)
+        raise typer.Exit(code=1)
+
+    started = time.perf_counter()
+    destination = root / "overlap_experiment.json"
+    payload = overlap_mod.write(root, destination)
+
+    typer.echo(f"{'overlap':>8} {'tx obs':>8} {'coverage':>9} "
+               f"{'abstention':>11}  evidence")
+    for level in payload["levels"]:
+        state = "available" if level["evidence_available"] else "UNAVAILABLE"
+        typer.echo(
+            f"{level['observed_overlap']:>8.2f} "
+            f"{level['transactions_with_observations']:>8,} "
+            f"{level['coverage']:>9.3f} {level['abstention']:>11.3f}  {state}"
+        )
+    typer.echo("")
+    typer.echo(f"wrote            {destination}")
+    typer.echo(f"wall time        {time.perf_counter() - started:.1f} s")
+    typer.echo("")
+    typer.echo("SYNTHETIC evaluation. Lower overlap is not claimed to cause a")
+    typer.echo("detection outcome; coverage and abstention are what is")
+    typer.echo("measured. Missing evidence is not negative evidence.")
