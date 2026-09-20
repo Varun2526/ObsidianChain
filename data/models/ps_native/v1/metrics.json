@@ -1,0 +1,55 @@
+{
+  "no_skill_baseline_pr_auc": 0.06255637501989707,
+  "validation_candidate_comparison": {
+    "LogisticRegression": {
+      "val_pr_auc": 0.26542483571833864,
+      "val_roc_auc": 0.7903378865448343,
+      "val_brier": 0.2013949751853943,
+      "precision_at_100": 0.55,
+      "precision_at_500": 0.54,
+      "f1_at_0.5": 0.22538781915856823,
+      "fit_time_seconds": 0.46,
+      "beats_baseline": true
+    },
+    "RandomForest": {
+      "val_pr_auc": 0.5701972891343364,
+      "val_roc_auc": 0.8606422389649213,
+      "val_brier": 0.04186015888399271,
+      "precision_at_100": 0.99,
+      "precision_at_500": 0.944,
+      "f1_at_0.5": 0.4248302618816683,
+      "fit_time_seconds": 1.25,
+      "beats_baseline": true
+    },
+    "LightGBM": {
+      "val_pr_auc": 0.5227744379209504,
+      "val_roc_auc": 0.869270758623431,
+      "val_brier": 0.04449571379270856,
+      "precision_at_100": 0.71,
+      "precision_at_500": 0.934,
+      "f1_at_0.5": 0.5072681704260652,
+      "fit_time_seconds": 1.49,
+      "beats_baseline": true
+    }
+  },
+  "winning_model": "RandomForest",
+  "validation_winning_metrics": {
+    "val_pr_auc": 0.5701972891343364,
+    "val_roc_auc": 0.8606422389649213,
+    "val_brier": 0.04186015888399271,
+    "precision_at_100": 0.99,
+    "precision_at_500": 0.944,
+    "f1_at_0.5": 0.4248302618816683,
+    "fit_time_seconds": 1.25,
+    "beats_baseline": true
+  },
+  "test_metrics": {
+    "test_pr_auc": 0.20792324917190835,
+    "test_roc_auc": 0.7367124754721598,
+    "test_brier": 0.04510267547248221,
+    "precision_at_100": 0.97,
+    "precision_at_500": 0.504,
+    "f1_at_0.5": 0.2103163294385865,
+    "test_positive_prevalence": 0.04634213674427165
+  }
+}
