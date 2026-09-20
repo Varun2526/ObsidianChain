@@ -30,6 +30,7 @@ absent rather than filled in.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -82,6 +83,8 @@ class ValidationReport:
     required_missing: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    exact_duplicates_rejected: int = 0
+    network_observations_preserved: int = 0
 
     @property
     def ok(self) -> bool:
@@ -99,6 +102,8 @@ class ValidationReport:
             "errors": self.errors[:50],
             "warnings": self.warnings[:50],
             "ok": self.ok,
+            "exact_duplicates_rejected": self.exact_duplicates_rejected,
+            "network_observations_preserved": self.network_observations_preserved,
         }
 
 
@@ -287,8 +292,155 @@ def ingest(path, declared_format: str | None = None
     if rejected:
         report.errors.append(f"{rejected} row(s) have no txid and were rejected")
     frame = frame[valid].reset_index(drop=True)
+
+    # ---- duplicate handling ------------------------------------------
+    # Blockchain identity and network observation identity are DIFFERENT.
+    # An exact duplicate blockchain record is rejected (same txid, same
+    # inputs, outputs, amounts, fee, script_type).  But multiple network
+    # observations of the same TXID from different sources (different
+    # src_ip, src_port, or timestamp) are preserved — they represent
+    # distinct P2P relay vantage points and are analytically meaningful.
+    if len(frame) > 1:
+        frame, report = _deduplicate(frame, report)
+
     report.rows_valid = int(len(frame))
     return frame[CANONICAL_COLUMNS], report
+
+
+def _canonical_tuples(addresses, amounts) -> list[tuple[str, str]]:
+    """Pair addresses with corresponding amounts before sorting.
+
+    Prevents destroying address <-> amount correspondence by never sorting
+    addresses and amounts independently.
+    """
+    if addresses is None or (isinstance(addresses, float) and pd.isna(addresses)):
+        addrs = []
+    elif isinstance(addresses, (list, tuple)):
+        addrs = [str(a) if a is not None and not (isinstance(a, float) and pd.isna(a)) else "" for a in addresses]
+    else:
+        addrs = [str(addresses)]
+
+    if amounts is None or (isinstance(amounts, float) and pd.isna(amounts)):
+        amts = []
+    elif isinstance(amounts, (list, tuple)):
+        amts = [str(a) if a is not None and not (isinstance(a, float) and pd.isna(a)) else "" for a in amounts]
+    else:
+        amts = [str(amounts)]
+
+    n = max(len(addrs), len(amts))
+    pairs: list[tuple[str, str]] = []
+    for i in range(n):
+        addr = addrs[i] if i < len(addrs) else ""
+        amt = amts[i] if i < len(amts) else ""
+        pairs.append((addr, amt))
+    return sorted(pairs)
+
+
+def blockchain_record_key(record: dict | pd.Series) -> str:
+    """Canonical identity key for a blockchain transaction record.
+
+    Uses canonical input/output tuples sorted as (address, amount) pairs
+    to preserve the address <-> amount relationship.
+    Includes fields that define a blockchain record under the canonical schema:
+    txid, canonical input tuples, canonical output tuples, fee, and script_type.
+    """
+    txid = str(record.get("txid") or "").strip()
+    inputs = _canonical_tuples(record.get("input_addresses"), record.get("input_amounts"))
+    outputs = _canonical_tuples(record.get("output_addresses"), record.get("output_amounts"))
+    fee = str(record.get("fee") if record.get("fee") is not None and not pd.isna(record.get("fee")) else "").strip()
+    script_type = str(record.get("script_type") if record.get("script_type") is not None and not pd.isna(record.get("script_type")) else "").strip()
+
+    payload = json.dumps({
+        "txid": txid,
+        "inputs": inputs,
+        "outputs": outputs,
+        "fee": fee,
+        "script_type": script_type,
+    }, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def observation_key(record: dict | pd.Series) -> str:
+    """Canonical identity key for a network observation.
+
+    Key composition:
+        hash(txid + observer_id + src_ip + src_port + timestamp)
+
+    FORENSIC SCHEMA LIMITATION:
+    The canonical Problem Statement (PS) schema specifies network fields:
+    (timestamp, src_ip, dst_ip, src_port, dst_port, geo_country, asn)
+    and does NOT include an observer_id column. When observer_id is not
+    present in the input record, observer_id defaults to empty string in
+    the observation key. If an observer_id (or observer) is provided in
+    extended capture data, it is incorporated into the key to distinguish
+    distinct observations from different vantage points.
+    """
+    txid = str(record.get("txid") or "").strip()
+    observer_val = record.get("observer_id") if "observer_id" in record else record.get("observer")
+    observer_id = str(observer_val or "").strip() if observer_val is not None and not pd.isna(observer_val) else ""
+    src_ip = str(record.get("src_ip") if record.get("src_ip") is not None and not pd.isna(record.get("src_ip")) else "").strip()
+    src_port = str(record.get("src_port") if record.get("src_port") is not None and not pd.isna(record.get("src_port")) else "").strip()
+    timestamp = str(record.get("timestamp") if record.get("timestamp") is not None and not pd.isna(record.get("timestamp")) else "").strip()
+
+    payload = json.dumps({
+        "txid": txid,
+        "observer_id": observer_id,
+        "src_ip": src_ip,
+        "src_port": src_port,
+        "timestamp": timestamp,
+    }, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _deduplicate(frame: pd.DataFrame, report: ValidationReport) -> tuple[pd.DataFrame, ValidationReport]:
+    """Deduplicate records distinguishing blockchain identity from network identity.
+
+    - Exact duplicate blockchain records with identical (or empty) network observations are rejected.
+    - Multiple network observations of the same TXID from distinct vantage points (different
+      observer_id, src_ip, src_port, or timestamp) are preserved.
+    """
+    keep_indices: list[int] = []
+    seen_row_signatures: set[str] = set()
+    seen_blockchain_only: set[str] = set()
+    seen_tx_network_keys: dict[str, set[str]] = {}
+
+    for idx, row in frame.iterrows():
+        b_key = blockchain_record_key(row)
+        o_key = observation_key(row)
+        txid = str(row.get("txid") or "").strip()
+
+        has_net = bool(
+            pd.notna(row.get("src_ip"))
+            and str(row.get("src_ip")).strip() not in ("", "<NA>", "nan", "None")
+        )
+
+        row_sig = f"{b_key}:{o_key}"
+
+        if row_sig in seen_row_signatures:
+            report.exact_duplicates_rejected += 1
+            continue
+
+        if not has_net and b_key in seen_blockchain_only:
+            report.exact_duplicates_rejected += 1
+            continue
+
+        if has_net:
+            if txid in seen_tx_network_keys and o_key not in seen_tx_network_keys[txid]:
+                report.network_observations_preserved += 1
+            seen_tx_network_keys.setdefault(txid, set()).add(o_key)
+
+        seen_row_signatures.add(row_sig)
+        if not has_net:
+            seen_blockchain_only.add(b_key)
+        keep_indices.append(idx)
+
+    if report.exact_duplicates_rejected > 0:
+        report.warnings.append(
+            f"{report.exact_duplicates_rejected} exact duplicate record(s) were rejected"
+        )
+
+    deduped_frame = frame.loc[keep_indices].reset_index(drop=True)
+    return deduped_frame, report
 
 
 def correlation_summary(frame: pd.DataFrame) -> dict:

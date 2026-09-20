@@ -45,7 +45,17 @@ app = typer.Typer(
     help="Offline Bitcoin forensics prototype (NTRO PS 26146).",
 )
 
-DATA_ROOT = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
+def _default_data_root() -> Path:
+    env = os.environ.get("OBSIDIANCHAIN_DATA")
+    if env:
+        return Path(env)
+    repo_data = Path(__file__).resolve().parents[2] / "data"
+    if repo_data.is_dir():
+        return repo_data
+    return Path("/data")
+
+
+DATA_ROOT = _default_data_root()
 
 
 def _evidence_run_inputs(
@@ -1837,8 +1847,6 @@ def main() -> None:
     app()
 
 
-if __name__ == "__main__":
-    sys.exit(app())
 
 
 # ---- Phase 6: entity risk ranking ---------------------------------------
@@ -2389,6 +2397,44 @@ def console_user_password(
     typer.echo(f"password updated for {username}; {revoked} session(s) revoked")
 
 
+@app.command("demo-reset")
+def demo_reset(
+    confirm: bool = typer.Option(
+        False, "--confirm",
+        help="Acknowledge that mutable casework database and uploads will be wiped.",
+    ),
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+) -> None:
+    """Deterministically initialize a clean demonstration database.
+
+    Wipes mutable cases and uploads, runs all migrations, and generates
+    fresh temporary credentials for Admin, Investigator, and Reviewer.
+    Leaves analytical and research artifacts (data/raw/, data/processed/) untouched.
+    """
+    from obsidianchain.console.demo_reset import reset_clean_demo_database
+
+    if not confirm:
+        typer.echo("Error: --confirm flag is required to reset the demo database.", err=True)
+        typer.echo("This will wipe all mutable casework, sessions, and uploads.", err=True)
+        raise typer.Exit(code=1)
+
+    creds = reset_clean_demo_database(data_root, confirm=True)
+    typer.echo("=" * 64)
+    typer.echo("OBSIDIANCHAIN — CLEAN DEMO DATABASE INITIALIZED")
+    typer.echo("=" * 64)
+    typer.echo("Database:   Clean (schema v4)")
+    typer.echo("Casework:   0 cases, 0 uploaded datasets")
+    typer.echo("Analytics:  Preserved untouched (data/processed)")
+    typer.echo("-" * 64)
+    typer.echo(f"{'ROLE':<14} {'USERNAME':<16} {'TEMPORARY PASSWORD'}")
+    typer.echo("-" * 64)
+    for role_name in ("admin", "investigator", "reviewer"):
+        info = creds[role_name]
+        typer.echo(f"{info['role']:<14} {info['username']:<16} {info['password']}")
+    typer.echo("=" * 64)
+    typer.echo("Note: Save these temporary credentials for this demonstration session.")
+
+
 # ---- structural pattern scan (additive, never mutates an alert artifact) --
 
 
@@ -2577,3 +2623,7 @@ def synthetic_world_overlap(
     typer.echo("SYNTHETIC evaluation. Lower overlap is not claimed to cause a")
     typer.echo("detection outcome; coverage and abstention are what is")
     typer.echo("measured. Missing evidence is not negative evidence.")
+
+
+if __name__ == "__main__":
+    sys.exit(app())

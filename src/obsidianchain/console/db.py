@@ -50,7 +50,7 @@ DB_FILENAME = "obsidianchain.sqlite3"
 UPLOAD_DIRNAME = "uploads"
 
 #: Bumped by appending to MIGRATIONS, never by editing an applied entry.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 4
 
 
 class StorageError(RuntimeError):
@@ -250,29 +250,90 @@ CREATE TABLE audit_events (
     action           TEXT NOT NULL,
     object_type      TEXT NOT NULL,
     object_id        TEXT,
-    investigation_id TEXT,
+    investigation_id TEXT REFERENCES investigations(id),
     at               TEXT NOT NULL,
     detail_json      TEXT NOT NULL DEFAULT '{}'
 );
 CREATE INDEX idx_audit_investigation ON audit_events(investigation_id, id);
-CREATE INDEX idx_audit_actor ON audit_events(actor_id, id);
-
-CREATE TRIGGER audit_events_no_update
-BEFORE UPDATE ON audit_events
-BEGIN
-    SELECT RAISE(ABORT, 'audit_events is append-only');
-END;
+CREATE INDEX idx_audit_at            ON audit_events(at);
 
 CREATE TRIGGER audit_events_no_delete
 BEFORE DELETE ON audit_events
 BEGIN
     SELECT RAISE(ABORT, 'audit_events is append-only');
 END;
+
+CREATE TRIGGER audit_events_no_update
+BEFORE UPDATE ON audit_events
+BEGIN
+    SELECT RAISE(ABORT, 'audit_events is append-only');
+END;
 """
 
-#: ``(version, script)`` in order. Append only - editing an applied entry
-#: would leave already-migrated databases silently disagreeing with the code.
-MIGRATIONS: tuple[tuple[int, str], ...] = ((1, _V1),)
+_V2 = """
+CREATE TABLE saved_filters (
+    id               TEXT PRIMARY KEY,
+    user_id          TEXT NOT NULL REFERENCES users(id),
+    investigation_id TEXT REFERENCES investigations(id),
+    name             TEXT NOT NULL,
+    filter_json      TEXT NOT NULL,
+    created_at       TEXT NOT NULL
+);
+CREATE INDEX idx_saved_filters_user ON saved_filters(user_id);
+"""
+
+_V3 = """
+CREATE TABLE case_integrity (
+    id               TEXT PRIMARY KEY,
+    investigation_id TEXT NOT NULL REFERENCES investigations(id),
+    merkle_root      TEXT NOT NULL,
+    leaf_count       INTEGER NOT NULL,
+    manifest_json    TEXT NOT NULL,
+    calculated_by    TEXT NOT NULL REFERENCES users(id),
+    calculated_at    TEXT NOT NULL
+);
+CREATE INDEX idx_case_integrity_inv ON case_integrity(investigation_id, calculated_at);
+"""
+
+_V4 = """
+CREATE TABLE new_investigations (
+    id          TEXT PRIMARY KEY,
+    case_number INTEGER NOT NULL UNIQUE,
+    name        TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    owner_id    TEXT NOT NULL REFERENCES users(id),
+    status      TEXT NOT NULL CHECK (status IN (
+                    'DRAFT', 'VALIDATING', 'ANALYZING', 'ACTIVE',
+                    'SUBMITTED', 'IN_REVIEW', 'APPROVED', 'RETURNED',
+                    'CLOSED', 'ARCHIVED', 'REVIEW')),
+    bound_run_fingerprint TEXT,
+    bound_run_at          TEXT,
+    bound_by              TEXT REFERENCES users(id),
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    closed_at   TEXT
+);
+
+INSERT INTO new_investigations (
+    id, case_number, name, description, owner_id, status,
+    bound_run_fingerprint, bound_run_at, bound_by, created_at, updated_at, closed_at
+)
+SELECT id, case_number, name, description, owner_id, status,
+       bound_run_fingerprint, bound_run_at, bound_by, created_at, updated_at, closed_at
+FROM investigations;
+
+DROP TABLE investigations;
+ALTER TABLE new_investigations RENAME TO investigations;
+CREATE INDEX idx_investigations_owner ON investigations(owner_id);
+"""
+
+#: Applied in order by :func:`migrate`. Never edit an entry that has shipped.
+MIGRATIONS: tuple[tuple[int, str], ...] = (
+    (1, _V1),
+    (2, _V2),
+    (3, _V3),
+    (4, _V4),
+)
 
 
 def database_path(data_root) -> Path:
@@ -337,12 +398,15 @@ def migrate(conn: sqlite3.Connection) -> int:
         # The version is an int from this module's own tuple, never a
         # caller's value; PRAGMA takes a literal and cannot be parameterised.
         try:
+            conn.execute("PRAGMA legacy_alter_table = ON")
             conn.executescript(
                 "BEGIN;\n"
                 + script
                 + f"\nPRAGMA user_version = {int(version)};\nCOMMIT;"
             )
+            conn.execute("PRAGMA legacy_alter_table = OFF")
         except sqlite3.Error:
+            conn.execute("PRAGMA legacy_alter_table = OFF")
             if conn.in_transaction:
                 conn.execute("ROLLBACK")
             raise

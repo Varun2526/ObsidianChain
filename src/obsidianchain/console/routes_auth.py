@@ -14,7 +14,7 @@ import sqlite3
 from fastapi import APIRouter, Body, Depends, Request, Response
 
 from obsidianchain.console import audit, deps, errors, sessions, users
-from obsidianchain.console.rbac import CAPABILITIES, Capability, parse_role
+from obsidianchain.console.rbac import CAPABILITIES, Capability, Role, parse_role
 from obsidianchain.console.users import User
 
 router = APIRouter(prefix="/api", tags=["auth"])
@@ -185,6 +185,10 @@ def deactivate(
         raise errors.ValidationFailed(
             "an administrator cannot deactivate their own account"
         )
+    if target.role is Role.ADMIN and target.active and users.count_active_admins(conn) <= 1:
+        raise errors.ValidationFailed(
+            "cannot deactivate the only active administrator"
+        )
     users.set_active(conn, user_id, False)
     revoked = sessions.revoke_all_for_user(conn, user_id)
     audit.record_standalone(
@@ -193,6 +197,118 @@ def deactivate(
         detail={"sessions_revoked": revoked},
     )
     return {"ok": True, "sessions_revoked": revoked}
+
+
+@router.post("/users/{user_id}/activate", summary="Reactivate an account")
+def activate(
+    user_id: str,
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.require_capability(Capability.MANAGE_USERS)),
+) -> dict:
+    target = users.get(conn, user_id)
+    if target is None:
+        raise errors.NotFound(f"no user {user_id!r}")
+    users.set_active(conn, user_id, True)
+    audit.record_standalone(
+        conn, actor_id=actor.id, action=audit.USER_ACTIVATED,
+        object_type="user", object_id=user_id, detail={},
+    )
+    return {"ok": True, "user": users.get(conn, user_id).as_dict()}
+
+
+@router.post("/users/{user_id}/role", summary="Change an account's role (admin)")
+def change_role(
+    user_id: str,
+    payload: dict = Body(...),
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.require_capability(Capability.MANAGE_USERS)),
+) -> dict:
+    target = users.get(conn, user_id)
+    if target is None:
+        raise errors.NotFound(f"no user {user_id!r}")
+    new_role = payload.get("role")
+    if not new_role:
+        raise errors.ValidationFailed("role is required")
+    updated = users.set_role(conn, user_id, new_role)
+    # Revoke sessions so updated permissions take effect on next request
+    sessions.revoke_all_for_user(conn, user_id)
+    audit.record_standalone(
+        conn, actor_id=actor.id, action=audit.USER_ROLE_CHANGED,
+        object_type="user", object_id=user_id,
+        detail={"from": target.role.value, "to": updated.role.value},
+    )
+    return {"ok": True, "user": updated.as_dict()}
+
+
+@router.post("/users/{user_id}/reset-password", summary="Reset an account's password (admin)")
+def reset_password(
+    user_id: str,
+    payload: dict = Body(...),
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.require_capability(Capability.MANAGE_USERS)),
+) -> dict:
+    target = users.get(conn, user_id)
+    if target is None:
+        raise errors.NotFound(f"no user {user_id!r}")
+    password = str(payload.get("password") or "")
+    if not password:
+        raise errors.ValidationFailed("new password is required")
+    users.set_password(conn, user_id, password)
+    revoked = sessions.revoke_all_for_user(conn, user_id)
+    audit.record_standalone(
+        conn, actor_id=actor.id, action=audit.PASSWORD_RESET,
+        object_type="user", object_id=user_id,
+        detail={"sessions_revoked": revoked},
+    )
+    return {"ok": True, "sessions_revoked": revoked}
+
+
+@router.post("/auth/change-password", summary="Change own password")
+def change_password(
+    payload: dict = Body(...),
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.current_user),
+) -> dict:
+    old_password = str(payload.get("old_password") or "")
+    new_password = str(payload.get("new_password") or "")
+    if not old_password or not new_password:
+        raise errors.ValidationFailed("both old_password and new_password are required")
+    try:
+        users.authenticate(conn, actor.username, old_password)
+    except errors.InvalidCredentials:
+        raise errors.ValidationFailed("existing password is incorrect")
+    users.set_password(conn, actor.id, new_password)
+    audit.record_standalone(
+        conn, actor_id=actor.id, action=audit.PASSWORD_CHANGED,
+        object_type="user", object_id=actor.id, detail={},
+    )
+    return {"ok": True}
+
+
+@router.delete("/users/{user_id}", summary="Delete an account (admin, exceptional)")
+def delete_user_route(
+    user_id: str,
+    payload: dict = Body(default={}),
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.require_capability(Capability.MANAGE_USERS)),
+) -> dict:
+    if user_id == actor.id:
+        raise errors.ValidationFailed("an administrator cannot delete their own account")
+    target = users.get(conn, user_id)
+    if target is None:
+        raise errors.NotFound(f"no user {user_id!r}")
+    if not payload.get("confirm"):
+        raise errors.ValidationFailed(
+            "exceptional account deletion requires 'confirm: true' in request body"
+        )
+    # Record audit event BEFORE deletion
+    audit.record_standalone(
+        conn, actor_id=actor.id, action=audit.USER_DELETED,
+        object_type="user", object_id=user_id,
+        detail={"username": target.username, "role": target.role.value},
+    )
+    users.delete_user(conn, user_id)
+    return {"ok": True}
 
 
 @router.get("/roles", summary="The role -> capability policy, as served")

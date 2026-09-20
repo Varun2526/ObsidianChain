@@ -388,6 +388,29 @@ def create_app(data_root=None) -> FastAPI:
         return JSONResponse(content=payload)
 
     @app.get(
+        f"{API_PREFIX}/alerts/{{alert_id}}/related",
+        summary="Related alerts identified through shared transactions or observed network infrastructure (T2)",
+        dependencies=[requires_session()],
+    )
+    async def get_related_alerts(
+        alert_id: str,
+        limit: int = Query(default=20, ge=1, le=100),
+    ) -> JSONResponse:
+        payload = alerts_api.get_related_alerts(alert_id, data_root, limit=limit)
+        boundary.assert_no_truth_fields(payload)
+        return JSONResponse(content=payload)
+
+    @app.get(
+        f"{API_PREFIX}/transactions/{{txid}}",
+        summary="Transaction drilldown: inputs, outputs, counterparties, peers, and mixing classification (T2)",
+        dependencies=[requires_session()],
+    )
+    async def get_transaction(txid: int) -> JSONResponse:
+        payload = alerts_api.get_transaction_drilldown(txid, data_root)
+        boundary.assert_no_truth_fields(payload)
+        return JSONResponse(content=payload)
+
+    @app.get(
         f"{API_PREFIX}/demo/scenarios",
         summary="The five Phase 3.4 demonstration scenarios",
         dependencies=[requires_session()],
@@ -461,6 +484,23 @@ def create_app(data_root=None) -> FastAPI:
         """
         payload = patterns.get_patterns(alert_id, app.state.data_root,
                                         limit=limit)
+        boundary.assert_no_truth_fields(payload)
+        return JSONResponse(content=payload)
+
+    @app.get(
+        f"{API_PREFIX}/alerts/{{alert_id}}/graph",
+        summary="Investigation graph for this alert",
+        dependencies=[requires_session()],
+        response_description=(
+            "Investigation graph projecting cluster, address, transaction, "
+            "and announcing peer network nodes and edges."
+        ),
+    )
+    async def alert_graph(
+        alert_id: str,
+        hops: int = Query(default=2, ge=1, le=5),
+    ) -> JSONResponse:
+        payload = alerts_api.get_alert_graph(alert_id, app.state.data_root, hops=hops)
         boundary.assert_no_truth_fields(payload)
         return JSONResponse(content=payload)
 

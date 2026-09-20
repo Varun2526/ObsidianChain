@@ -20,7 +20,7 @@ from obsidianchain.console.rbac import Role, parse_role
 #: Conservative on purpose: usernames appear in audit records and in report
 #: headers, so they must round-trip through display and comparison without
 #: normalisation surprises.
-USERNAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{1,63}$")
+USERNAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._@-]{1,63}$")
 
 
 @dataclass(frozen=True)
@@ -171,7 +171,79 @@ def set_password(conn: sqlite3.Connection, user_id: str, password: str) -> None:
         )
 
 
+def count_active_admins(conn: sqlite3.Connection) -> int:
+    """Return the number of active accounts holding the ADMIN role."""
+    row = conn.execute(
+        "SELECT COUNT(*) FROM users WHERE role = 'ADMIN' AND active = 1"
+    ).fetchone()
+    return int(row[0]) if row else 0
+
+
+def set_role(conn: sqlite3.Connection, user_id: str, new_role) -> User:
+    """Change an account's role. Refuses to demote the last active admin."""
+    target = get(conn, user_id)
+    if target is None:
+        raise errors.NotFound(f"no user {user_id!r}")
+    resolved = parse_role(new_role)
+    if target.role is Role.ADMIN and resolved is not Role.ADMIN:
+        if target.active and count_active_admins(conn) <= 1:
+            raise errors.ValidationFailed(
+                "cannot remove the ADMIN role from the only active administrator"
+            )
+    with db.transaction(conn):
+        conn.execute(
+            "UPDATE users SET role = ? WHERE id = ?",
+            (resolved.value, user_id),
+        )
+    return get(conn, user_id)
+
+
+def delete_user(conn: sqlite3.Connection, user_id: str) -> None:
+    """Exceptional administrative deletion. Refuses to delete the last admin
+    or a user owning investigations (which must be reassigned or deactivated)."""
+    target = get(conn, user_id)
+    if target is None:
+        raise errors.NotFound(f"no user {user_id!r}")
+    if target.role is Role.ADMIN and count_active_admins(conn) <= 1:
+        raise errors.ValidationFailed("cannot delete the only active administrator")
+
+    # Check if this user owns investigations
+    inv_count = int(conn.execute(
+        "SELECT COUNT(*) FROM investigations WHERE owner_id = ?", (user_id,)
+    ).fetchone()[0])
+    if inv_count > 0:
+        raise errors.Conflict(
+            f"user owns {inv_count} investigation(s). Investigations cannot be "
+            f"orphaned; deactivate the user instead to preserve audit attribution."
+        )
+
+    # Check if this user has notes, reports, or dispositions
+    notes_count = int(conn.execute(
+        "SELECT COUNT(*) FROM investigator_notes WHERE author_id = ?", (user_id,)
+    ).fetchone()[0])
+    reports_count = int(conn.execute(
+        "SELECT COUNT(*) FROM reports WHERE generated_by = ?", (user_id,)
+    ).fetchone()[0])
+    if notes_count > 0 or reports_count > 0:
+        raise errors.Conflict(
+            "user has authored case notes or reports. Deactivate the user "
+            "to preserve historical audit attribution."
+        )
+
+    with db.transaction(conn):
+        conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM saved_filters WHERE user_id = ?", (user_id,))
+        try:
+            conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        except sqlite3.IntegrityError as exc:
+            raise errors.Conflict(
+                "user is referenced by existing audit or case records; "
+                "deactivate the user instead to maintain data integrity."
+            ) from exc
+
+
 #: A real scrypt hash of a random value, computed once at import. Verifying
 #: against it costs the same as verifying a genuine account, which is the
 #: point - see :func:`authenticate`.
 _DUMMY_HASH = passwords.hash_password(secrets.token_hex(32))
+
