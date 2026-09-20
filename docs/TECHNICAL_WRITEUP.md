@@ -1,7 +1,9 @@
-# ObsidianChain — technical write-up
+# ObsidianChain — Technical Write-Up (Historical Architecture Note)
 
-**SIH 2026 / NTRO** — AI-Powered Monitoring & Analysis of Bitcoin Transaction
-Traffic. Offline prototype, Linux containers, no network at build or run time.
+> [!NOTE]
+> **Historical Reference Note:** This document represents the initial architecture specification prior to the final model-selection freeze. For the authoritative frozen architecture, 17-stage pipeline, and production Random Forest model specification, see [ARCHITECTURE.md](file:///Users/varun/dev/obsidianchain/docs/ARCHITECTURE.md), [ML_PIPELINE.md](file:///Users/varun/dev/obsidianchain/docs/ML_PIPELINE.md), and [PRODUCTION_FREEZE.md](file:///Users/varun/dev/obsidianchain/docs/PRODUCTION_FREEZE.md).
+
+**SIH 2026 / NTRO** — AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic. Offline workbench, Linux containers, no network at build or run time.
 
 ---
 
