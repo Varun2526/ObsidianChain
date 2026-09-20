@@ -72,6 +72,7 @@ RUN set -eux; \
 COPY pyproject.toml /app/pyproject.toml
 COPY src/ /app/src/
 COPY scripts/ /app/scripts/
+COPY research/ /app/research/
 COPY tests/ /app/tests/
 RUN pip install --no-index --no-build-isolation --no-deps /app
 

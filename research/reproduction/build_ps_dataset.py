@@ -191,7 +191,7 @@ def build_ps_dataset(
     manifest = {
         "schema": "obsidianchain.ps_dataset_manifest/1",
         "provenance_type": "RESEARCH_DERIVED_CANONICAL_TRAINING_REPRESENTATION",
-        "generator": "scripts/build_ps_dataset.py",
+        "generator": "research/reproduction/build_ps_dataset.py",
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "source_dataset_hashes": source_hashes,
         "feature_schema_version": "ps_native_features/1",
