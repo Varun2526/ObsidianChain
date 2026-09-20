@@ -249,6 +249,7 @@ EXPECTED_IMPORT_GRAPH = {
     "obsidianchain.console.db",
     "obsidianchain.console.deps",
     "obsidianchain.console.errors",
+    "obsidianchain.console.integrity",
     "obsidianchain.console.investigations",
     "obsidianchain.console.passwords",
     "obsidianchain.console.rbac",

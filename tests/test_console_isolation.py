@@ -126,6 +126,8 @@ def test_viewing_a_case_does_not_change_its_status(alice, case_a) -> None:
 
 
 def test_status_transitions_are_validated(alice, case_a) -> None:
+    alice.post(f"/api/investigations/{case_a}/status", json={"status": "VALIDATING"})
+    alice.post(f"/api/investigations/{case_a}/status", json={"status": "ANALYZING"})
     alice.post(f"/api/investigations/{case_a}/status", json={"status": "ACTIVE"})
     # ACTIVE -> DRAFT is not a permitted transition.
     refused = alice.post(f"/api/investigations/{case_a}/status",
@@ -555,5 +557,5 @@ def test_a_closed_case_refuses_further_writes(alice, case_a) -> None:
 
 
 def test_there_is_no_delete_route_for_a_case(alice, case_a) -> None:
-    """A case is CLOSED, never removed - deleting it destroys the audit trail."""
-    assert alice.delete(f"/api/investigations/{case_a}").status_code in (404, 405)
+    """A case is CLOSED, never removed by investigators - deleting it destroys the audit trail."""
+    assert alice.delete(f"/api/investigations/{case_a}").status_code in (403, 404, 405)

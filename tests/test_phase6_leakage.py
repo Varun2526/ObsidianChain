@@ -154,7 +154,8 @@ def test_the_transaction_column_allowlist_excludes_the_anonymised_blocks() -> No
 # ---- split integrity, on the real dataset ------------------------------
 
 
-DATA_ROOT = Path("/data")
+import os
+DATA_ROOT = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
 DATASET = DATA_ROOT / "processed" / "phase6_dataset_d5.parquet"
 
 
