@@ -265,3 +265,126 @@ def test_summarise_reports_unavailable_rather_than_empty() -> None:
     assert facts["all_private_asns"] is True
     assert facts["geoip_database_installed"] is False
     assert facts["reserved_ranges"]
+
+
+# ---- Duplicate Identity & Preservation ----------------------------------
+
+
+def test_blockchain_key_preserves_address_amount_correspondence() -> None:
+    """Inputs and amounts must remain paired as tuples. Swapping amounts across
+    addresses must change the key, but reordering identical pairs must not."""
+    rec1 = {
+        "txid": "tx1",
+        "input_addresses": ["addrA", "addrB"],
+        "input_amounts": ["1.0", "5.0"],
+        "output_addresses": ["addrC"],
+        "output_amounts": ["5.99"],
+        "fee": "0.01",
+        "script_type": "p2pkh",
+    }
+    # Reordered input pairs: (addrB, 5.0), (addrA, 1.0) -> same canonical set
+    rec2 = {
+        "txid": "tx1",
+        "input_addresses": ["addrB", "addrA"],
+        "input_amounts": ["5.0", "1.0"],
+        "output_addresses": ["addrC"],
+        "output_amounts": ["5.99"],
+        "fee": "0.01",
+        "script_type": "p2pkh",
+    }
+    # Swapped amounts: addrA has 5.0, addrB has 1.0 -> DIFFERENT canonical tuples!
+    rec3 = {
+        "txid": "tx1",
+        "input_addresses": ["addrA", "addrB"],
+        "input_amounts": ["5.0", "1.0"],
+        "output_addresses": ["addrC"],
+        "output_amounts": ["5.99"],
+        "fee": "0.01",
+        "script_type": "p2pkh",
+    }
+    k1 = ingest.blockchain_record_key(rec1)
+    k2 = ingest.blockchain_record_key(rec2)
+    k3 = ingest.blockchain_record_key(rec3)
+    assert k1 == k2, "Reordered canonical pairs must produce identical blockchain key"
+    assert k1 != k3, "Swapped amounts between addresses must produce different blockchain key"
+
+
+def test_network_observation_key_includes_observer_identity() -> None:
+    """Distinct observers reporting the same txid, ip, port, timestamp are distinct."""
+    obs1 = {
+        "txid": "tx1", "observer_id": "probe-east-1",
+        "src_ip": "1.2.3.4", "src_port": "8333", "timestamp": "1600000000",
+    }
+    obs2 = {
+        "txid": "tx1", "observer_id": "probe-west-2",
+        "src_ip": "1.2.3.4", "src_port": "8333", "timestamp": "1600000000",
+    }
+    obs_no_id = {
+        "txid": "tx1",
+        "src_ip": "1.2.3.4", "src_port": "8333", "timestamp": "1600000000",
+    }
+    k1 = ingest.observation_key(obs1)
+    k2 = ingest.observation_key(obs2)
+    k_none = ingest.observation_key(obs_no_id)
+
+    assert k1 != k2, "Distinct observer IDs must produce distinct observation keys"
+    assert k1 != k_none, "Absence of observer_id must not collide with present observer_id"
+
+
+def test_exact_blockchain_duplicates_are_rejected_and_reported(tmp_path) -> None:
+    path = tmp_path / "dup.csv"
+    path.write_text(
+        "txid,input_addresses,input_amounts,output_addresses,output_amounts\n"
+        "tx1,addrA,1.0,addrB,0.99\n"
+        "tx1,addrA,1.0,addrB,0.99\n"  # Exact duplicate
+        "tx2,addrC,2.0,addrD,1.99\n",
+        encoding="utf-8",
+    )
+    frame, report = ingest.ingest(path)
+    assert len(frame) == 2
+    assert report.rows_read == 3
+    assert report.rows_valid == 2
+    assert report.exact_duplicates_rejected == 1
+    assert report.network_observations_preserved == 0
+    assert any("duplicate" in w for w in report.warnings)
+
+
+def test_multi_observer_network_observations_are_preserved(tmp_path) -> None:
+    path = tmp_path / "multi_obs.csv"
+    path.write_text(
+        "txid,src_ip,src_port,timestamp\n"
+        "tx1,198.51.100.1,8333,1600000001\n"
+        "tx1,203.0.113.2,8333,1600000002\n"  # Different network vantage point
+        "tx1,198.51.100.1,8333,1600000001\n",  # Exact duplicate of line 1
+        encoding="utf-8",
+    )
+    frame, report = ingest.ingest(path)
+    assert len(frame) == 2
+    assert report.rows_read == 3
+    assert report.rows_valid == 2
+    assert report.exact_duplicates_rejected == 1
+    assert report.network_observations_preserved == 1
+
+
+def test_geoip_provider_interface_and_test_fixture() -> None:
+    provider = geoip.TestFixtureProvider()
+    assert provider.version == "test-fixture-1.0"
+    assert len(provider.sha256) == 64
+
+    # Routable mapped IP resolves to country
+    us_facts = provider.resolve_ip("8.8.8.8")
+    assert us_facts.country_iso == "US"
+    assert us_facts.country_name == "United States"
+
+    # RFC 5737 documentation IP is NEVER mapped to a country, even if in DB
+    rfc_facts = provider.resolve_ip("198.51.100.1")
+    assert rfc_facts.country_iso is None
+    assert "reserved and not globally routable" in rfc_facts.country_source
+
+    # Summary with provider
+    summary = geoip.summarise(["8.8.8.8", "198.51.100.1"], [65000], provider=provider)
+    assert summary["countries"] == ["US"]
+    assert summary["provider_version"] == "test-fixture-1.0"
+    assert summary["provider_sha256"] == provider.sha256
+
+
