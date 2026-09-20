@@ -33,18 +33,25 @@ from obsidianchain.console import audit, db, errors
 from obsidianchain.console.rbac import Capability, Role, has, may_read_case
 from obsidianchain.console.users import User
 
-STATUSES = ("DRAFT", "VALIDATING", "ACTIVE", "REVIEW", "CLOSED")
+STATUSES = (
+    "DRAFT", "VALIDATING", "ANALYZING", "ACTIVE",
+    "SUBMITTED", "IN_REVIEW", "APPROVED", "RETURNED",
+    "CLOSED", "ARCHIVED", "REVIEW",
+)
 
-#: Which status may follow which. A case moves forward through triage and
-#: review, may be reopened from REVIEW, and is closed from ACTIVE or REVIEW.
-#: Deliberately restrictive: an arbitrary transition table is how a lifecycle
-#: stops meaning anything.
+#: Which status may follow which in the institutional casework lifecycle.
 TRANSITIONS: dict[str, tuple[str, ...]] = {
-    "DRAFT": ("VALIDATING", "ACTIVE", "CLOSED"),
-    "VALIDATING": ("ACTIVE", "DRAFT", "CLOSED"),
-    "ACTIVE": ("REVIEW", "CLOSED"),
-    "REVIEW": ("ACTIVE", "CLOSED"),
-    "CLOSED": (),
+    "DRAFT": ("VALIDATING", "CLOSED"),
+    "VALIDATING": ("ANALYZING", "DRAFT", "CLOSED"),
+    "ANALYZING": ("ACTIVE", "DRAFT"),
+    "ACTIVE": ("SUBMITTED", "CLOSED"),
+    "SUBMITTED": ("IN_REVIEW", "ACTIVE"),
+    "IN_REVIEW": ("APPROVED", "RETURNED"),
+    "REVIEW": ("APPROVED", "RETURNED", "ACTIVE"),  # backward compat alias
+    "RETURNED": ("ACTIVE",),
+    "APPROVED": ("CLOSED",),
+    "CLOSED": ("ACTIVE", "ARCHIVED"),
+    "ARCHIVED": ("CLOSED", "ACTIVE"),
 }
 
 MAX_NAME = 200
@@ -279,14 +286,28 @@ def set_status(
         )
 
     found = require_readable(conn, actor, investigation_id)
-    if not has(actor.role, Capability.CHANGE_INVESTIGATION_STATUS):
-        raise errors.AccessDenied(
-            f"role {actor.role.value} may not change investigation status"
-        )
-    if actor.role is not Role.ADMIN and actor.id != found.owner_id:
-        raise errors.AccessDenied(
-            "only the owning investigator may change this case's status"
-        )
+
+    # Specific role constraints per target:
+    if target == "ARCHIVED" or found.status == "ARCHIVED":
+        if not has(actor.role, Capability.ARCHIVE_INVESTIGATION):
+            raise errors.AccessDenied(
+                "only administrators may archive or restore an investigation"
+            )
+    elif target in ("IN_REVIEW", "APPROVED", "RETURNED"):
+        if not has(actor.role, Capability.REVIEW_INVESTIGATION):
+            raise errors.AccessDenied(
+                f"role {actor.role.value} may not review an investigation"
+            )
+    else:
+        if not has(actor.role, Capability.CHANGE_INVESTIGATION_STATUS):
+            raise errors.AccessDenied(
+                f"role {actor.role.value} may not change investigation status"
+            )
+        if actor.role is not Role.ADMIN and actor.id != found.owner_id:
+            raise errors.AccessDenied(
+                "only the owning investigator may change this case's status"
+            )
+
     if target == found.status:
         return found
     if target not in TRANSITIONS[found.status]:
@@ -297,7 +318,7 @@ def set_status(
         )
 
     now = db.utcnow()
-    closed_at = now if target == "CLOSED" else None
+    closed_at = now if target in ("CLOSED", "ARCHIVED") else None
     with db.transaction(conn):
         conn.execute(
             "UPDATE investigations SET status = ?, updated_at = ?,"
@@ -312,6 +333,140 @@ def set_status(
             detail={"from": found.status, "to": target},
         )
     return get(conn, investigation_id)
+
+
+def archive(
+    conn: sqlite3.Connection, actor: User, investigation_id: str
+) -> Investigation:
+    """Archive an investigation. Standard administrative lifecycle action."""
+    if not has(actor.role, Capability.ARCHIVE_INVESTIGATION):
+        raise errors.AccessDenied(
+            "only administrators may archive an investigation"
+        )
+    found = require_readable(conn, actor, investigation_id)
+    if found.status == "ARCHIVED":
+        return found
+    if found.status not in ("CLOSED", "APPROVED"):
+        raise errors.Conflict(
+            f"investigation must be CLOSED before archiving; current status is {found.status}"
+        )
+    now = db.utcnow()
+    with db.transaction(conn):
+        conn.execute(
+            "UPDATE investigations SET status = 'ARCHIVED', updated_at = ?,"
+            " closed_at = COALESCE(closed_at, ?) WHERE id = ?",
+            (now, now, investigation_id),
+        )
+        audit.record(
+            conn, actor_id=actor.id, action=audit.INVESTIGATION_ARCHIVED,
+            object_type="investigation", object_id=investigation_id,
+            investigation_id=investigation_id,
+            detail={"previous_status": found.status},
+        )
+    return get(conn, investigation_id)
+
+
+def restore(
+    conn: sqlite3.Connection, actor: User, investigation_id: str
+) -> Investigation:
+    """Restore an archived investigation back to CLOSED/ACTIVE."""
+    if not has(actor.role, Capability.ARCHIVE_INVESTIGATION):
+        raise errors.AccessDenied(
+            "only administrators may restore an archived investigation"
+        )
+    found = require_readable(conn, actor, investigation_id)
+    if found.status != "ARCHIVED":
+        raise errors.Conflict(
+            f"investigation is not ARCHIVED (status: {found.status})"
+        )
+    now = db.utcnow()
+    with db.transaction(conn):
+        conn.execute(
+            "UPDATE investigations SET status = 'CLOSED', updated_at = ? WHERE id = ?",
+            (now, investigation_id),
+        )
+        audit.record(
+            conn, actor_id=actor.id, action=audit.INVESTIGATION_RESTORED,
+            object_type="investigation", object_id=investigation_id,
+            investigation_id=investigation_id,
+            detail={"restored_status": "CLOSED"},
+        )
+    return get(conn, investigation_id)
+
+
+def delete_case(
+    conn: sqlite3.Connection, actor: User, investigation_id: str, confirmation: str = ""
+) -> None:
+    """Exceptional administrative maintenance action.
+    Requires typed confirmation matching 'DELETE <case_label>'."""
+    if not has(actor.role, Capability.DELETE_INVESTIGATION):
+        raise errors.AccessDenied("only administrators may delete an investigation")
+    found = require_readable(conn, actor, investigation_id)
+    if found.status in ("ACTIVE", "SUBMITTED", "IN_REVIEW"):
+        raise errors.Conflict(
+            f"cannot delete an active or in-review investigation (status: {found.status}); "
+            f"close or archive it first."
+        )
+    expected_confirm = f"DELETE {found.case_label}"
+    if confirmation.strip() != expected_confirm:
+        raise errors.ValidationFailed(
+            f"typed confirmation mismatch: expected '{expected_confirm}', got '{confirmation}'"
+        )
+
+    # Check if case has recorded dispositions (which are schema-enforced append-only)
+    disp_count = int(conn.execute(
+        "SELECT COUNT(*) FROM alert_dispositions WHERE investigation_id = ?",
+        (investigation_id,),
+    ).fetchone()[0])
+    if disp_count > 0:
+        raise errors.Conflict(
+            f"investigation has {disp_count} recorded disposition(s). Deleting it would "
+            f"destroy immutable evidentiary history. Archive the investigation instead."
+        )
+
+    # Check if case has sealed cryptographic integrity records
+    integrity_count = int(conn.execute(
+        "SELECT COUNT(*) FROM case_integrity WHERE investigation_id = ?",
+        (investigation_id,),
+    ).fetchone()[0])
+    if integrity_count > 0:
+        raise errors.Conflict(
+            f"investigation has {integrity_count} sealed integrity record(s). Deleting it would "
+            f"destroy cryptographic provenance. Archive the investigation instead."
+        )
+
+    # Record audit event BEFORE deletion so that the deletion action itself is permanently logged
+    audit.record_standalone(
+        conn, actor_id=actor.id, action=audit.INVESTIGATION_DELETED,
+        object_type="investigation", object_id=investigation_id,
+        investigation_id=None,
+        detail={
+            "case_number": found.case_number,
+            "case_label": found.case_label,
+            "name": found.name,
+        },
+    )
+
+    # Disable foreign keys temporarily for exceptional purge of this case
+    # so append-only audit events retain their historical investigation_id
+    # without foreign key violation on row deletion.
+    conn.execute("PRAGMA foreign_keys = OFF")
+    try:
+        with db.transaction(conn):
+            conn.execute("DELETE FROM saved_filters WHERE investigation_id = ?", (investigation_id,))
+            conn.execute("DELETE FROM reports WHERE investigation_id = ?", (investigation_id,))
+            conn.execute("DELETE FROM investigator_notes WHERE investigation_id = ?", (investigation_id,))
+            conn.execute("DELETE FROM alert_references WHERE investigation_id = ?", (investigation_id,))
+            dataset_ids = [r[0] for r in conn.execute(
+                "SELECT id FROM datasets WHERE investigation_id = ?", (investigation_id,)
+            ).fetchall()]
+            for ds_id in dataset_ids:
+                conn.execute("DELETE FROM analysis_runs WHERE dataset_id = ?", (ds_id,))
+            conn.execute("DELETE FROM datasets WHERE investigation_id = ?", (investigation_id,))
+            conn.execute("DELETE FROM investigations WHERE id = ?", (investigation_id,))
+    finally:
+        conn.execute("PRAGMA foreign_keys = ON")
+
 
 
 def bind_run(

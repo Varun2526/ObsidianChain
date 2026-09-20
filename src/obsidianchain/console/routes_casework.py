@@ -397,3 +397,62 @@ def export_report(
         raise errors.NotFound(f"no report version {version}")
     reports_mod.record_export(conn, actor, investigation_id, report.id)
     return {"ok": True, "content_sha256": report.content_sha256}
+
+
+# ---- saved filters (T2) -------------------------------------------------
+
+
+@router.get(
+    "/{investigation_id}/filters",
+    summary="Saved filters for this user and investigation",
+)
+def list_filters(
+    investigation_id: str,
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.current_user),
+) -> dict:
+    inv.require_readable(conn, actor, investigation_id)
+    filters = casework.list_saved_filters(
+        conn, user_id=actor.id, investigation_id=investigation_id
+    )
+    return {"filters": filters}
+
+
+@router.post(
+    "/{investigation_id}/filters",
+    summary="Save an alert filter preset",
+    status_code=201,
+)
+def create_filter(
+    investigation_id: str,
+    payload: dict = Body(...),
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.current_user),
+) -> dict:
+    inv.require_readable(conn, actor, investigation_id)
+    name = str(payload.get("name") or "")
+    import json
+    filter_json = json.dumps(payload.get("filter") or {})
+    created = casework.create_saved_filter(
+        conn,
+        user_id=actor.id,
+        name=name,
+        filter_json=filter_json,
+        investigation_id=investigation_id,
+    )
+    return {"filter": created}
+
+
+@router.delete(
+    "/{investigation_id}/filters/{filter_id}",
+    summary="Delete a saved filter",
+)
+def delete_filter(
+    investigation_id: str,
+    filter_id: str,
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.current_user),
+) -> dict:
+    inv.require_readable(conn, actor, investigation_id)
+    casework.delete_saved_filter(conn, user_id=actor.id, filter_id=filter_id)
+    return {"ok": True}

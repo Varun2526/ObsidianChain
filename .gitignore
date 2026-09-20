@@ -16,6 +16,7 @@ data/obsidianchain.sqlite3
 data/obsidianchain.sqlite3-wal
 data/obsidianchain.sqlite3-shm
 data/uploads/
+data/runs/
 
 # The controlled synthetic world and the additive structural scan.
 # Both are generated artifacts: reproducible from a seed and a

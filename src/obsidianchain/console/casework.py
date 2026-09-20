@@ -504,3 +504,70 @@ def summary(
 
 def may_assign(role: Role) -> bool:
     return has(role, Capability.ASSIGN_ALERT)
+
+
+# ---- saved filters (T2) -------------------------------------------------
+
+
+def list_saved_filters(
+    conn: sqlite3.Connection, user_id: str, investigation_id: str | None = None
+) -> list[dict]:
+    query = "SELECT * FROM saved_filters WHERE user_id = ?"
+    params: list[str] = [user_id]
+    if investigation_id:
+        query += " AND (investigation_id IS NULL OR investigation_id = ?)"
+        params.append(investigation_id)
+    query += " ORDER BY created_at DESC"
+    rows = conn.execute(query, params).fetchall()
+    return [
+        {
+            "id": r["id"],
+            "user_id": r["user_id"],
+            "investigation_id": r["investigation_id"],
+            "name": r["name"],
+            "filter_json": r["filter_json"],
+            "created_at": r["created_at"],
+        }
+        for r in rows
+    ]
+
+
+def create_saved_filter(
+    conn: sqlite3.Connection,
+    *,
+    user_id: str,
+    name: str,
+    filter_json: str,
+    investigation_id: str | None = None,
+) -> dict:
+    if not name.strip():
+        raise errors.ValidationFailed("filter name cannot be empty")
+    new_id = "flt_" + secrets.token_hex(8)
+    now = db.utcnow()
+    with db.transaction(conn):
+        conn.execute(
+            "INSERT INTO saved_filters (id, user_id, investigation_id, name, filter_json, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (new_id, user_id, investigation_id, name.strip(), filter_json, now),
+        )
+    return {
+        "id": new_id,
+        "user_id": user_id,
+        "investigation_id": investigation_id,
+        "name": name.strip(),
+        "filter_json": filter_json,
+        "created_at": now,
+    }
+
+
+def delete_saved_filter(
+    conn: sqlite3.Connection, *, user_id: str, filter_id: str
+) -> bool:
+    with db.transaction(conn):
+        cur = conn.execute(
+            "DELETE FROM saved_filters WHERE id = ? AND user_id = ?",
+            (filter_id, user_id),
+        )
+        if cur.rowcount == 0:
+            raise errors.NotFound(f"saved filter {filter_id!r} not found")
+    return True

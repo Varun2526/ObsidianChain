@@ -477,3 +477,183 @@ def _network(alert, network_rows=None, root=None) -> dict:
             contract.INSUFFICIENT_EVIDENCE_MEANING if members_with == 0 else None
         ),
     }
+
+
+def get_related_alerts(raw_id: str, root=None, *, limit: int = 20) -> dict:
+    """Identify real relationships between alerts based only on supported artifact data (T2).
+    
+    Why related:
+    - shared on-chain transaction (txid)
+    - shared peer observation (with gossip relay caveat)
+    Never inferred from similar risk scores.
+    """
+    requested_run, cluster_id = contract.parse_alert_id(raw_id)
+    frame, sidecar = artifacts.load_alerts(root)
+    current = current_run_fingerprint(sidecar)
+    if requested_run != current:
+        raise contract.AlertIdStaleError(
+            f"Alert id {raw_id!r} is from run {requested_run}, current run is {current}"
+        )
+    row = frame[frame["alert_id"] == raw_id]
+    if row.empty:
+        raise contract.AlertNotFoundError(f"alert {raw_id!r} not found in run {current}")
+    
+    net_table = artifacts.load_alert_table(root, "alert_network")
+    this_net = net_table[net_table["alert_id"] == raw_id]
+    
+    related = []
+    seen_alerts = set()
+    
+    # 1. Check shared transactions
+    if not this_net.empty and "txid" in this_net.columns:
+        txids = set(this_net["txid"].dropna().unique())
+        if txids:
+            tx_matches = net_table[
+                (net_table["txid"].isin(txids)) & (net_table["alert_id"] != raw_id)
+            ]
+            for other_id, grp in tx_matches.groupby("alert_id"):
+                if other_id in seen_alerts:
+                    continue
+                seen_alerts.add(other_id)
+                match_row = frame[frame["alert_id"] == other_id]
+                if match_row.empty:
+                    continue
+                m = match_row.iloc[0]
+                shared_tx_list = [int(x) for x in grp["txid"].unique()[:3]]
+                related.append({
+                    "alert_id": other_id,
+                    "cluster_id": int(m["cluster_id"]),
+                    "rank": int(m["rank"]),
+                    "severity": str(m["severity"]),
+                    "risk_score": _clean(m["risk_score"]),
+                    "top_signals": list(m["top_signals"]) if hasattr(m["top_signals"], "__iter__") else [],
+                    "relationship_type": "SHARED_TRANSACTION",
+                    "connecting_identifier": f"txids: {', '.join(str(t) for t in shared_tx_list)}",
+                    "detail": f"Cluster members participated in {len(grp['txid'].unique())} shared on-chain transaction(s).",
+                    "limitation": "Shared transactions demonstrate on-chain interaction or counterparty flow; they do not prove identical ownership.",
+                })
+                if len(related) >= limit:
+                    break
+                    
+    # 2. Check shared peers (if still room)
+    if len(related) < limit and not this_net.empty and "peer_ip" in this_net.columns:
+        peers = set(this_net["peer_ip"].dropna().unique())
+        if peers:
+            peer_matches = net_table[
+                (net_table["peer_ip"].isin(peers)) & (net_table["alert_id"] != raw_id)
+            ]
+            for other_id, grp in peer_matches.groupby("alert_id"):
+                if other_id in seen_alerts:
+                    continue
+                seen_alerts.add(other_id)
+                match_row = frame[frame["alert_id"] == other_id]
+                if match_row.empty:
+                    continue
+                m = match_row.iloc[0]
+                shared_peers_list = [str(x) for x in grp["peer_ip"].unique()[:2]]
+                related.append({
+                    "alert_id": other_id,
+                    "cluster_id": int(m["cluster_id"]),
+                    "rank": int(m["rank"]),
+                    "severity": str(m["severity"]),
+                    "risk_score": _clean(m["risk_score"]),
+                    "top_signals": list(m["top_signals"]) if hasattr(m["top_signals"], "__iter__") else [],
+                    "relationship_type": "OBSERVED_SHARED_PEER",
+                    "connecting_identifier": f"peers: {', '.join(shared_peers_list)}",
+                    "detail": f"Both alerts have transactions observed via announcing peer(s) {', '.join(shared_peers_list)}.",
+                    "limitation": "An announcing peer is a relay vantage point in the Bitcoin p2p network, NOT an originator or proof of shared ownership.",
+                })
+                if len(related) >= limit:
+                    break
+                    
+    return {
+        "alert_id": raw_id,
+        "run_fingerprint": current,
+        "count": len(related),
+        "related_alerts": related,
+        "meaning": "Related alerts identified strictly through shared on-chain transactions or observed network relay peers. Similarity in risk score is never used to infer a relationship.",
+    }
+
+
+def get_transaction_drilldown(txid: int, root=None) -> dict:
+    """Drilldown into a transaction: inputs, outputs, observers, peers, mixing (T2)."""
+    net_table = artifacts.load_alert_table(root, "alert_network")
+    rows = net_table[net_table["txid"] == txid]
+    if rows.empty:
+        raise contract.AlertNotFoundError(f"transaction {txid} not found in network correlation")
+        
+    inputs = []
+    outputs = []
+    peers = []
+    seen_peers = set()
+    seen_addrs = set()
+    clusters = set()
+    
+    for r in rows.itertuples():
+        addr = str(r.address)
+        role = str(r.address_role)
+        alert_id = str(r.alert_id)
+        if ":" in alert_id:
+            clusters.add(alert_id.split(":")[1])
+        if addr not in seen_addrs:
+            seen_addrs.add(addr)
+            if role == "input":
+                inputs.append({"address": addr, "alert_id": alert_id})
+            else:
+                outputs.append({"address": addr, "alert_id": alert_id})
+                
+        peer_key = (r.peer_ip, r.peer_port)
+        if peer_key not in seen_peers:
+            seen_peers.add(peer_key)
+            peers.append({
+                "ip": str(r.peer_ip),
+                "port": int(r.peer_port) if r.peer_port else None,
+                "asn": int(r.peer_asn) if r.peer_asn else None,
+                "observers": int(r.observers) if r.observers else 1,
+                "announcing_peers": int(r.announcing_peers) if r.announcing_peers else 1,
+            })
+            
+    # Check tx_mixing if available
+    mixing_info = None
+    try:
+        from obsidianchain.api import patterns
+        tx_mixing_df, meta = patterns.load_tx_mixing(root)
+        if tx_mixing_df is not None:
+            m_row = tx_mixing_df[tx_mixing_df["txid"] == txid]
+            if not m_row.empty:
+                m = m_row.iloc[0]
+                mixing_info = {
+                    "available": True,
+                    "mixing_class": str(m.get("mixing_class", "STANDARD")),
+                    "entropy": _clean(m.get("entropy")),
+                    "n_inputs": int(m.get("n_inputs", len(inputs))),
+                    "n_outputs": int(m.get("n_outputs", len(outputs))),
+                }
+    except Exception:
+        pass
+        
+    if mixing_info is None:
+        mixing_info = {
+            "available": False,
+            "meaning": "Transaction mixing classification scan is not loaded for this deployment.",
+        }
+        
+    return {
+        "txid": txid,
+        "input_count": len(inputs),
+        "output_count": len(outputs),
+        "inputs": inputs,
+        "outputs": outputs,
+        "associated_clusters": sorted(list(clusters)),
+        "announcing_peers": peers,
+        "mixing": mixing_info,
+        "limitation": "A peer announcing a transaction is a network relay observer. It does not identify the sender, wallet owner, or person who created the transaction.",
+    }
+
+
+def get_alert_graph(raw_id: str, root=None, hops: int = 2) -> dict:
+    """Multi-layer investigation graph for an alert (cluster, address, tx, ip)."""
+    from obsidianchain.alerts import graph as alert_graph
+
+    return alert_graph.get_alert_graph(raw_id, root=root, hops=hops)
+

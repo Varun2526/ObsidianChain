@@ -34,9 +34,12 @@ where an announcement was seen, which is a routing fact.
 from __future__ import annotations
 
 import csv
+import hashlib
 import ipaddress
+import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 #: IANA IPv4 Special-Purpose Address Registry (RFC 6890 and successors).
 #: Reproduced as reference data: it is small, stable, and published openly.
@@ -204,15 +207,107 @@ def resolve_asn(asn) -> AsnFacts:
     )
 
 
-def summarise(ips, asns, data_root=None) -> dict:
+class GeoIPProvider(Protocol):
+    """Protocol for offline GeoIP and ASN metadata providers."""
+
+    def resolve_ip(self, ip: str) -> IpFacts:
+        ...
+
+    def resolve_asn(self, asn: int | str | None) -> AsnFacts:
+        ...
+
+    @property
+    def version(self) -> str:
+        ...
+
+    @property
+    def sha256(self) -> str:
+        ...
+
+
+class OfflineCSVProvider:
+    """Production offline GeoIP provider reading data/reference/geoip_country.csv."""
+
+    def __init__(self, data_root: str | Path | None = None) -> None:
+        self.data_root = Path(data_root) if data_root is not None else None
+        self._entries = load_geoip_database(self.data_root)
+        self._path = (self.data_root / GEOIP_DATABASE) if self.data_root is not None else None
+        self._sha256 = "none"
+        if self._path is not None and self._path.is_file():
+            self._sha256 = hashlib.sha256(self._path.read_bytes()).hexdigest()
+
+    def resolve_ip(self, ip: str) -> IpFacts:
+        return resolve_ip(ip, self._entries)
+
+    def resolve_asn(self, asn: int | str | None) -> AsnFacts:
+        return resolve_asn(asn)
+
+    @property
+    def version(self) -> str:
+        return "offline-csv-1.0" if self._entries else "uninstalled"
+
+    @property
+    def sha256(self) -> str:
+        return self._sha256
+
+
+class TestFixtureProvider:
+    """Deterministic test fixture GeoIP provider with built-in routable test mappings.
+
+    Honors IANA special purpose ranges first: RFC 5737 and private ranges
+    are never assigned a country.
+    """
+
+    DEFAULT_MAPPINGS = [
+        ("8.8.8.0/24", "US", "United States"),
+        ("1.1.1.0/24", "AU", "Australia"),
+        ("9.9.9.0/24", "CH", "Switzerland"),
+    ]
+
+    def __init__(self, custom_mappings: list[tuple[str, str, str]] | None = None) -> None:
+        mappings = custom_mappings if custom_mappings is not None else self.DEFAULT_MAPPINGS
+        self._entries = [
+            (ipaddress.ip_network(cidr, strict=False), iso, country)
+            for cidr, iso, country in mappings
+        ]
+        payload = json.dumps([(str(n), iso, c) for n, iso, c in self._entries], sort_keys=True)
+        self._sha256 = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    def resolve_ip(self, ip: str) -> IpFacts:
+        return resolve_ip(ip, self._entries)
+
+    def resolve_asn(self, asn: int | str | None) -> AsnFacts:
+        return resolve_asn(asn)
+
+    @property
+    def version(self) -> str:
+        return "test-fixture-1.0"
+
+    @property
+    def sha256(self) -> str:
+        return self._sha256
+
+
+def summarise(ips, asns, data_root=None, provider: GeoIPProvider | None = None) -> dict:
     """Aggregate facts for a set of addresses and ASNs.
 
     Used by the alert layer to describe an alert's network footprint without
     per-record lookups in a request handler.
     """
-    database = load_geoip_database(data_root)
-    ip_facts = [resolve_ip(ip, database) for ip in dict.fromkeys(ips)]
-    asn_facts = [resolve_asn(a) for a in dict.fromkeys(asns)]
+    if provider is not None:
+        ip_facts = [provider.resolve_ip(ip) for ip in dict.fromkeys(ips)]
+        asn_facts = [provider.resolve_asn(a) for a in dict.fromkeys(asns)]
+        database_installed = provider.version != "uninstalled"
+        prov_version = provider.version
+        prov_sha256 = provider.sha256
+    else:
+        database = load_geoip_database(data_root)
+        ip_facts = [resolve_ip(ip, database) for ip in dict.fromkeys(ips)]
+        asn_facts = [resolve_asn(a) for a in dict.fromkeys(asns)]
+        database_installed = bool(database)
+        prov_version = "offline-csv-1.0" if database_installed else "uninstalled"
+        prov_sha256 = "none"
+
     countries = sorted({f.country_iso for f in ip_facts if f.country_iso})
     reserved = sorted({f.special_purpose for f in ip_facts if f.special_purpose})
     return {
@@ -231,5 +326,8 @@ def summarise(ips, asns, data_root=None) -> dict:
         "all_private_asns": bool(asn_facts) and all(
             f.private_use for f in asn_facts if f.asn is not None
         ),
-        "geoip_database_installed": bool(database),
+        "geoip_database_installed": database_installed,
+        "provider_version": prov_version,
+        "provider_sha256": prov_sha256,
     }
+

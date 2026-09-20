@@ -48,6 +48,9 @@ class Capability(str, Enum):
     CREATE_INVESTIGATION = "create_investigation"
     EDIT_INVESTIGATION = "edit_investigation"
     CHANGE_INVESTIGATION_STATUS = "change_investigation_status"
+    ARCHIVE_INVESTIGATION = "archive_investigation"
+    DELETE_INVESTIGATION = "delete_investigation"
+    REVIEW_INVESTIGATION = "review_investigation"
 
     # Data
     UPLOAD_DATASET = "upload_dataset"
@@ -77,7 +80,7 @@ _INVESTIGATOR = frozenset({
     Capability.CREATE_REPORT,
 })
 
-#: A reviewer writes notes and finalises reports. Everything else they do is
+#: A reviewer writes notes, reviews cases and finalises reports. Everything else they do is
 #: a read, which is governed by :func:`may_read_case` rather than by a
 #: capability.
 _REVIEWER = frozenset({
@@ -85,6 +88,7 @@ _REVIEWER = frozenset({
     Capability.VIEW_ALL_AUDIT,
     Capability.WRITE_NOTE,
     Capability.FINALISE_REPORT,
+    Capability.REVIEW_INVESTIGATION,
 })
 
 _ADMIN = frozenset(Capability)
@@ -103,8 +107,11 @@ def parse_role(raw) -> Role:
     recognise" and "role with no privileges" are different states, and only
     one of them should ever be silent.
     """
+    if isinstance(raw, Role):
+        return raw
+    val = raw.value if hasattr(raw, "value") else str(raw)
     try:
-        return Role(str(raw).upper())
+        return Role(val.upper())
     except ValueError as exc:
         raise ValueError(f"{raw!r} is not a known role") from exc
 

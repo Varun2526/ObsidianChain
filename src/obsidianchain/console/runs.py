@@ -175,3 +175,117 @@ def set_status(
     if found is None:
         raise errors.NotFound(f"no analysis run {run_id!r}")
     return found
+
+
+RUN_PROGRESS: dict[str, dict] = {}
+
+
+def get_progress(conn: sqlite3.Connection, run_id: str) -> dict:
+    """Return real-time execution progress of a 17-stage analytical run."""
+    if run_id in RUN_PROGRESS:
+        return RUN_PROGRESS[run_id]
+    run = get(conn, run_id)
+    if run is None:
+        raise errors.NotFound(f"no analysis run {run_id!r}")
+    if run.status == "COMPLETE":
+        return {
+            "status": "COMPLETE",
+            "current_stage": 17,
+            "total_stages": 17,
+            "stage_name": "Reporting & Integrity",
+            "stage_status": "SUCCESS",
+            "progress_pct": 100,
+            "run_fingerprint": run.run_fingerprint,
+        }
+    if run.status == "FAILED":
+        return {
+            "status": "FAILED",
+            "current_stage": 0,
+            "total_stages": 17,
+            "stage_name": "Execution Failed",
+            "stage_status": "FAILED",
+            "progress_pct": 0,
+            "error": run.error,
+        }
+    return {
+        "status": run.status,
+        "current_stage": 0,
+        "total_stages": 17,
+        "stage_name": "Pending Execution",
+        "stage_status": "NOT_RUN",
+        "progress_pct": 0,
+    }
+
+
+def _update_progress(run_id: str, stage_num: int, stage_name: str, status: str, summary: dict) -> None:
+    RUN_PROGRESS[run_id] = {
+        "status": "RUNNING",
+        "current_stage": stage_num,
+        "total_stages": 17,
+        "stage_name": stage_name,
+        "stage_status": status,
+        "progress_pct": int(round((stage_num / 17) * 100)),
+        "summary": summary,
+    }
+
+
+def execute_run(
+    conn: sqlite3.Connection,
+    run_id: str,
+    dataset_file_path: str | Path,
+    runs_dir: str | Path | None = None,
+    geoip_provider=None,
+    declared_format: str | None = None,
+):
+    """Execute the full 17-stage analytical pipeline for an existing AnalysisRun.
+
+    Transitions:
+        NOT_RUN / QUEUED → RUNNING → COMPLETE (or FAILED)
+    """
+    from obsidianchain.pipeline.orchestrator import run_pipeline
+
+    run = get(conn, run_id)
+    if run is None:
+        raise errors.NotFound(f"no analysis run {run_id!r}")
+
+    set_status(conn, run_id, "RUNNING")
+    _update_progress(run_id, 0, "Initializing pipeline", "PENDING", {})
+
+    def on_stage(num: int, name: str, st: str, summ: dict) -> None:
+        _update_progress(run_id, num, name, st, summ)
+
+    try:
+        outcome = run_pipeline(
+            input_path=dataset_file_path,
+            runs_dir=runs_dir,
+            run_id=run_id,
+            geoip_provider=geoip_provider,
+            declared_format=declared_format,
+            stage_callback=on_stage,
+        )
+        fingerprint = outcome.manifest["artifacts"]["manifest.json"][:16]
+        updated_run = set_status(conn, run_id, "COMPLETE", run_fingerprint=fingerprint)
+        RUN_PROGRESS[run_id] = {
+            "status": "COMPLETE",
+            "current_stage": 17,
+            "total_stages": 17,
+            "stage_name": "Reporting & Integrity",
+            "stage_status": "SUCCESS",
+            "progress_pct": 100,
+            "run_fingerprint": fingerprint,
+            "alerts_count": outcome.alert_result.total_alerts,
+        }
+        return updated_run, outcome
+    except Exception as exc:
+        RUN_PROGRESS[run_id] = {
+            "status": "FAILED",
+            "current_stage": RUN_PROGRESS.get(run_id, {}).get("current_stage", 0),
+            "total_stages": 17,
+            "stage_name": "Pipeline Failed",
+            "stage_status": "FAILED",
+            "progress_pct": 0,
+            "error": str(exc),
+        }
+        set_status(conn, run_id, "FAILED", error=str(exc))
+        raise
+

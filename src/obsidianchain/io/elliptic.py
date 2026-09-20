@@ -42,7 +42,18 @@ ADDR_ADDR_DO_NOT_CLUSTER = "AddrAddr_edgelist.csv"
 #: The one file co-spend may be derived from.
 COSPEND_SOURCE = ADDR_TX
 
-DEFAULT_DATA_ROOT = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
+
+def _resolve_default_data_root() -> Path:
+    env = os.environ.get("OBSIDIANCHAIN_DATA")
+    if env:
+        return Path(env)
+    repo_data = Path(__file__).resolve().parents[3] / "data"
+    if repo_data.is_dir():
+        return repo_data
+    return Path("/data")
+
+
+DEFAULT_DATA_ROOT = _resolve_default_data_root()
 
 # int32 caps the address universe at 2.1e9 ids; Elliptic++ has ~1.3e6.
 CodeDType = np.int32

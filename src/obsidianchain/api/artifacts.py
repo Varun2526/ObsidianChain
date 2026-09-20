@@ -11,9 +11,19 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+def _resolve_default_data_root() -> Path:
+    env = os.environ.get("OBSIDIANCHAIN_DATA")
+    if env:
+        return Path(env)
+    repo_data = Path(__file__).resolve().parents[3] / "data"
+    if repo_data.is_dir():
+        return repo_data
+    return Path("/data")
+
+
 #: Same environment variable the CLI and the loaders already use, so the API
 #: reads the data root the pipeline wrote to without a second convention.
-DEFAULT_DATA_ROOT = Path(os.environ.get("OBSIDIANCHAIN_DATA", "/data"))
+DEFAULT_DATA_ROOT = _resolve_default_data_root()
 
 #: The Phase 3.4 demonstration payload, relative to the data root.
 DEMO_SCENARIOS = Path("demo") / "output" / "scenarios.json"

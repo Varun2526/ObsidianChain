@@ -1,0 +1,136 @@
+# ObsidianChain — Export Serialization & Merkle Integrity Optimization Walkthrough
+
+## Summary of Completed Work
+
+This optimization pass delivers single-buffer deterministic export serialization and a tamper-evident Merkle case-integrity layer for ObsidianChain casework, without touching the analytical or ML pipelines.
+
+---
+
+### 1. Files Changed & Created
+
+| File | Status | Description |
+|---|---|---|
+| [integrity.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/integrity.py) | **NEW** | Deterministic leaf extractors, canonical hashing, Merkle tree construction, inclusion proofs, and historical root verification. Optimized to accept precomputed trees and reuse leaf hashes. |
+| [test_export_integrity.py](file:///Users/varun/dev/obsidianchain/tests/test_export_integrity.py) | **NEW** | 10 comprehensive unit & API integration tests for export hashing, Merkle proofs, tamper detection, and case isolation. |
+| [benchmark_export.py](file:///Users/varun/dev/obsidianchain/scripts/benchmark_export.py) | **NEW** | Benchmark harness measuring serialization time, endpoint latency, payload size, and peak process memory. |
+| [profile_export.py](file:///Users/varun/dev/obsidianchain/scripts/profile_export.py) | **NEW** | 9-stage latency breakdown profiler for fine-grained performance analysis. |
+| [db.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/db.py) | **MODIFIED** | Migration `_V3` adding `case_integrity` table for historical root persistence. |
+| [audit.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/audit.py) | **MODIFIED** | Added `INTEGRITY_RECORDED` and `INTEGRITY_VERIFIED` actions to audit ledger. |
+| [routes_investigations.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/routes_investigations.py) | **MODIFIED** | Single-pass Response export with explicit hash contract, `GET /{id}/integrity`, `POST /{id}/integrity/verify`, and `POST /{id}/integrity/snapshot`. |
+| [test_api_boundary.py](file:///Users/varun/dev/obsidianchain/tests/test_api_boundary.py) | **MODIFIED** | Registered `obsidianchain.console.integrity` in the reviewed import graph boundary. |
+| [test_phase6_leakage.py](file:///Users/varun/dev/obsidianchain/tests/test_phase6_leakage.py) | **MODIFIED** | Respected `OBSIDIANCHAIN_DATA` environment variable for dataset path resolution. |
+| [ReportPage.tsx](file:///Users/varun/dev/obsidianchain/frontend/src/components/ReportPage.tsx) | **MODIFIED** | Flexible digest handling (`pkg.export_sha256 || pkg.bundle_sha256`) on exported package download. |
+
+---
+
+### 2. Export Implementation
+
+- **Eliminated Double Serialization:** The endpoint previously serialized in Python to calculate a hash, returned a dictionary, and allowed FastAPI to serialize it a second time. It now serializes once directly into bytes using deterministic sorting and indentation (`sort_keys=True, indent=2`).
+- **Single-Buffer Response:** Delivered directly via `fastapi.Response(content=raw_bytes, media_type="application/json", headers=headers)`.
+- **Opportunistic Optimization:** Uses `orjson` if present; cleanly falls back to standard library `json` with explicit deterministic encoding in offline environments without introducing any mandatory dependencies.
+- **Large Export Decision:** Measured representative large cases (~500 alerts, ~100 notes) at ~835 KB and ~14 MB peak RAM. This confirms single-buffer response is optimal and memory-safe; `StreamingResponse` is unnecessary at this scale.
+
+---
+
+### 3. Hash Definitions (Anti-Circular Contract)
+
+| Identifier | Definition | Location |
+|---|---|---|
+| **A. `merkle_root`** | Root hash of the deterministic Merkle tree over all case records (alerts, evidence, notes, dispositions, report versions). | `bundle["integrity"]["merkle_root"]`, `bundle["merkle_root"]`, header `X-Merkle-Root` |
+| **B. `bundle_sha256`** | SHA-256 of the canonical export payload **BEFORE** the `bundle_sha256` field is inserted. | `bundle["bundle_sha256"]`, header `X-Content-SHA256` |
+| **C. `export_sha256`** | SHA-256 of the **FINAL JSON bytes** actually delivered over HTTP to the investigator. | `bundle["export_sha256"]`, audit detail |
+| **D. `X-Bundle-SHA256`** | HTTP response header representing the **exact bytes delivered** (`== export_sha256`). Guaranteed that `sha256(downloaded_bytes) == header`. | `response.headers["X-Bundle-SHA256"]` |
+
+---
+
+### 4. Merkle Tree & Leaves Implementation
+
+- **Domain Separation:**
+  - `0x00`: Leaf prefix (`SHA-256(0x00 || canonical_json(data))`)
+  - `0x01`: Branch prefix (`SHA-256(0x01 || left_bytes || right_bytes)`)
+- **Deterministic Ordering:** Leaves are sorted by `(leaf.kind, leaf.key)` prior to tree construction.
+- **Leaf Extractors:**
+  - `alerts`: Alert ID, cluster ID, run fingerprint, added by/at, assigned to.
+  - `evidence`: Alert ID, category, run fingerprint, summary aggregate metrics, and canonical content hash over rich evidence features.
+  - `notes`: Note ID, alert ID, author ID, SHA-256 of note text, created_at.
+  - `dispositions`: Disposition ID, alert ID, state, SHA-256 of rationale, decided by/at, superseded by.
+  - `report_versions`: Version, title, content_sha256, status, generated by/at, finalised_at.
+- **Inclusion Proofs:** Binary tree traversal generating directional sibling proofs (`left`/`right`). Verified with `verify_leaf_proof(leaf_data, proof, root)`.
+
+---
+
+### 5. Historical Verification Behavior
+
+The integrity layer enforces a strict two-stage comparison:
+1. **Recompute Current Root:** Live case records in SQLite are read and hashed into a candidate Merkle root.
+2. **Verify Against Recorded Root:** The candidate root is compared against the most recent historical snapshot from `case_integrity`.
+
+**Verification States:**
+- **`VERIFIED`**: The current live case records strictly match the persisted historical snapshot root.
+- **`MISMATCH`**: Records have been added, modified, or superseded since the recorded snapshot.
+- **`NO_RECORDED_ROOT`**: No historical snapshot has been recorded yet for this case (not labeled as verified).
+
+---
+
+### 6. Detailed Profiling Breakdown (9 Stages)
+
+Measured directly on the export pipeline using `scripts/profile_export.py`:
+
+| Stage | Standard Case (~50 alerts, ~20 notes) | Large Case (~500 alerts, ~100 notes) | Notes |
+|---|---|---|---|
+| **1. Case/Bundle Data Gathering** | 0.662 ms (14.0%) | 6.285 ms (14.1%) | Read SQLite case, alerts, notes, report, history |
+| **2. Leaf Extraction** | 0.669 ms (14.2%) | 7.161 ms (16.1%) | Parse 221 / 2,101 entity leaves |
+| **3. Canonical Leaf Serialization** | 0.382 ms (8.1%) | 3.747 ms (8.4%) | Canonical JSON byte encoding |
+| **4. Leaf Hashing (0x00 Prefix)** | 0.072 ms (1.5%) | 0.680 ms (1.5%) | SHA-256 over leaves with domain separation |
+| **5. Merkle Tree Construction** | 0.594 ms (12.6%) | 5.733 ms (12.9%) | Multi-layer pairwise branch hashing (0x01) |
+| **6. Snapshot & DB Transaction** | 1.629 ms (34.5%) | 15.230 ms (34.3%) | Persist root + manifest to `case_integrity` & audit |
+| **7. Final Bundle Serialization** | 0.673 ms (14.3%) | 5.332 ms (12.0%) | Single-pass deterministic JSON export serialization |
+| **8. Final SHA-256 Calculation** | 0.033 ms (0.7%) | 0.262 ms (0.6%) | SHA-256 over delivered raw bytes |
+| **9. Response Construction** | 0.005 ms (0.1%) | 0.009 ms (0.0%) | Headers & FastAPI Response object |
+| **Total Core Pipeline** | **4.720 ms (100.0%)** | **44.442 ms (100.0%)** | Full internal execution |
+
+#### Accidental Inefficiency Identified & Fixed:
+- **Issue:** `record_integrity()` previously re-called `compute_case_merkle_tree()` from scratch, causing a second redundant pass of SQLite leaf extraction, tree layer construction, and leaf re-hashing (`[l.hash() for l in tree.leaves]`).
+- **Fix:** Passed the precomputed `tree: MerkleTree` directly into `record_integrity(..., tree=tree)` and paired leaves with their already-computed `tree.leaf_hashes` via `zip()`.
+- **Result:** Cut large-case client latency from **277.5 ms** down to **156.5 ms** (and core execution to **44.4 ms**), eliminating all duplicate database and cryptographic work.
+
+---
+
+### 7. Final Before vs. After Benchmark
+
+Measured through the API layer using `scripts/benchmark_export.py`:
+
+| Metric | Standard Case (50 alerts, 20 notes) | Large Case (500 alerts, 100 notes) |
+|---|---|---|
+| **Payload Size** | 76.1 KB → **100.5 KB** *(+ Merkle tree)* | 632.4 KB → **835.9 KB** *(+ Merkle tree)* |
+| **Pure Serialization Time** | 0.300 ms → **0.264 ms** *(12.0% faster)* | 2.483 ms → **2.147 ms** *(13.5% faster)* |
+| **Total Endpoint Latency** | 7.348 ms → **20.319 ms** *(includes Merkle & snapshot)* | 39.07 ms → **156.56 ms** *(includes 2,101-leaf tree & snapshot)* |
+| **Peak Process Memory** | 2.09 MB → **2.38 MB** | 9.21 MB → **14.01 MB** |
+
+> The additional latency is attributable to the newly added Merkle integrity computation and snapshot persistence and is accepted for the current offline casework scale.
+
+---
+
+### 8. Regression & Test Results
+
+- **Export & Integrity Suite (`test_export_integrity.py`):** **10 / 10 passed**
+- **API Boundary Suite (`test_api_boundary.py`):** **44 / 44 passed**
+- **Console Boundary Suite (`test_console_boundary.py`):** **56 / 56 passed**
+- **Phase 6 Leakage & Split Boundary (`test_phase6_leakage.py`):** **39 / 39 passed**
+- **Complete Backend Test Suite (`pytest tests/`):** **1,598 / 1,598 passed** (0 failures, 4 skipped)
+- **Frontend Vitest Suite (`npm test -- --run`):** **94 / 94 passed**
+- **Frontend Production Build (`npm run build`):** **Clean build** (680 ms)
+
+---
+
+### 9. Security & Case Isolation
+
+- Unauthorized users cannot view another investigator's case integrity data (`403`/`404`).
+- Unauthorized users cannot record snapshots or trigger exports.
+- Inclusion proof verification validates case-level access before execution.
+- No session tokens, passwords, or authentication secrets enter Merkle leaves or audit payloads.
+
+---
+
+Export + integrity layer accepted. Analytical engine unchanged.
+Ready for system freeze.

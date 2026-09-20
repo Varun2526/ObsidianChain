@@ -53,7 +53,7 @@ DOCKER_RUN := docker run --rm $(OFFLINE) --platform $(PLATFORM) \
 	-e OBSIDIANCHAIN_DATA=/data
 
 .PHONY: help vendor build run shell test verify isolation arch freeze dirs clean demo serve \
-        clean-vendor clean-vendor-all check-vendor
+        clean-vendor clean-vendor-all check-vendor demo-reset
 
 help: ## Show this help
 	@echo "obsidianchain - offline Bitcoin forensics prototype"
@@ -151,6 +151,10 @@ demo: dirs ## Run the five DEMO scenarios; writes data/demo/output/index.html
 	$(DOCKER_RUN) $(IMAGE):$(TAG) demo --rebuild
 	@echo ""
 	@echo ">> open $(DATA_DIR)/demo/output/index.html"
+
+demo-reset: dirs ## Deterministically reset the casework database and generate clean demo credentials
+	python3 -m obsidianchain.cli demo-reset --confirm --data-root $(DATA_DIR)
+
 
 verify: dirs ## Check data/raw for the Elliptic++ dataset
 	$(DOCKER_RUN) --entrypoint python $(IMAGE):$(TAG) /app/scripts/verify_dataset.py
