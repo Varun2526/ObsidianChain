@@ -242,30 +242,25 @@ select:-webkit-autofill {
 
 .login-btn {
   margin-top: 8px;
-  padding: 12px;
-  border: 1px solid var(--border-strong);
+  padding: 11px;
+  border: none;
   border-radius: 5px;
-  background: #000000;
-  color: #ffffff;
+  background: #ffffff;
+  color: #000000;
   font-family: var(--display);
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.5px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: opacity 0.15s;
 }
 .login-btn:hover:not(:disabled) {
-  background: #0d1117;
-  border-color: var(--cyan);
-  color: var(--cyan);
-  box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+  opacity: 0.85;
 }
 .login-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
-  border-color: var(--hairline);
-  color: var(--text-faint);
 }
 
 .login-security-footer {
