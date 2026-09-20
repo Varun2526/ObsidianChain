@@ -269,7 +269,7 @@ contradiction between two thin halves. Say that out loud.
 
 ## 5.6 Phase 4.1 — additive safety fixes (no methodology change)
 
-Four fixes from `docs/PHASE4_ARCHITECTURE_AUDIT.md`. Nothing scientific moved:
+Four fixes from `docs/archive/PHASE4_ARCHITECTURE_AUDIT.md`. Nothing scientific moved:
 Phase 1, Phase 3.1, Phase 3.3 and Phase 3.4 all reproduce exactly, and the
 frozen dataset hash is unchanged. E1/E3 are NOT implemented.
 
@@ -427,7 +427,7 @@ until Phase 3.7 picks a method.**
 
 ## 9. Open questions / next steps
 
-**Phase 4 architecture audit: `docs/PHASE4_ARCHITECTURE_AUDIT.md`.** Read it
+**Phase 4 architecture audit: `docs/archive/PHASE4_ARCHITECTURE_AUDIT.md`.** Read it
 before any Phase 4 structural work. Headline: E1+E3 can replace the current
 oracle, but four blockers must clear first (~120 lines, 5 files), and three
 boundary fixes are worth doing regardless of which method Phase 3.7 picks —
