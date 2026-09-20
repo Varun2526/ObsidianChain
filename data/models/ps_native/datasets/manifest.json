@@ -1,7 +1,7 @@
 {
   "schema": "obsidianchain.ps_dataset_manifest/1",
   "provenance_type": "RESEARCH_DERIVED_CANONICAL_TRAINING_REPRESENTATION",
-  "generator": "scripts/build_ps_dataset.py",
+  "generator": "research/reproduction/build_ps_dataset.py",
   "generated_at": "2026-09-19T16:04:09.331413+00:00",
   "source_dataset_hashes": {
     "AddrTx_edgelist.csv": "f5f903f752387f66a1bccaeff54e293b2e8470fcddf5eb56b88aa06fd23a8f3b",

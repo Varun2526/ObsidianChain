@@ -12,8 +12,8 @@ This optimization pass delivers single-buffer deterministic export serialization
 |---|---|---|
 | [integrity.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/integrity.py) | **NEW** | Deterministic leaf extractors, canonical hashing, Merkle tree construction, inclusion proofs, and historical root verification. Optimized to accept precomputed trees and reuse leaf hashes. |
 | [test_export_integrity.py](file:///Users/varun/dev/obsidianchain/tests/test_export_integrity.py) | **NEW** | 10 comprehensive unit & API integration tests for export hashing, Merkle proofs, tamper detection, and case isolation. |
-| [benchmark_export.py](file:///Users/varun/dev/obsidianchain/scripts/benchmark_export.py) | **NEW** | Benchmark harness measuring serialization time, endpoint latency, payload size, and peak process memory. |
-| [profile_export.py](file:///Users/varun/dev/obsidianchain/scripts/profile_export.py) | **NEW** | 9-stage latency breakdown profiler for fine-grained performance analysis. |
+| [benchmark_export.py](file:///Users/varun/dev/obsidianchain/research/benchmarks/benchmark_export.py) | **NEW** | Benchmark harness measuring serialization time, endpoint latency, payload size, and peak process memory. |
+| [profile_export.py](file:///Users/varun/dev/obsidianchain/research/benchmarks/profile_export.py) | **NEW** | 9-stage latency breakdown profiler for fine-grained performance analysis. |
 | [db.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/db.py) | **MODIFIED** | Migration `_V3` adding `case_integrity` table for historical root persistence. |
 | [audit.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/audit.py) | **MODIFIED** | Added `INTEGRITY_RECORDED` and `INTEGRITY_VERIFIED` actions to audit ledger. |
 | [routes_investigations.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/routes_investigations.py) | **MODIFIED** | Single-pass Response export with explicit hash contract, `GET /{id}/integrity`, `POST /{id}/integrity/verify`, and `POST /{id}/integrity/snapshot`. |
@@ -74,7 +74,7 @@ The integrity layer enforces a strict two-stage comparison:
 
 ### 6. Detailed Profiling Breakdown (9 Stages)
 
-Measured directly on the export pipeline using `scripts/profile_export.py`:
+Measured directly on the export pipeline using `research/benchmarks/profile_export.py`:
 
 | Stage | Standard Case (~50 alerts, ~20 notes) | Large Case (~500 alerts, ~100 notes) | Notes |
 |---|---|---|---|
@@ -98,7 +98,7 @@ Measured directly on the export pipeline using `scripts/profile_export.py`:
 
 ### 7. Final Before vs. After Benchmark
 
-Measured through the API layer using `scripts/benchmark_export.py`:
+Measured through the API layer using `research/benchmarks/benchmark_export.py`:
 
 | Metric | Standard Case (50 alerts, 20 notes) | Large Case (500 alerts, 100 notes) |
 |---|---|---|
