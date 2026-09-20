@@ -27,9 +27,16 @@ import type {
   InvestigatorNote,
   ReportPayload,
   AlertPatterns,
+  RelatedAlertsResponse,
+  SavedFilter,
   SeparationEvidence,
+  TransactionDrilldown,
   UploadedDataset,
+  RunProgressResponse,
+  UserAccount,
 } from "./types";
+
+export type { SavedFilter, RelatedAlertsResponse };
 
 const BASE = "/api";
 
@@ -116,6 +123,37 @@ export const assignableUsers = () =>
     "/users/assignable",
   );
 
+export const listUsers = (signal?: AbortSignal) =>
+  call<{ users: UserAccount[] }>("/users", {}, signal);
+
+export const createUser = (payload: {
+  username: string;
+  password: string;
+  display_name: string;
+  role: string;
+}) =>
+  post<UserAccount>("/users", payload);
+
+export const deactivateUser = (userId: string) =>
+  post<{ ok: boolean }>(`/users/${encodeURIComponent(userId)}/deactivate`);
+
+export const activateUser = (userId: string) =>
+  post<{ ok: boolean }>(`/users/${encodeURIComponent(userId)}/activate`);
+
+export const setUserRole = (userId: string, role: string) =>
+  post<{ ok: boolean }>(`/users/${encodeURIComponent(userId)}/role`, { role });
+
+export const resetUserPassword = (userId: string, newPassword: string) =>
+  post<{ ok: boolean }>(`/users/${encodeURIComponent(userId)}/reset-password`, {
+    new_password: newPassword,
+  });
+
+export const deleteUser = (userId: string) =>
+  call<{ ok: boolean }>(`/users/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  });
+
+
 // ---- investigations -----------------------------------------------------
 
 export const listInvestigations = (signal?: AbortSignal) =>
@@ -145,6 +183,18 @@ export const setInvestigationStatus = (id: string, status: string) =>
   post<Investigation>(`/investigations/${encodeURIComponent(id)}/status`, {
     status,
   });
+
+export const archiveInvestigation = (id: string) =>
+  post<Investigation>(`/investigations/${encodeURIComponent(id)}/archive`);
+
+export const restoreInvestigation = (id: string) =>
+  post<Investigation>(`/investigations/${encodeURIComponent(id)}/restore`);
+
+export const deleteInvestigation = (id: string, confirmation: string) =>
+  call<{ ok: boolean }>(
+    `/investigations/${encodeURIComponent(id)}?confirmation=${encodeURIComponent(confirmation)}`,
+    { method: "DELETE" },
+  );
 
 // ---- datasets -----------------------------------------------------------
 
@@ -180,6 +230,33 @@ export const listDatasets = (investigationId: string) =>
   call<{ datasets: UploadedDataset[] }>(
     `/investigations/${encodeURIComponent(investigationId)}/datasets`,
   );
+
+export const runDatasetAnalysis = (
+  investigationId: string,
+  datasetId: string,
+  options?: Record<string, unknown>,
+) =>
+  post<{
+    run_id: string;
+    analysis_run: Record<string, unknown>;
+    alerts_count: number;
+    manifest: Record<string, unknown>;
+  }>(
+    `/investigations/${encodeURIComponent(investigationId)}/datasets/${encodeURIComponent(datasetId)}/run`,
+    options,
+  );
+
+export const getRunProgress = (
+  investigationId: string,
+  runId: string,
+  signal?: AbortSignal,
+) =>
+  call<RunProgressResponse>(
+    `/investigations/${encodeURIComponent(investigationId)}/runs/${encodeURIComponent(runId)}/progress`,
+    {},
+    signal,
+  );
+
 
 // ---- casework -----------------------------------------------------------
 
@@ -324,3 +401,62 @@ export const getAlertPatterns = (alertId: string, signal?: AbortSignal) =>
  */
 export const getSyntheticEvaluation = (signal?: AbortSignal) =>
   call<Record<string, unknown>>("/evaluation/synthetic", {}, signal);
+
+// ---- recent activity (T1.1) ---------------------------------------------
+
+export const recentActivity = (limit = 25, signal?: AbortSignal) =>
+  call<{ events: AuditEvent[] }>(
+    `/investigations/activity/recent?limit=${limit}`,
+    {},
+    signal,
+  );
+
+// ---- saved filters (T2.7) -----------------------------------------------
+
+export const listSavedFilters = (investigationId: string, signal?: AbortSignal) =>
+  call<{ filters: SavedFilter[] }>(
+    `/investigations/${encodeURIComponent(investigationId)}/filters`,
+    {},
+    signal,
+  );
+
+export const saveFilter = (
+  investigationId: string,
+  name: string,
+  filter: unknown,
+) =>
+  post<{ filter: SavedFilter }>(
+    `/investigations/${encodeURIComponent(investigationId)}/filters`,
+    { name, filter },
+  );
+
+export const deleteSavedFilter = (investigationId: string, filterId: string) =>
+  call<{ ok: boolean }>(
+    `/investigations/${encodeURIComponent(investigationId)}/filters/${encodeURIComponent(filterId)}`,
+    { method: "DELETE" },
+  );
+
+// ---- export (T2.11) -----------------------------------------------------
+
+export const exportInvestigation = (investigationId: string) =>
+  call<Record<string, unknown>>(
+    `/investigations/${encodeURIComponent(investigationId)}/export`,
+  );
+
+// ---- related alerts (T2.1) ----------------------------------------------
+
+export const getRelatedAlerts = (alertId: string, signal?: AbortSignal) =>
+  call<RelatedAlertsResponse>(
+    `/alerts/${encodeURIComponent(alertId)}/related`,
+    {},
+    signal,
+  );
+
+// ---- transaction drilldown (T2.4) ---------------------------------------
+
+export const getTransactionDrilldown = (txid: number | string, signal?: AbortSignal) =>
+  call<TransactionDrilldown>(
+    `/transactions/${encodeURIComponent(String(txid))}`,
+    {},
+    signal,
+  );

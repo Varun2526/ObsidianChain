@@ -241,6 +241,7 @@ export interface IngestValidation {
   rows_read: number;
   rows_valid: number;
   rows_rejected: number;
+  exact_duplicates_rejected?: number;
   columns_present: string[];
   columns_missing: string[];
   required_missing: string[];
@@ -337,7 +338,17 @@ export type ApiErrorKind =
 export type Role = "ADMIN" | "INVESTIGATOR" | "REVIEWER";
 
 export type InvestigationStatus =
-  | "DRAFT" | "VALIDATING" | "ACTIVE" | "REVIEW" | "CLOSED";
+  | "DRAFT"
+  | "VALIDATING"
+  | "ANALYZING"
+  | "ACTIVE"
+  | "SUBMITTED"
+  | "IN_REVIEW"
+  | "APPROVED"
+  | "RETURNED"
+  | "CLOSED"
+  | "ARCHIVED"
+  | "REVIEW";
 
 export type DispositionState =
   | "NEW" | "TRIAGED" | "IN_REVIEW" | "CONFIRMED" | "DISMISSED" | "ESCALATED";
@@ -674,3 +685,102 @@ export interface AlertPatterns {
   mixing: MixingBlock;
   category: Category;
 }
+
+export interface SavedFilter {
+  id: string;
+  user_id: string;
+  investigation_id: string | null;
+  name: string;
+  filter_json: string;
+  created_at: string;
+}
+
+export interface RelatedAlert {
+  alert_id: string;
+  cluster_id: number;
+  rank: number;
+  severity: Severity;
+  risk_score: number | null;
+  top_signals: string[];
+  relationship_type: "SHARED_TRANSACTION" | "OBSERVED_SHARED_PEER" | string;
+  connecting_identifier: string;
+  detail: string;
+  limitation: string;
+}
+
+export interface RelatedAlertsResponse {
+  alert_id: string;
+  run_fingerprint: string;
+  count: number;
+  related_alerts: RelatedAlert[];
+  meaning: string;
+}
+
+export interface TransactionDrilldown {
+  txid: number;
+  input_count: number;
+  output_count: number;
+  inputs: { address: string; alert_id: string }[];
+  outputs: { address: string; alert_id: string }[];
+  associated_clusters: string[];
+  announcing_peers: {
+    ip: string;
+    port: number | null;
+    asn: number | null;
+    observers: number;
+    announcing_peers: number;
+  }[];
+  mixing: {
+    available: boolean;
+    mixing_class?: string;
+    entropy?: number | null;
+    n_inputs?: number;
+    n_outputs?: number;
+    meaning?: string;
+  };
+  limitation: string;
+}
+
+export interface RunStageInfo {
+  stage_number: number;
+  stage_name: string;
+  status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+  progress_pct: number;
+  summary?: string;
+}
+
+export interface RunProgressResponse {
+  run_id?: string;
+  status: "NOT_RUN" | "RUNNING" | "COMPLETE" | "FAILED";
+  current_stage: number;
+  total_stages: number;
+  stage_name: string;
+  stage_status: string;
+  progress_pct: number;
+  stages?: RunStageInfo[];
+  summary?: {
+    alerts_generated?: number;
+    entities_clustered?: number;
+    correlations_identified?: number;
+    run_fingerprint?: string;
+    completed_at?: string;
+  };
+  run_fingerprint?: string | null;
+  alerts_count?: number;
+  error?: string | null;
+}
+
+export interface UserAccount {
+  id: string;
+  username: string;
+  display_name: string;
+  role: Role;
+  active: boolean;
+  created_at: string;
+}
+
+export interface ReviewDecisionPayload {
+  decision: "APPROVE_FINDINGS" | "RETURN_FOR_CLARIFICATION" | "REQUEST_FURTHER_INVESTIGATION";
+  rationale: string;
+}
+

@@ -21,12 +21,12 @@ import listFixture from "../../fixtures/alerts_list.json";
 import detailFixture from "../../fixtures/alert_detail_graph.json";
 import { ApiError, buildAlertQuery } from "../api/client";
 import type { AlertDetail, AlertListResponse } from "../api/types";
-import { AlertQueue } from "../components/AlertQueue";
-import { AlertDetailPage } from "../components/AlertDetail";
-import { ErrorState } from "../components/ErrorState";
-import { NetworkContextPanel } from "../components/NetworkContextPanel";
-import { buildGraphModel } from "../components/InvestigationGraph";
-import { Value } from "../components/primitives";
+import { AlertQueue } from "../pages/investigation/AlertQueue";
+import { AlertDetailPage } from "../pages/investigation/AlertDetail";
+import { ErrorState } from "../components/ui/ErrorState";
+import { NetworkContextPanel } from "../components/forensics/NetworkContextPanel";
+import { buildGraphModel } from "../components/forensics/InvestigationGraph";
+import { Value } from "../components/ui/primitives";
 
 const list = listFixture as unknown as AlertListResponse;
 const detail = detailFixture as unknown as AlertDetail;
@@ -267,7 +267,7 @@ describe("AlertDetailPage", () => {
 describe("NetworkContextPanel", () => {
   it("carries the synthetic warning and the backend's own caveat", () => {
     render(<NetworkContextPanel context={detail.network_context} />);
-    expect(screen.getByText(/Synthetic network data/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 4, name: "Network observations" })).toBeInTheDocument();
     expect(screen.getByText(detail.network_context.meaning)).toBeInTheDocument();
   });
 
@@ -424,7 +424,7 @@ describe("buildGraphModel", () => {
 // offered - now run against NewInvestigation, which is the component a user
 // actually reaches.
 
-import { CorrelationPanel } from "../components/CorrelationPanel";
+import { CorrelationPanel } from "../components/forensics/CorrelationPanel";
 
 describe("CorrelationPanel", () => {
   it("shows the IP -> transaction -> wallet chain from the API", () => {

@@ -20,13 +20,13 @@ import { fetchAlerts } from "../api/client";
 import * as api from "../api/console";
 import { AuthProvider, useAuth } from "../store/auth";
 import { CaseGate } from "../store/investigation";
-import { LoginPage } from "../components/LoginPage";
-import { AlertDetailPage } from "../components/AlertDetail";
-import { NewInvestigation } from "../components/NewInvestigation";
-import { InvestigationOverview } from "../components/InvestigationOverview";
-import { ReportPage } from "../components/ReportPage";
-import { SeparationEvidencePanel } from "../components/SeparationEvidencePanel";
-import { DispositionBadge, StaleRunBanner } from "../components/CaseChrome";
+import { LoginPage } from "../pages/LoginPage";
+import { AlertDetailPage } from "../pages/investigation/AlertDetail";
+import { NewInvestigation } from "../pages/investigation/NewInvestigation";
+import { InvestigationOverview } from "../pages/investigation/InvestigationOverview";
+import { ReportPage } from "../pages/investigation/ReportPage";
+import { SeparationEvidencePanel } from "../components/forensics/SeparationEvidencePanel";
+import { DispositionBadge, StaleRunBanner } from "../components/layout/CaseChrome";
 import detailFixture from "../../fixtures/alert_detail.json";
 import type { AlertDetail } from "../api/types";
 
@@ -699,8 +699,8 @@ describe("DispositionBadge", () => {
 
 // ---- structural patterns: peeling and mixing ---------------------------
 
-import { StructuralPatternsPanel } from "../components/StructuralPatternsPanel";
-import { AnalysisLayerToggle, useAnalysisLayer } from "../components/AnalysisLayerToggle";
+import { StructuralPatternsPanel } from "../components/forensics/StructuralPatternsPanel";
+import { AnalysisLayerToggle, useAnalysisLayer } from "../components/forensics/AnalysisLayerToggle";
 
 const PATTERNS = {
   alert_id: "043ea584e99daf99:1", cluster_id: 1,
@@ -913,7 +913,7 @@ describe("AnalysisLayerToggle", () => {
 
 // ---- the synthetic evaluation is never mistaken for production ---------
 
-import { EvaluationPage } from "../components/EvaluationPage";
+import { EvaluationPage } from "../pages/EvaluationPage";
 
 const EVALUATION = {
   available: true,
