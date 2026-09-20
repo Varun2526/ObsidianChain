@@ -1,0 +1,32 @@
+{
+  "method": "IsotonicRegression",
+  "dataset": "validation.parquet (timesteps 35-41)",
+  "calibrated_brier": 0.036118200963563496,
+  "raw_brier": 0.04186015888399271,
+  "severity_bands": [
+    {
+      "band": "CRITICAL",
+      "target_precision": 0.9,
+      "threshold": 0.669683257918552,
+      "support": 840,
+      "validation_precision": 0.9,
+      "populated": true
+    },
+    {
+      "band": "HIGH",
+      "target_precision": 0.75,
+      "threshold": 0.2148859543817527,
+      "support": 1452,
+      "validation_precision": 0.75,
+      "populated": true
+    },
+    {
+      "band": "MEDIUM",
+      "target_precision": 0.5,
+      "threshold": 0.1138801261829653,
+      "support": 2602,
+      "validation_precision": 0.5,
+      "populated": true
+    }
+  ]
+}

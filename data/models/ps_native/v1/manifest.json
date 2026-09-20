@@ -1,0 +1,53 @@
+{
+  "schema": "obsidianchain.ps_model_manifest/1",
+  "model_version": "ps_native_v1",
+  "model_type": "RandomForest",
+  "feature_schema_version": "ps_native_features/1",
+  "training_dataset_sha256": "72170b671a68856fd50ad80bed5d64e3159455cc62758d36ce289097e74a328d",
+  "model_sha256": "7d9c1b404872fd1b05ecb4ff99648904c89f6f5ee1502e6c2915bc6f4d7ad65d",
+  "features": [
+    "input_count",
+    "output_count",
+    "total_input_amount",
+    "total_output_amount",
+    "fee",
+    "fee_ratio",
+    "input_amount_mean",
+    "input_amount_max",
+    "input_amount_std",
+    "output_amount_mean",
+    "output_amount_max",
+    "output_amount_std",
+    "n_txs_asof_t",
+    "n_sent_asof_t",
+    "n_recv_asof_t",
+    "btc_sent_total_asof_t",
+    "btc_recv_total_asof_t",
+    "net_flow_asof_t",
+    "mean_fee_ratio_asof_t",
+    "active_duration_seconds",
+    "tx_velocity_per_hour",
+    "gap_since_last_tx",
+    "in_degree_asof_t",
+    "out_degree_asof_t",
+    "unique_counterparties_asof_t",
+    "cluster_size_asof_t",
+    "is_peeling_candidate",
+    "is_mixing_candidate",
+    "equal_output_count",
+    "output_entropy"
+  ],
+  "created_at": "2026-09-19T16:04:57.146138+00:00",
+  "artifacts": {
+    "model.joblib": "7d9c1b404872fd1b05ecb4ff99648904c89f6f5ee1502e6c2915bc6f4d7ad65d",
+    "feature_schema.json": "8ef0f929e6a7bbf502e1dfc413b0688fb8b836e84bd0198f3c3cf1303f6dab5c",
+    "calibration.json": "953a7f9075c16c5ce43ef3dbf2962e6fa6466ef27c2e7b905b909135edc9b810",
+    "metrics.json": "a9dc5055271271049ec2badd3c192018d911c39b94451242951f2d2acf9279da"
+  },
+  "metrics_summary": {
+    "val_pr_auc": 0.5701972891343364,
+    "test_pr_auc": 0.20792324917190835,
+    "test_roc_auc": 0.7367124754721598,
+    "test_precision_at_100": 0.97
+  }
+}

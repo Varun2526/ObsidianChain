@@ -1,0 +1,82 @@
+{
+  "schema_version": "ps_native_features/1",
+  "feature_count": 30,
+  "feature_list": [
+    "input_count",
+    "output_count",
+    "total_input_amount",
+    "total_output_amount",
+    "fee",
+    "fee_ratio",
+    "input_amount_mean",
+    "input_amount_max",
+    "input_amount_std",
+    "output_amount_mean",
+    "output_amount_max",
+    "output_amount_std",
+    "n_txs_asof_t",
+    "n_sent_asof_t",
+    "n_recv_asof_t",
+    "btc_sent_total_asof_t",
+    "btc_recv_total_asof_t",
+    "net_flow_asof_t",
+    "mean_fee_ratio_asof_t",
+    "active_duration_seconds",
+    "tx_velocity_per_hour",
+    "gap_since_last_tx",
+    "in_degree_asof_t",
+    "out_degree_asof_t",
+    "unique_counterparties_asof_t",
+    "cluster_size_asof_t",
+    "is_peeling_candidate",
+    "is_mixing_candidate",
+    "equal_output_count",
+    "output_entropy"
+  ],
+  "feature_groups": {
+    "A_transaction": [
+      "input_count",
+      "output_count",
+      "total_input_amount",
+      "total_output_amount",
+      "fee",
+      "fee_ratio",
+      "input_amount_mean",
+      "input_amount_max",
+      "input_amount_std",
+      "output_amount_mean",
+      "output_amount_max",
+      "output_amount_std"
+    ],
+    "B_address_history": [
+      "n_txs_asof_t",
+      "n_sent_asof_t",
+      "n_recv_asof_t",
+      "btc_sent_total_asof_t",
+      "btc_recv_total_asof_t",
+      "net_flow_asof_t",
+      "mean_fee_ratio_asof_t",
+      "active_duration_seconds",
+      "tx_velocity_per_hour",
+      "gap_since_last_tx"
+    ],
+    "C_graph": [
+      "in_degree_asof_t",
+      "out_degree_asof_t",
+      "unique_counterparties_asof_t",
+      "cluster_size_asof_t"
+    ],
+    "D_patterns": [
+      "is_peeling_candidate",
+      "is_mixing_candidate",
+      "equal_output_count",
+      "output_entropy"
+    ],
+    "E_network": [
+      "network_observation_count",
+      "observer_diversity",
+      "peer_count",
+      "asn_count"
+    ]
+  }
+}
