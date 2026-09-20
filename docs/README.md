@@ -41,3 +41,15 @@ This index provides a direct navigational map of the technical documentation for
 ### Operations & Deployment
 - [Local Demo Setup](file:///Users/varun/dev/obsidianchain/docs/LOCAL_DEMO_SETUP.md)  
   Provides reproducible instructions to reset the SQLite database, generate dynamic temporary credentials, and run the complete offline demo stack.
+
+---
+
+## 3. Historical Engineering Records
+
+Earlier development specifications, preliminary milestone audits, and historical walkthroughs are preserved in [`docs/archive/`](file:///Users/varun/dev/obsidianchain/docs/archive/):
+- [PHASE4_ARCHITECTURE_AUDIT.md](file:///Users/varun/dev/obsidianchain/docs/archive/PHASE4_ARCHITECTURE_AUDIT.md): Initial architectural gap analysis and additive safety fixes.
+- [PHASE5_ARTIFACT_API_MAP.md](file:///Users/varun/dev/obsidianchain/docs/archive/PHASE5_ARTIFACT_API_MAP.md): Artifact-to-API contract mapping during early backend implementation.
+- [PHASE6_SPEC.md](file:///Users/varun/dev/obsidianchain/docs/archive/PHASE6_SPEC.md): Preliminary specification for earlier pipeline iterations.
+- [TECHNICAL_WRITEUP.md](file:///Users/varun/dev/obsidianchain/docs/archive/TECHNICAL_WRITEUP.md): Initial technical write-up prior to the PS-native Random Forest model-selection freeze.
+- [latency_walkthrough.md](file:///Users/varun/dev/obsidianchain/docs/archive/latency_walkthrough.md): Export serialization benchmark and Merkle profiler notes.
+
