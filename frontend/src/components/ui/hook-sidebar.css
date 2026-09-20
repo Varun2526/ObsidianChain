@@ -1,0 +1,98 @@
+/* Hook Sidebar styling for ObsidianChain */
+.hook-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.hook-sidebar-label {
+  padding: 0 0 10px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted, #6e7681);
+}
+
+.hook-sidebar-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 8px;
+}
+
+.hook-sidebar-rail {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+
+.hook-sidebar-rail-line {
+  position: absolute;
+  left: 8px;
+  width: 1px;
+}
+
+.hook-sidebar-rail-hook {
+  position: absolute;
+  left: 8px;
+}
+
+.hook-sidebar-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 8px 12px 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim, #8b949e);
+  text-decoration: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+  transition: color 0.18s ease, background 0.18s ease;
+  user-select: none;
+}
+
+.hook-sidebar-item:hover {
+  color: var(--text, #f0f6fc);
+  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+}
+
+.hook-sidebar-item[data-active="true"] {
+  color: #ffffff;
+  font-weight: 600;
+  background: var(--bg-hover, rgba(255, 255, 255, 0.06));
+}
+
+.hook-sidebar-icon {
+  font-size: 15px;
+  width: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted, #8b949e);
+  transition: color 0.18s ease;
+  flex-shrink: 0;
+}
+
+.hook-sidebar-item:hover .hook-sidebar-icon {
+  color: var(--text, #f0f6fc);
+}
+
+.hook-sidebar-item[data-active="true"] .hook-sidebar-icon {
+  color: var(--cyan, #00f0aa);
+}
+
+.hook-sidebar-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

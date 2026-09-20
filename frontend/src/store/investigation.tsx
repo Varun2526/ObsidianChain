@@ -49,6 +49,8 @@ export function useInvestigation(id: string | undefined) {
   const load = useCallback(
     async (signal?: AbortSignal) => {
       if (!id) {
+        setInvestigation(null);
+        setError(null);
         setLoading(false);
         return;
       }
