@@ -81,6 +81,19 @@ a { color: var(--text); text-decoration: none; transition: color 0.15s ease; }
 a:hover { color: var(--cyan); }
 code, .mono { font-family: var(--mono); font-size: 0.92em; letter-spacing: -0.01em; }
 
+/* Dark mode autofill overrides - prevent browser from forcing white/light backgrounds */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #000000 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 /* ── LOGIN PAGE ──────────────────────────────────────────────────── */
 
 .login-page {
@@ -102,6 +115,44 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; letter-spacing: -0.01
 .login-brand {
   text-align: center;
   margin-bottom: 36px;
+}
+
+.institutional-monogram {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: #ffffff;
+}
+
+.institutional-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.institutional-subtitle {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+.institutional-pills {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.institutional-pills .dot {
+  color: var(--cyan);
 }
 
 .login-brand .login-logo {
@@ -148,15 +199,27 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; letter-spacing: -0.01
   padding: 10px 14px;
   border: 1px solid var(--border-strong);
   border-radius: 5px;
-  background: var(--bg);
-  color: var(--text);
+  background: #000000;
+  color: #ffffff;
   font-family: var(--sans);
   font-size: 14px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  color-scheme: dark;
 }
 .login-fields input:focus {
   border-color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--cyan);
+}
+
+.login-fields input:-webkit-autofill,
+.login-fields input:-webkit-autofill:hover, 
+.login-fields input:-webkit-autofill:focus, 
+.login-fields input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #000000 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .login-error {
@@ -165,22 +228,75 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; letter-spacing: -0.01
   margin: 0;
 }
 
+.login-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 51, 68, 0.4);
+  border-radius: 4px;
+  background: rgba(255, 51, 68, 0.08);
+  color: var(--critical);
+  font-size: 12px;
+}
+
 .login-btn {
   margin-top: 8px;
-  padding: 11px;
-  border: none;
+  padding: 12px;
+  border: 1px solid var(--border-strong);
   border-radius: 5px;
-  background: #ffffff;
-  color: #000000;
+  background: #000000;
+  color: #ffffff;
   font-family: var(--display);
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.5px;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: all 0.15s ease;
 }
-.login-btn:hover { opacity: 0.85; }
+.login-btn:hover:not(:disabled) {
+  background: #0d1117;
+  border-color: var(--cyan);
+  color: var(--cyan);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+}
+.login-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: var(--hairline);
+  color: var(--text-faint);
+}
+
+.login-security-footer {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.security-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.secure-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--model, #00f0aa);
+  box-shadow: 0 0 8px var(--model, #00f0aa);
+}
+
+.security-caption {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 6px;
+}
 
 .login-footer {
   text-align: center;
