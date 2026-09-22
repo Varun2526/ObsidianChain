@@ -1940,3 +1940,216 @@ th.sortable:hover { color: var(--text); }
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
+
+/* ── INVESTIGATIONS PAGE ─────────────────────────────────────────── */
+
+.inv-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+@media (max-width: 900px) { .inv-stats-row { grid-template-columns: repeat(2, 1fr); } }
+
+.inv-stat {
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 14px 18px;
+  background: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inv-stat-value {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.inv-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.inv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.inv-search {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+
+.inv-search input {
+  width: 100%;
+  padding: 9px 14px 9px 32px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.inv-search input:focus { border-color: var(--cyan); }
+
+.inv-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.inv-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.inv-filter-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.inv-status-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.inv-status-select:focus {
+  border-color: var(--cyan);
+}
+
+.inv-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  font-size: 9px;
+  font-weight: 700;
+  margin-left: 4px;
+  color: var(--text-dim);
+}
+
+.toggle.active .inv-filter-count {
+  background: rgba(255,255,255,0.15);
+  color: var(--text);
+}
+
+.inv-case-label {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cyan);
+  background: rgba(0, 240, 255, 0.06);
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 240, 255, 0.12);
+  white-space: nowrap;
+}
+
+.inv-name-link {
+  color: var(--text);
+  font-weight: 500;
+  transition: color 0.15s;
+}
+.inv-name-link:hover {
+  color: var(--cyan);
+}
+
+/* Additional investigation status badge variants */
+.status-analyzing   { background: rgba(255,204,0,0.08); color: var(--medium); border: 1px solid rgba(255,204,0,0.15); }
+.status-submitted   { background: rgba(56,189,248,0.08); color: var(--blockchain); border: 1px solid rgba(56,189,248,0.15); }
+.status-in_review   { background: rgba(192,132,252,0.08); color: var(--network); border: 1px solid rgba(192,132,252,0.15); }
+.status-approved    { background: rgba(0,240,170,0.08); color: var(--model); border: 1px solid rgba(0,240,170,0.15); }
+.status-returned    { background: rgba(255,136,51,0.08); color: var(--high); border: 1px solid rgba(255,136,51,0.15); }
+.status-archived    { background: rgba(113,113,122,0.06); color: var(--text-faint); border: 1px solid rgba(113,113,122,0.12); }
+
+/* Status for roles on settings page */
+.status-admin        { background: rgba(255,51,68,0.08); color: var(--critical); border: 1px solid rgba(255,51,68,0.15); }
+.status-investigator { background: rgba(56,189,248,0.08); color: var(--blockchain); border: 1px solid rgba(56,189,248,0.15); }
+.status-reviewer     { background: rgba(192,132,252,0.08); color: var(--network); border: 1px solid rgba(192,132,252,0.15); }
+
+/* ── SETTINGS PAGE ───────────────────────────────────────────────── */
+
+.settings-profile-grid {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.settings-avatar {
+  flex: none;
+}
+
+.settings-avatar-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cyan);
+  text-transform: uppercase;
+}
+
+.settings-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-arch-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-arch-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  background: var(--bg);
+}
+
+.settings-arch-icon {
+  font-size: 18px;
+  flex: none;
+  margin-top: 1px;
+}

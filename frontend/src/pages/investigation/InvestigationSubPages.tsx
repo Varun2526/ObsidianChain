@@ -111,6 +111,11 @@ function SubPage({
               back to the analytical run's top-ranked alerts, which belong to
               the pipeline rather than to this investigation.
             </p>
+            <div style={{ marginTop: 16 }}>
+              <Link to={`/inv/${ctx.invId}/alerts`} className="btn btn-sm btn-primary">
+                Browse &amp; Reference Alerts →
+              </Link>
+            </div>
           </div>
         </section>
       ) : (
