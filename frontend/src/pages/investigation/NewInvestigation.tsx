@@ -288,6 +288,10 @@ export function NewInvestigation() {
               All files are validated offline, stamped with immutable SHA-256 hashes, and stored in the case repository.
             </p>
 
+            <div style={{ padding: "12px 16px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6, marginTop: 14, fontSize: 13, lineHeight: 1.5 }}>
+              <strong style={{ color: "var(--cyan)" }}>Dataset Format Guidance:</strong> If using a 14-column <strong>Unified Dataset</strong> (like <code>canonical_acceptance_capture.csv</code>), it already bundles blockchain ledger transactions and P2P network propagation telemetry together. Upload it into <strong>Box 1</strong> — Box 2 is optional and only needed if you have split, separate log files.
+            </div>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
               {/* Primary / Combined Dropzone */}
               <div>

@@ -366,7 +366,12 @@ export interface AccountRef {
 }
 
 export interface Identity {
-  user: AccountRef & { role: Role; active: boolean; created_at: string };
+  user: AccountRef & {
+    role: Role;
+    active: boolean;
+    created_at: string;
+    last_login_at?: string | null;
+  };
   /** For RENDERING only. The backend re-derives and re-checks every request. */
   capabilities: string[];
 }
@@ -402,9 +407,14 @@ export interface UploadedDataset {
 
 export interface CaseSummary {
   alerts_referenced: number;
+  high_risk_alerts?: number;
   dispositions_by_state: Record<DispositionState, number>;
   outstanding: number;
   notes: number;
+  dataset_count?: number;
+  dataset_status?: string | null;
+  analysis_status?: string | null;
+  last_activity_at?: string | null;
 }
 
 export interface AnalyticalRunBinding {
