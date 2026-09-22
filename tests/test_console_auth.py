@@ -133,7 +133,43 @@ def test_me_returns_the_identity_after_login(client) -> None:
     login(client, "alice", "alice-password")
     body = client.get("/api/auth/me").json()
     assert body["user"]["role"] == "INVESTIGATOR"
+    assert body["user"]["username"] == "alice"
+    assert body["user"]["display_name"] == "Alice A"
+    assert body["user"]["active"] is True
+    assert "created_at" in body["user"]
+    assert body["user"]["last_login_at"] is not None
+    assert "password_hash" not in body["user"]
     assert "create_investigation" in body["capabilities"]
+
+
+def test_investigation_summary_provides_complete_metadata(client) -> None:
+    login(client, "alice", "alice-password")
+    create_res = client.post("/api/investigations", json={"name": "Case Alpha", "description": "Test case"})
+    assert create_res.status_code == 201
+    created_id = create_res.json()["id"]
+
+    list_res = client.get("/api/investigations")
+    assert list_res.status_code == 200
+    cases = list_res.json()["investigations"]
+    target = next((c for c in cases if c["id"] == created_id), None)
+    assert target is not None
+    assert target["case_label"].startswith("OC-")
+    assert target["name"] == "Case Alpha"
+    assert target["status"] == "DRAFT"
+    assert target["owner"]["username"] == "alice"
+    assert target["created_at"] is not None
+    assert target["updated_at"] is not None
+
+    summary = target["summary"]
+    assert "alerts_referenced" in summary
+    assert "high_risk_alerts" in summary
+    assert "dataset_count" in summary
+    assert "dataset_status" in summary
+    assert "analysis_status" in summary
+    assert "last_activity_at" in summary
+    assert summary["dataset_count"] == 0
+    assert summary["alerts_referenced"] == 0
+    assert summary["high_risk_alerts"] == 0
 
 
 def test_logout_revokes_the_session(client) -> None:
