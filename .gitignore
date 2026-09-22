@@ -100,3 +100,9 @@ htmlcov/
 # ---- Local planning / prompt artifacts ----
 PS26146_claude_code_prompts.md
 PS26146_merged_architecture_v2.md
+
+# ---- AI Agent customizations & skills ----
+.agents/
+.claude/
+skills-lock.json
+
