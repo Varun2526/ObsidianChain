@@ -26,7 +26,12 @@ import hashlib
 import json
 import os
 import sys
+import os
 import time
+
+#: Rebuilding the sealed holdout requires an explicit opt-in, and there is
+#: currently no legitimate reason to set it.
+REGENERATE_HOLDOUT = os.environ.get("OBSIDIANCHAIN_REGENERATE_HOLDOUT") == "1"
 from pathlib import Path
 
 import numpy as np
@@ -85,7 +90,13 @@ def build_ps_dataset(
     ta = pd.read_csv(tx_addr_path)
     txs = pd.read_csv(
         tx_feat_path,
-        usecols=["txId", "Time step", "fees", "in_BTC_total", "out_BTC_total", "total_BTC"],
+        usecols=["txId", "Time step", "fees", "in_BTC_total", "out_BTC_total",
+                 "total_BTC",
+                 # v2. The REAL per-transaction value summary. Without these
+                 # the builder had to synthesise per-output amounts, which
+                 # made six features constant or duplicated.
+                 "in_BTC_min", "in_BTC_max", "in_BTC_mean",
+                 "out_BTC_min", "out_BTC_max", "out_BTC_mean"],
     )
     labels = pd.read_csv(wallets_classes_path)
 
@@ -110,8 +121,20 @@ def build_ps_dataset(
         tot_out = float(row["out_BTC_total"]) if pd.notna(row["out_BTC_total"]) else float(row["total_BTC"])
         fee = float(row["fees"]) if pd.notna(row["fees"]) else 0.0
 
+        # v1 fabricated per-input and per-output amounts here by dividing the
+        # total evenly. The source has no per-output values, so that was not a
+        # lossy approximation - it manufactured a uniform distribution, and
+        # every summary of it was therefore a restatement of the cardinality.
+        # v2 passes the REAL min/max/mean summary through instead and lets the
+        # engine compute only what that supports. The even-split lists are
+        # still supplied because the engine needs one amount per address to
+        # attribute flow, but no FEATURE is derived from their spread.
         in_amts = [tot_in / len(ins)] * len(ins) if ins else []
         out_amts = [tot_out / len(outs)] * len(outs) if outs else []
+
+        def _num(key, default=float("nan")):
+            value = row.get(key)
+            return float(value) if pd.notna(value) else default
 
         records.append({
             "txid": str(txid),
@@ -123,6 +146,10 @@ def build_ps_dataset(
             "output_amounts": out_amts,
             "fee": fee,
             "script_type": "p2pkh",
+            "in_BTC_min": _num("in_BTC_min"), "in_BTC_max": _num("in_BTC_max"),
+            "in_BTC_mean": _num("in_BTC_mean"),
+            "out_BTC_min": _num("out_BTC_min"), "out_BTC_max": _num("out_BTC_max"),
+            "out_BTC_mean": _num("out_BTC_mean"),
         })
 
     frame = pd.DataFrame(records)
@@ -171,6 +198,11 @@ def build_ps_dataset(
 
     save_cols = ["address", "txid", "timestamp", "y"] + CORE_PS_FEATURE_COLUMNS
 
+    # The sealed holdout is NOT regenerated. Rebuilding it would replace the
+    # one dataset that has never informed a development decision, which is
+    # the only thing that makes a final measurement worth anything.
+    # ml/protocol.py enforces the same boundary at read time.
+    HOLDOUT_SPLIT = "test"
     splits_data = {}
     row_counts = {}
     pos_counts = {}
@@ -178,6 +210,23 @@ def build_ps_dataset(
     artifact_hashes = {}
 
     for s_name in ["train", "validation", "test"]:
+        if s_name == HOLDOUT_SPLIT and not REGENERATE_HOLDOUT:
+            # Not regenerated - but still RECORDED. Dropping it from the
+            # manifest would make the sealed holdout look absent rather than
+            # deliberately untouched, and downstream integrity checks read
+            # this table to verify the file they are about to open.
+            existing = out / f"{s_name}.parquet"
+            if existing.is_file():
+                held = pd.read_parquet(existing)
+                row_counts[s_name] = int(len(held))
+                pos_counts[s_name] = int(held["y"].sum())
+                neg_counts[s_name] = int((held["y"] == 0).sum())
+                artifact_hashes[f"{s_name}.parquet"] = _compute_sha256(existing)
+                print(f"  {s_name}: SEALED - not regenerated, hash recorded "
+                      f"({len(held):,} rows, schema ps_native_features/1)")
+            else:
+                print(f"  {s_name}: SKIPPED - sealed holdout, file absent")
+            continue
         s_df = usable[usable["split"] == s_name][save_cols].reset_index(drop=True)
         s_path = out / f"{s_name}.parquet"
         s_df.to_parquet(s_path, index=False)
@@ -208,6 +257,13 @@ def build_ps_dataset(
             "validation": f"step {TRAIN_END+1}-{VALIDATION_END}",
             "test": f"step {VALIDATION_END+1}-{TEST_END}",
         },
+        "schema_note": (
+            "train and validation are ps_native_features/2. The sealed "
+            "holdout was NOT regenerated and remains ps_native_features/1. "
+            "A model must not be fitted on /2 and scored on /1."
+        ),
+        "development_schema_version": "ps_native_features/2",
+        "holdout_schema_version": "ps_native_features/1",
         "row_counts": row_counts,
         "positive_counts": pos_counts,
         "negative_counts": neg_counts,
