@@ -36,7 +36,7 @@ def _set_cookie(response: Response, token: str) -> None:
     )
 
 
-def _identity(user: User) -> dict:
+def _identity(user: User, *, conn: sqlite3.Connection | None = None) -> dict:
     """What the frontend may know about itself.
 
     Capabilities are included for RENDERING only - so the UI can hide a
@@ -44,8 +44,18 @@ def _identity(user: User) -> dict:
     role on the server on every request and are never trusted on the way
     back in.
     """
+    user_payload = user.as_dict()
+    if conn is not None:
+        row = conn.execute(
+            "SELECT at FROM audit_events WHERE actor_id = ? AND action = ? ORDER BY id DESC LIMIT 1",
+            (user.id, audit.LOGIN),
+        ).fetchone()
+        user_payload["last_login_at"] = row["at"] if row else None
+    else:
+        user_payload["last_login_at"] = None
+
     return {
-        "user": user.as_dict(),
+        "user": user_payload,
         "capabilities": sorted(
             c.value for c in CAPABILITIES.get(user.role, frozenset())
         ),
@@ -83,12 +93,15 @@ def login(
         detail={"role": user.role.value},
     )
     _set_cookie(response, token)
-    return _identity(user)
+    return _identity(user, conn=conn)
 
 
 @router.get("/auth/me", summary="The authenticated identity, re-read")
-def me(user: User = Depends(deps.current_user)) -> dict:
-    return _identity(user)
+def me(
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    user: User = Depends(deps.current_user),
+) -> dict:
+    return _identity(user, conn=conn)
 
 
 @router.post("/auth/logout", summary="Revoke the current session")

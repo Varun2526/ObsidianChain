@@ -466,7 +466,7 @@ def _note(row: sqlite3.Row) -> dict:
 
 
 def summary(
-    conn: sqlite3.Connection, investigation_id: str
+    conn: sqlite3.Connection, investigation_id: str, *, data_root=None
 ) -> dict:
     """Counts the overview needs: how many referenced, reviewed, outstanding.
 
@@ -492,13 +492,62 @@ def summary(
         (investigation_id,),
     ).fetchone()[0])
     outstanding = by_state.get("NEW", 0) + by_state.get("TRIAGED", 0)
+
+    # High-risk alerts among referenced alerts (CRITICAL or HIGH severity)
+    high_risk_count = 0
+    if referenced > 0:
+        try:
+            from obsidianchain.api import artifacts
+            ref_rows = conn.execute(
+                "SELECT alert_id FROM alert_references WHERE investigation_id = ?",
+                (investigation_id,),
+            ).fetchall()
+            ref_ids = {row["alert_id"] for row in ref_rows}
+            frame, _ = artifacts.load_alerts(data_root, columns=["alert_id", "severity"])
+            matched = frame[frame["alert_id"].isin(ref_ids)]
+            high_risk_count = int((matched["severity"].isin(["HIGH", "CRITICAL"])).sum())
+        except Exception:
+            high_risk_count = 0
+
+    # Dataset association & status
+    ds_row = conn.execute(
+        "SELECT COUNT(*) AS total, "
+        "(SELECT status FROM datasets WHERE investigation_id = ? ORDER BY uploaded_at DESC LIMIT 1) AS latest_status "
+        "FROM datasets WHERE investigation_id = ?",
+        (investigation_id, investigation_id),
+    ).fetchone()
+    dataset_count = int(ds_row["total"]) if ds_row else 0
+    dataset_status = ds_row["latest_status"] if ds_row else None
+
+    # Analysis status for the latest dataset run
+    ar_row = conn.execute(
+        "SELECT ar.status FROM analysis_runs ar "
+        "JOIN datasets d ON d.id = ar.dataset_id "
+        "WHERE d.investigation_id = ? "
+        "ORDER BY ar.created_at DESC LIMIT 1",
+        (investigation_id,),
+    ).fetchone()
+    analysis_status = ar_row["status"] if ar_row else None
+
+    # Last casework activity
+    audit_row = conn.execute(
+        "SELECT at FROM audit_events WHERE investigation_id = ? ORDER BY id DESC LIMIT 1",
+        (investigation_id,),
+    ).fetchone()
+    last_activity_at = audit_row["at"] if audit_row else None
+
     return {
         "alerts_referenced": referenced,
+        "high_risk_alerts": high_risk_count,
         "dispositions_by_state": {
             state: by_state.get(state, 0) for state in DISPOSITION_STATES
         },
         "outstanding": outstanding,
         "notes": note_count,
+        "dataset_count": dataset_count,
+        "dataset_status": dataset_status,
+        "analysis_status": analysis_status,
+        "last_activity_at": last_activity_at,
     }
 
 
