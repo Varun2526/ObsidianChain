@@ -31,11 +31,15 @@ GROUP_A_TRANSACTION = [
     "fee",
     "fee_ratio",
     "input_amount_mean",
-    "input_amount_max",
-    "input_amount_std",
     "output_amount_mean",
-    "output_amount_max",
-    "output_amount_std",
+    # v2. The source carries a min/max/mean/total summary per transaction and
+    # nothing finer, so per-output values were previously SYNTHESISED by even
+    # division - which made *_std exactly zero, *_max identical to *_mean,
+    # equal_output_count identical to output_count and output_entropy equal
+    # to log2(output_count). Spread is the signal those columns were
+    # pretending to carry, and it is computable from the real summary.
+    "input_spread",
+    "output_spread",
 ]
 
 GROUP_B_ADDRESS_HISTORY = [
@@ -51,18 +55,22 @@ GROUP_B_ADDRESS_HISTORY = [
     "gap_since_last_tx",
 ]
 
+# v2. in_degree_asof_t and out_degree_asof_t were removed: they counted
+# distinct receiving and sending txids, which is exactly what n_recv_asof_t
+# and n_sent_asof_t in group B already count. They were identical on every
+# row, and a duplicate splits its own importance with its twin - so any
+# importance ranking over the v1 set was wrong.
 GROUP_C_GRAPH = [
-    "in_degree_asof_t",
-    "out_degree_asof_t",
     "unique_counterparties_asof_t",
     "cluster_size_asof_t",
 ]
 
+# v2. equal_output_count and output_entropy were removed as restatements of
+# output_count. The two remaining flags were REDEFINED - see
+# is_peeling_shape and is_mixing_shape below, and the tests that pin them.
 GROUP_D_PATTERNS = [
     "is_peeling_candidate",
     "is_mixing_candidate",
-    "equal_output_count",
-    "output_entropy",
 ]
 
 GROUP_E_NETWORK = [
@@ -80,6 +88,11 @@ PS_FEATURE_GROUPS: dict[str, list[str]] = {
     "E_network": GROUP_E_NETWORK,
 }
 
+#: Bumped because a v1 row and a v2 row are not the same observation. A
+#: model, a metric or an ablation carried across the two would be comparing
+#: different quantities under one name.
+PS_FEATURE_SCHEMA_VERSION = "ps_native_features/2"
+
 # The core feature set without optional network features
 CORE_PS_FEATURE_COLUMNS: list[str] = (
     GROUP_A_TRANSACTION + GROUP_B_ADDRESS_HISTORY + GROUP_C_GRAPH + GROUP_D_PATTERNS
@@ -90,6 +103,19 @@ ALL_PS_FEATURE_COLUMNS: list[str] = CORE_PS_FEATURE_COLUMNS + GROUP_E_NETWORK
 
 # Metadata columns (not fed to ML booster)
 METADATA_COLUMNS = ["address", "txid", "timestamp"]
+
+
+#: Share of a two-output transaction's value the larger output must carry.
+PEEL_DOMINANCE = 0.8
+
+#: Fewest participants per side before an anonymity set means anything.
+MIXING_MIN_PARTICIPANTS = 3
+
+#: Spread at or below which values count as near-identical, and at or above
+#: which they count as genuinely varied. Same constants as
+#: features/mixing.py, which is already tested against benign shapes.
+UNIFORM_SPREAD = 0.02
+VARIED_SPREAD = 0.25
 
 
 def _safe_float(val: Any, default: float = 0.0, min_val: float | None = 0.0) -> float:
@@ -104,6 +130,61 @@ def _safe_float(val: Any, default: float = 0.0, min_val: float | None = 0.0) -> 
         return f
     except (ValueError, TypeError):
         return default
+
+
+def is_peeling_shape(*, n_in: int, n_out: int,
+                     out_min: float, out_max: float, out_mean: float) -> bool:
+    """One input, two outputs, one of them carrying most of the value.
+
+    v1 required ``out_max >= 0.8 * total_out`` while the builder gave every
+    output an equal share, so ``out_max`` was exactly half the total and the
+    condition read ``0.5 >= 0.8``. The flag was constant zero across all
+    262,433 rows - Group D "Structural Patterns" detected no structural
+    pattern, and the PS peeling requirement was not met by it.
+
+    Stated against the observable summary instead: with two outputs,
+    ``out_max`` and ``out_min`` ARE the two output values, so the dominance
+    ratio is exact rather than inferred.
+    """
+    if n_in != 1 or n_out != 2:
+        return False
+    total = out_min + out_max
+    if total <= 0:
+        return False
+    return bool(out_max / total >= PEEL_DOMINANCE)
+
+
+def is_mixing_shape(*, n_in: int, n_out: int,
+                    out_min: float, out_max: float, out_mean: float,
+                    in_min: float, in_max: float, in_mean: float) -> bool:
+    """Many participants, near-identical outputs, varied inputs.
+
+    v1 reduced to ``n_in >= 3 and n_out >= 3`` once the equality test went
+    vacuous, and fired on 34% of holdout addresses - a fan-out threshold
+    wearing a detector's name. This requires the two VALUE conditions that
+    actually distinguish a collaborative spend from a batch, using the same
+    uniformity measure as ``features/mixing.py`` so the two detectors cannot
+    disagree about what the shape is.
+    """
+    if n_in < MIXING_MIN_PARTICIPANTS or n_out < MIXING_MIN_PARTICIPANTS:
+        return False
+    if out_mean <= 0 or in_mean <= 0:
+        return False
+    outputs_uniform = (out_max - out_min) / out_mean <= UNIFORM_SPREAD
+    inputs_varied = (in_max - in_min) / in_mean >= VARIED_SPREAD
+    return bool(outputs_uniform and inputs_varied)
+
+
+def spread(low: float, high: float, mean: float) -> float:
+    """``(max - min) / mean``: 0 when every value is identical.
+
+    Returns NaN on a non-positive mean rather than 0, because "could not be
+    measured" and "measured as perfectly uniform" are different answers and
+    only one of them is true of a transaction with no value.
+    """
+    if mean is None or not math.isfinite(mean) or mean <= 0:
+        return float("nan")
+    return (high - low) / mean
 
 
 def _calculate_entropy(amounts: list[float]) -> float:
@@ -246,25 +327,44 @@ class PsTemporalFeatureEngine:
             total_out = sum(out_amts)
             fee_ratio = (fee / total_in) if total_in > 0 else 0.0
 
+            # v2. The REAL per-transaction value summary, when the caller has
+            # it. The source data carries in/out min, max and mean per
+            # transaction but no per-output values, so a caller that passes
+            # only amount LISTS is passing something it synthesised - which is
+            # exactly how v1 produced six columns that measured nothing.
+            # Falling back to the lists keeps streaming callers working; the
+            # dataset builder supplies the real summary.
+            def _summary(prefix: str, amounts: list[float]) -> tuple:
+                lo = row.get(f"{prefix}_min")
+                hi = row.get(f"{prefix}_max")
+                mu = row.get(f"{prefix}_mean")
+                if lo is not None and not pd.isna(lo):
+                    return (_safe_float(lo), _safe_float(hi), _safe_float(mu))
+                if not amounts:
+                    return (0.0, 0.0, 0.0)
+                return (min(amounts), max(amounts),
+                        sum(amounts) / len(amounts))
+
+            in_lo, in_hi, in_mu = _summary("in_BTC", in_amts)
+            out_lo, out_hi, out_mu = _summary("out_BTC", out_amts)
+
             # --- Group A: Transaction Behaviour (Instantaneous at t) ---
             in_count = len(in_addrs)
             out_count = len(out_addrs)
-            in_mean = float(np.mean(in_amts)) if in_amts else 0.0
-            in_max = float(np.max(in_amts)) if in_amts else 0.0
-            in_std = float(np.std(in_amts)) if len(in_amts) > 1 else 0.0
-            out_mean = float(np.mean(out_amts)) if out_amts else 0.0
-            out_max = float(np.max(out_amts)) if out_amts else 0.0
-            out_std = float(np.std(out_amts)) if len(out_amts) > 1 else 0.0
+            in_mean, out_mean = in_mu, out_mu
+            in_spread = spread(in_lo, in_hi, in_mu)
+            out_spread = spread(out_lo, out_hi, out_mu)
 
             # --- Group D: Structural Patterns ---
-            is_peel = 1 if (in_count == 1 and out_count == 2 and out_max >= 0.8 * total_out and total_out > 0) else 0
-            counts_by_amt: dict[float, int] = {}
-            for oa in out_amts:
-                r_oa = round(oa, 6)
-                counts_by_amt[r_oa] = counts_by_amt.get(r_oa, 0) + 1
-            max_equal = max(counts_by_amt.values()) if counts_by_amt else 0
-            is_mix = 1 if (in_count >= 3 and out_count >= 3 and max_equal >= 3) else 0
-            entropy = _calculate_entropy(out_amts)
+            is_peel = 1 if is_peeling_shape(
+                n_in=in_count, n_out=out_count,
+                out_min=out_lo, out_max=out_hi, out_mean=out_mu,
+            ) else 0
+            is_mix = 1 if is_mixing_shape(
+                n_in=in_count, n_out=out_count,
+                out_min=out_lo, out_max=out_hi, out_mean=out_mu,
+                in_min=in_lo, in_max=in_hi, in_mean=in_mu,
+            ) else 0
 
             # --- Group E: Optional Network Features ---
             net_obs_count = np.nan
@@ -323,11 +423,9 @@ class PsTemporalFeatureEngine:
                     "fee": fee,
                     "fee_ratio": fee_ratio,
                     "input_amount_mean": in_mean,
-                    "input_amount_max": in_max,
-                    "input_amount_std": in_std,
+                    "input_spread": in_spread,
                     "output_amount_mean": out_mean,
-                    "output_amount_max": out_max,
-                    "output_amount_std": out_std,
+                    "output_spread": out_spread,
                     # Group B
                     "n_txs_asof_t": prior_txs,
                     "n_sent_asof_t": prior_sent_count,
@@ -340,15 +438,12 @@ class PsTemporalFeatureEngine:
                     "tx_velocity_per_hour": velocity,
                     "gap_since_last_tx": gap_sec,
                     # Group C
-                    "in_degree_asof_t": in_degree,
-                    "out_degree_asof_t": out_degree,
+
                     "unique_counterparties_asof_t": unique_cps,
                     "cluster_size_asof_t": cluster_size,
                     # Group D
                     "is_peeling_candidate": is_peel,
                     "is_mixing_candidate": is_mix,
-                    "equal_output_count": max_equal,
-                    "output_entropy": entropy,
                 }
 
                 if include_network:

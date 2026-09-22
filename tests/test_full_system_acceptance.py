@@ -197,25 +197,33 @@ class TestPipelineAcceptance:
         # Check manifest contents
         manifest = outcome.manifest
         assert manifest["input_dataset"]["format"] == fmt
-        assert manifest["provenance"]["ml_status"] == "SCORED"
+        # PENDING RETRAIN. The generator fix (ADR 0001, schema
+        # ps_native_features/2) removed six fabricated columns and redefined
+        # two pattern flags. The frozen v1 model declares /1, so ps_model.py
+        # refuses it rather than scoring mismatched columns - which is the
+        # correct behaviour, and is why this asserts the refusal rather than
+        # a score. Restore the SCORED assertion when a v2 model is trained
+        # under ml/protocol.py.
+        assert manifest["provenance"]["ml_status"] == "MODEL_UNAVAILABLE_FOR_SCHEMA"
+        # The run still completes: 17 stages, honest degradation, no crash.
+        assert outcome.is_success
         assert len(manifest["stages"]) == 17
 
         # Verify Stage 10 (Supervised ML Risk) execution
         s10 = next(s for s in outcome.stages if s.stage_number == 10)
-        assert s10.status == "SUCCESS"
-        assert s10.summary["status"] == "SCORED"
+        assert s10.status == "DEGRADED"
+        assert s10.summary["status"] == "MODEL_UNAVAILABLE_FOR_SCHEMA"
 
-        # Check alerts contain MODEL_SIGNAL evidence
+        # Check alerts contain MODEL_SIGNAL evidence (UNAVAILABLE pending retrained v2 model)
         alerts = outcome.alert_result.alerts
         assert len(alerts) > 0
         has_model_signal = False
         for a in alerts:
             for ev in a.evidence:
-                if ev.category == "MODEL_SIGNAL" and ev.status == "PRESENT":
+                if ev.category == "MODEL_SIGNAL":
                     has_model_signal = True
-                    assert 0.0 <= ev.score <= 1.0
-                    assert "Key contributing features:" in ev.explanation
-        assert has_model_signal, "Alerts must contain MODEL_SIGNAL evidence from PS-native model"
+                    assert ev.status == "UNAVAILABLE"
+        assert has_model_signal, "Alerts must contain MODEL_SIGNAL evidence"
 
     def test_ps_model_inference_determinism(self, tmp_path) -> None:
         """Verify identical PS-native input produces deterministic risk scores."""
@@ -250,15 +258,23 @@ class TestPipelineAcceptance:
         outcome = run_pipeline(pure_bc_path, runs_dir=tmp_path / "runs", geoip_provider=geoip.TestFixtureProvider())
         assert outcome.is_success
         manifest = outcome.manifest
-        assert manifest["provenance"]["ml_status"] == "SCORED"
+        # PENDING RETRAIN. The generator fix (ADR 0001, schema
+        # ps_native_features/2) removed six fabricated columns and redefined
+        # two pattern flags. The frozen v1 model declares /1, so ps_model.py
+        # refuses it rather than scoring mismatched columns - which is the
+        # correct behaviour, and is why this asserts the refusal rather than
+        # a score. Restore the SCORED assertion when a v2 model is trained
+        # under ml/protocol.py.
+        assert manifest["provenance"]["ml_status"] == "MODEL_UNAVAILABLE_FOR_SCHEMA"
+        # The run still completes: 17 stages, honest degradation, no crash.
+        assert outcome.is_success
 
         # Verify network evidence is NO_EVIDENCE, but ML risk score is still valid
         for a in outcome.alert_result.alerts:
             net_ev = next(e for e in a.evidence if e.category == "NETWORK_CONTEXT")
             assert net_ev.status == "NO_EVIDENCE"
             ml_ev = next(e for e in a.evidence if e.category == "MODEL_SIGNAL")
-            assert ml_ev.status == "PRESENT"
-            assert 0.0 <= ml_ev.score <= 1.0
+            assert ml_ev.status == "UNAVAILABLE"
 
     def test_explicit_incompatible_model_safeguard(self, tmp_path) -> None:
         """Passing an incompatible Elliptic++ feature model returns MODEL_UNAVAILABLE_FOR_SCHEMA."""

@@ -1,4 +1,17 @@
 # ObsidianChain — Machine Learning & Intelligence Pipeline
+
+> **Audit note (2026-09-22).** The figures below are single-window point
+> estimates and are superseded as a basis for model selection. Measured
+> fold-to-fold standard deviation on this problem is ~0.18 nAP — roughly 35x
+> the seed-to-seed spread — so a single validation number cannot rank two
+> models. The canonical protocol is `src/obsidianchain/ml/protocol.py`
+> (12 rolling-origin folds, paired t-test, Holm correction, sealed holdout);
+> see `docs/decisions/0001-two-production-model-paths.md` for scope.
+> The advertised severity-band precision (90/75/50%) is **not delivered**:
+> measured 82.2% on validation and 37.2% on test for CRITICAL, because a
+> rank-derived cutoff is applied as a value threshold under heavy score ties.
+
+
 **Problem Statement 26146: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
 **Repository Layer:** `docs/ML_PIPELINE.md` (Supervised Risk Modeling, Probability Calibration & Anomaly Detection)
 
@@ -26,8 +39,8 @@ flowchart LR
 ### 2.1. Supervised Risk Model
 - **Algorithm:** Random Forest Classifier (`sklearn.ensemble.RandomForestClassifier`)
 - **Hyperparameters:**
-  - `n_estimators = 120`
-  - `max_depth = 14`
+  - `n_estimators = 100`
+  - `max_depth = 12`  <!-- and min_samples_leaf = 20 -->
   - `class_weight = "balanced_subsample"`
   - `random_state = 42`
   - `n_jobs = -1`
@@ -103,7 +116,7 @@ During research evaluation, candidate model architectures were benchmarked on th
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Logistic Regression** (L2 penalty) | 0.2654 | 0.7903 | 55.0% | 54.0% | 0.2014 | 0.46s | Rejected: failed to model non-linear topology interactions. |
 | **LightGBM** (100 trees, lr=0.05) | 0.5228 | **0.8693** | 71.0% | 93.4% | 0.0445 | 1.49s | Rejected for production: lower top-100 precision than RF. |
-| **Random Forest** (120 trees, depth=14) | **0.5702** | 0.8606 | **99.0%** | **94.4%** | **0.0419** | 1.25s | **SELECTED & FROZEN** (Winner on primary metric and top-tier precision). |
+| **Random Forest** (100 trees, depth=12, min_samples_leaf=20) | **0.5702** | 0.8606 | **99.0%** | **94.4%** | **0.0419** | 1.25s | **SELECTED & FROZEN** (Winner on primary metric and top-tier precision). |
 
 *Note: No-skill random guess PR-AUC baseline on Validation = 0.0626. All models significantly outperform random baseline.*
 
