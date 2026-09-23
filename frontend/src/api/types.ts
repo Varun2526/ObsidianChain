@@ -310,6 +310,11 @@ export type ApiErrorKind =
   | "provenance_refused"
   | "artifact_missing"
   | "separation_basis_mismatch"
+  // ---- investigation read path (api/investigation.py, api/models.py) ----
+  | "address_not_found"
+  | "transaction_not_found"
+  | "trace_request_invalid"
+  | "model_not_found"
   // ---- application layer (obsidianchain.console) ----
   | "authentication_required"
   | "invalid_credentials"
@@ -730,8 +735,8 @@ export interface TransactionDrilldown {
   txid: number;
   input_count: number;
   output_count: number;
-  inputs: { address: string; alert_id: string }[];
-  outputs: { address: string; alert_id: string }[];
+  inputs: TxParty[];
+  outputs: TxParty[];
   associated_clusters: string[];
   announcing_peers: {
     ip: string;
@@ -743,12 +748,29 @@ export interface TransactionDrilldown {
   mixing: {
     available: boolean;
     mixing_class?: string;
-    entropy?: number | null;
+    mixing_score?: number | null;
+    signals?: Record<string, number | string | boolean | null>;
     n_inputs?: number;
     n_outputs?: number;
     meaning?: string;
   };
   limitation: string;
+  timestep?: number | null;
+  fee_btc?: number | null;
+  in_btc?: number | null;
+  out_btc?: number | null;
+  n_inputs?: number;
+  n_outputs?: number;
+  provenance?: import("./intel").ReadProvenance;
+}
+
+/** One side of a transaction, with what each layer says about the address. */
+export interface TxParty {
+  address: string;
+  alert_id: string | null;
+  model?: import("./intel").ModelAnnotation | null;
+  cluster?: import("./intel").ClusterAnnotation | null;
+  watchlist?: import("./intel").WatchlistHit[];
 }
 
 export interface RunStageInfo {

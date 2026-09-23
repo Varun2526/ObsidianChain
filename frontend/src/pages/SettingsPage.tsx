@@ -12,9 +12,9 @@ import { useAuth } from "../store/auth";
 type SettingsTab = "profile" | "security" | "about";
 
 const TABS: { key: SettingsTab; label: string; icon: string }[] = [
-  { key: "profile", label: "Profile", icon: "👤" },
-  { key: "security", label: "Security", icon: "🔒" },
-  { key: "about", label: "About", icon: "ℹ" },
+  { key: "profile", label: "Profile", icon: "" },
+  { key: "security", label: "Security", icon: "" },
+  { key: "about", label: "About", icon: "" },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -46,7 +46,7 @@ export function SettingsPage() {
             className={`tab${activeTab === t.key ? " active" : ""}`}
             onClick={() => setActiveTab(t.key)}
           >
-            <span style={{ marginRight: 6 }}>{t.icon}</span>
+
             {t.label}
           </button>
         ))}
@@ -193,7 +193,7 @@ export function SettingsPage() {
                   <div>
                     <strong style={{ fontSize: 12 }}>Analytical Engine</strong>
                     <p className="note" style={{ margin: 0 }}>
-                      Random Forest model with 17-stage pipeline. SHAP-based explanations.
+                      Scoring uses the registry champion (see Models). Explanations are TreeSHAP contributions.
                     </p>
                   </div>
                 </div>

@@ -196,7 +196,7 @@ export function InvestigationReview() {
               disabled={!rationale.trim() || busy}
               onClick={() => handleDecision("CLARIFICATION")}
             >
-              ⚠ RETURN FOR CLARIFICATION
+              Return for clarification
             </button>
 
             <button

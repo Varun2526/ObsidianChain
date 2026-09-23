@@ -389,12 +389,12 @@ export function ReportPage() {
       {payload.alert_references.length > 0 && (
         <section className="panel">
           <div className="panel-head">
-            <h2>Evidence Traceability & Chain of Custody</h2>
+            <h2>Evidence lineage</h2>
             <span className="small muted">{payload.alert_references.length} finding lineage(s)</span>
           </div>
           <div className="panel-body">
             <p className="note" style={{ marginTop: 0 }}>
-              Every investigative finding maintains unbroken provenance from frozen analytical inputs to final disposition. Network observations record gossip vantage points and never assert entity ownership.
+              Each step below is a recorded event from this case, not a template. The audit log holds the full, append-only history.
             </p>
             {payload.alert_references.map((r) => (
               <div key={r.alert_id} style={{ marginBottom: 16, padding: "12px 14px", border: "1px solid var(--hairline, #e1e4e8)", borderRadius: "var(--radius, 6px)" }}>
@@ -402,32 +402,19 @@ export function ReportPage() {
                   <span className="mono" style={{ fontWeight: 600 }}>Alert {r.alert_id}</span>
                   <DispositionBadge state={r.disposition?.state} />
                 </div>
-                <div className="trace-chain" style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-                  <div className="trace-step">
-                    <span className="trace-step-number" style={{ fontWeight: "bold", marginRight: 6 }}>1.</span>
-                    <span>Frozen Parquet (Run <code className="small">{r.run_fingerprint.slice(0, 10)}…</code>)</span>
-                  </div>
-                  <span className="trace-arrow">→</span>
-                  <div className="trace-step">
-                    <span className="trace-step-number" style={{ fontWeight: "bold", marginRight: 6 }}>2.</span>
-                    <span>Analytical Feature & Risk Pipeline</span>
-                  </div>
-                  <span className="trace-arrow">→</span>
-                  <div className="trace-step">
-                    <span className="trace-step-number" style={{ fontWeight: "bold", marginRight: 6 }}>3.</span>
-                    <span>Gossip Network Vantage Points</span>
-                  </div>
-                  <span className="trace-arrow">→</span>
-                  <div className="trace-step">
-                    <span className="trace-step-number" style={{ fontWeight: "bold", marginRight: 6 }}>4.</span>
-                    <span>Investigator Review ({r.disposition?.decided_by_display_name || "Investigator"})</span>
-                  </div>
-                  <span className="trace-arrow">→</span>
-                  <div className="trace-step">
-                    <span className="trace-step-number" style={{ fontWeight: "bold", marginRight: 6 }}>5.</span>
-                    <span>Report Binding {report ? `(v${report.version})` : "(Draft)"}</span>
-                  </div>
-                </div>
+                <ol className="trace-chain" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  <li className="trace-step"><span className="trace-step-number">1</span>Alert run <code className="small">{r.run_fingerprint.slice(0, 12)}</code>{r.stale === true ? " (stale)" : r.stale === null ? " (unverifiable)" : ""}</li>
+                  <li className="trace-arrow" aria-hidden="true">→</li>
+                  <li className="trace-step"><span className="trace-step-number">2</span>Referenced by {r.added_by_username ?? r.added_by} · {new Date(r.added_at).toLocaleString()}</li>
+                  {r.assigned_to && <>
+                    <li className="trace-arrow" aria-hidden="true">→</li>
+                    <li className="trace-step"><span className="trace-step-number">3</span>Assigned to {r.assigned_to_display_name ?? r.assigned_to_username ?? r.assigned_to}</li>
+                  </>}
+                  <li className="trace-arrow" aria-hidden="true">→</li>
+                  <li className="trace-step"><span className="trace-step-number">{r.assigned_to ? 4 : 3}</span>{r.disposition ? `${r.disposition.state} by ${r.disposition.decided_by_display_name ?? "investigator"}` : "No disposition recorded"}</li>
+                  <li className="trace-arrow" aria-hidden="true">→</li>
+                  <li className="trace-step"><span className="trace-step-number">{r.assigned_to ? 5 : 4}</span>{report ? `Report v${report.version}` : "Not yet in a saved report"}</li>
+                </ol>
                 {r.disposition?.rationale && (
                   <p className="small muted" style={{ margin: "8px 0 0" }}>
                     <strong>Finding Rationale:</strong> {r.disposition.rationale}

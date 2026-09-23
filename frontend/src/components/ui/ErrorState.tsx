@@ -37,6 +37,12 @@ export function ErrorState({ error, onRetry }:
     ? "The API refused to serve this artifact"
     : api?.kind === "alert_not_found"
       ? "No such alert in the current run"
+      : api?.kind === ("address_not_found")
+        ? "Address not in the chain index"
+      : api?.kind === ("transaction_not_found")
+        ? "Transaction not in the chain index"
+      : api?.kind === ("model_not_found")
+        ? "Model version is not registered"
       : api?.kind === "network"
         ? "Cannot reach the API"
         : "Request failed";
@@ -47,7 +53,7 @@ export function ErrorState({ error, onRetry }:
         <h4>{title}</h4>
         <p>{api?.detail ?? String((error as Error)?.message ?? error)}</p>
       </div>
-      {onRetry ? <button onClick={onRetry}>Retry</button> : null}
+      {onRetry ? <button type="button" className="btn btn-sm" onClick={onRetry}>Retry</button> : null}
     </div>
   );
 }

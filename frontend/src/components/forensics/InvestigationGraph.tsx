@@ -293,8 +293,8 @@ export function InvestigationGraph({ alert }: { alert: AlertDetail }) {
         {
           selector: 'edge[kind="FUNDED_VIA_TRANSACTION"]',
           style: {
-            width: 2, "line-color": "#00f0aa", "curve-style": "bezier",
-            "target-arrow-color": "#00f0aa", "target-arrow-shape": "triangle",
+            width: 2, "line-color": "#e7a33e", "curve-style": "bezier",
+            "target-arrow-color": "#e7a33e", "target-arrow-shape": "triangle",
             opacity: 0.85,
           },
         },

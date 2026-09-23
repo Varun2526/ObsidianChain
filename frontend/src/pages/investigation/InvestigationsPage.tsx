@@ -240,7 +240,7 @@ export function InvestigationsPage() {
               </thead>
               <tbody>
                 {filtered.map((inv) => (
-                  <tr key={inv.id} className="clickable" onClick={() => {}}>
+                  <tr key={inv.id}>
                     <td>
                       <span className="inv-case-label">{inv.case_label}</span>
                     </td>

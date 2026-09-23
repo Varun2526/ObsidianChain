@@ -75,22 +75,15 @@ export function WhyFlagged({
             const share = (Math.abs(c.contribution) / widest) * 100;
             const positive = c.contribution >= 0;
             return (
-              <div className="contrib" key={c.feature}>
-                <div className="contrib-bar">
-                  <span className={`fill ${positive ? "pos" : "neg"}`}
-                    style={positive
-                      ? { left: "50%", width: `${share / 2}%` }
-                      : { right: "50%", width: `${share / 2}%` }} />
-                  <span className="zero" style={{ left: "50%" }} />
-                  <span className="contrib-label">
-                    <span className="mono">{c.feature}</span>
-                    <span className="faint small">[{c.feature_group}]</span>
-                  </span>
-                </div>
-                <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <span className="mono small"
-                    style={{ color: positive ? "var(--critical)" : "var(--model)",
-                             minWidth: 64, textAlign: "right" }}>
+              <div className="contrib" key={c.feature} style={{ gridTemplateColumns: "minmax(140px, 34%) minmax(0, 1fr) auto" }}>
+                <span className="contrib-label" title={c.feature}>
+                  {c.feature} <span className="faint">[{c.feature_group}]</span>
+                </span>
+                <span className="contrib-bar" aria-hidden="true">
+                  <span className={`fill ${positive ? "pos" : "neg"}`} style={{ width: `${share / 2}%` }} />
+                </span>
+                <span style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "flex-end" }}>
+                  <span className="mono small" style={{ minWidth: 64, textAlign: "right" }}>
                     {positive ? "+" : ""}{c.contribution.toFixed(4)}
                   </span>
                   <span className="small muted" style={{ minWidth: 92, textAlign: "right" }}>
@@ -103,40 +96,10 @@ export function WhyFlagged({
           })}
         </div>
 
-        {/* 2. ANOMALY */}
-        <div style={{ marginBottom: 18, borderTop: "1px solid var(--hairline)", paddingTop: 14 }}>
-          <h3 className="small muted" style={{ margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--high)" }}>
-            2. Anomaly
-          </h3>
-          <p className="small muted" style={{ margin: 0, lineHeight: 1.6 }}>
-            Observed behaviour deviates from the learned baseline across historical transaction distributions, volume spikes, and timing frequency.
-          </p>
-        </div>
-
-        {/* 3. PATTERN */}
-        <div style={{ marginBottom: 18, borderTop: "1px solid var(--hairline)", paddingTop: 14 }}>
-          <h3 className="small muted" style={{ margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--critical)" }}>
-            3. Pattern
-          </h3>
-          <p className="small muted" style={{ margin: "0 0 6px", lineHeight: 1.6 }}>
-            Transaction structure matches a peeling-chain or rapid splitting pattern evaluated across multi-hop chain depth, fanout symmetry, and hop intervals.
-          </p>
-        </div>
-
-        {/* 4. BLOCKCHAIN */}
-        <div style={{ marginBottom: 18, borderTop: "1px solid var(--hairline)", paddingTop: 14 }}>
-          <h3 className="small muted" style={{ margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--blockchain)" }}>
-            4. Blockchain
-          </h3>
-          <p className="small muted" style={{ margin: 0, lineHeight: 1.6 }}>
-            Entity participates in common-input-ownership co-spending on-chain. Address clustering groups transaction inputs co-spent in shared UTXO redemption boundaries.
-          </p>
-        </div>
-
         {/* 5. NETWORK EVIDENCE */}
         <div style={{ marginBottom: 18, borderTop: "1px solid var(--hairline)", paddingTop: 14 }}>
           <h3 className="small muted" style={{ margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--network)" }}>
-            5. Network Evidence
+            2. Network evidence
           </h3>
           {hasNetwork ? (
             <p className="small muted" style={{ margin: 0, lineHeight: 1.6 }}>

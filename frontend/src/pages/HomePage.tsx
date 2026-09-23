@@ -1,312 +1,197 @@
 /**
- * Investigator landing page.
+ * Overview: the investigator's own work first, then the two analytical
+ * sources they work from, each labelled with whose it is.
  *
  * The counts at the top are CASE-OWNED: how many investigations this user
  * has, how many alerts they have referenced, how many still need a decision.
- * The global artifact's alert count is not among them.
- *
- * That is the point. The previous version put "2,128 Total Alerts" beside a
- * case list, which is a property of the pipeline's frozen dataset and not of
- * anyone's investigation. The reference queue lower down still shows those
- * alerts, under a heading that says whose they are.
+ * The reference alert run and the serving model sit below, under headings
+ * that say they belong to the pipeline, not to anyone's investigation.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import * as api from "../api/console";
-import type { AuditEvent, Investigation } from "../api/types";
+import { fetchAlerts } from "../api/client";
+import { getModel, listModels } from "../api/intel";
 import { useAuth } from "../store/auth";
 import { RunStatusChip } from "../components/layout/CaseChrome";
 import { InvestigationGuideModal } from "../components/modals/InvestigationGuideModal";
+import { Icon } from "../components/ui/Icon";
+import { Metric, PageHeader, ResultTypeTag, SevTag, fixed, int, pct } from "../components/ui/intel";
+import { Skeleton } from "../components/ui/primitives";
+import { useApi } from "../lib/useApi";
 
 export function HomePage() {
   const { identity, can } = useAuth();
-  const [investigations, setInvestigations] = useState<Investigation[]>([]);
-  const [activity, setActivity] = useState<AuditEvent[]>([]);
-  const [scope, setScope] = useState<"all" | "owned">("owned");
-  const [loading, setLoading] = useState(true);
   const [guideOpen, setGuideOpen] = useState(false);
+  const cases = useApi((s) => api.listInvestigations(s), []);
+  const activity = useApi((s) => api.recentActivity(10, s), []);
+  const alerts = useApi((s) => fetchAlerts({ limit: 8 }, s), []);
+  const critical = useApi((s) => fetchAlerts({ severity: ["CRITICAL"], limit: 1 }, s), []);
+  const high = useApi((s) => fetchAlerts({ severity: ["HIGH"], limit: 1 }, s), []);
+  const registry = useApi((s) => listModels(s), []);
+  const champion = registry.data?.roles.champion ?? null;
+  const model = useApi(champion ? (s) => getModel(champion, s) : null, [champion]);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    api.listInvestigations(controller.signal)
-      .then((r) => { setInvestigations(r.investigations); setScope(r.scope); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-    api.recentActivity(10, controller.signal)
-      .then((r) => setActivity(r.events))
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
-
+  const investigations = cases.data?.investigations ?? [];
   const open = investigations.filter((i) => i.status !== "CLOSED");
-  const referenced = investigations.reduce(
-    (n, i) => n + (i.summary?.alerts_referenced ?? 0), 0);
-  const outstanding = investigations.reduce(
-    (n, i) => n + (i.summary?.outstanding ?? 0), 0);
+  const referenced = investigations.reduce((n, i) => n + (i.summary?.alerts_referenced ?? 0), 0);
+  const outstanding = investigations.reduce((n, i) => n + (i.summary?.outstanding ?? 0), 0);
+  const canCreate = can("create_investigation") || identity?.user.role !== "REVIEWER";
 
   return (
     <>
-      {/* Hero Orientation Banner */}
-      <div className="page-header" style={{ alignItems: "flex-start", marginBottom: 20 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <h1 style={{ margin: 0 }}>Welcome back, {identity?.user.display_name}</h1>
-            <span className="status-badge status-draft" style={{ textTransform: "uppercase", fontSize: 11 }}>
-              {identity?.user.role}
-            </span>
-          </div>
-          <p className="muted" style={{ margin: 0 }}>
-            {scope === "all"
-              ? "Institutional investigation console · All workstation cases"
-              : "Institutional investigation console · Cases owned by your station"}
-            {" · "}
-            <span className="faint">Press <kbd className="mono" style={{ padding: "1px 4px", border: "1px solid var(--hairline)", borderRadius: 3 }}>⌘K</kbd> to search everything</span>
-          </p>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setGuideOpen(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
-          >
-            <span>◫</span>
-            <span>SOP Guide</span>
-          </button>
-          {can("create_investigation") && (
-            <Link to="/investigations/new" className="btn btn-primary">
-              + New Investigation
-            </Link>
-          )}
-        </div>
+      <PageHeader
+        eyebrow={identity ? `${identity.user.display_name} · ${identity.user.role.toLowerCase()}` : undefined}
+        title="Overview"
+        sub={cases.data?.scope === "all" ? "Every investigation on this workstation." : "Investigations you own or are assigned."}
+        actions={<>
+          <button type="button" className="btn btn-sm" onClick={() => setGuideOpen(true)}>Workflow guide</button>
+          {canCreate && <Link to="/investigations/new" className="btn btn-sm btn-primary"><Icon name="plus" size={14} />New investigation</Link>}
+        </>}
+      />
+
+      <div className="metric-strip">
+        <Metric k="Open investigations" v={cases.loading ? "…" : int(open.length)} d={`${int(investigations.length)} in total`} />
+        <Metric k="Alerts in your cases" v={cases.loading ? "…" : int(referenced)} d="referenced from the alert run" />
+        <Metric k="Awaiting a decision" v={cases.loading ? "…" : int(outstanding)} d="no disposition recorded yet"
+                tone={outstanding > 0 ? "var(--oc-sev-high)" : undefined} />
+        <Metric k="Recent activity" v={activity.loading ? "…" : int(activity.data?.events.length ?? 0)} d="audit events, latest 10" />
       </div>
 
-      {loading ? (
-        <section className="panel"><div className="panel-body"><p className="muted">Loading investigations…</p></div></section>
-      ) : investigations.length === 0 ? (
-        /* Empty Investigator Home */
-        <div className="panel" style={{
-          padding: "56px 32px",
-          textAlign: "center",
-          maxWidth: 640,
-          margin: "32px auto",
-          background: "var(--bg-panel)",
-          border: "1px solid var(--hairline)",
-          borderRadius: 8,
-          boxShadow: "0 4px 24px rgba(0, 0, 0, 0.4)"
-        }}>
-          <div style={{
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            background: "var(--bg-raised)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 16px",
-            border: "1px solid var(--border-strong)",
-            color: "var(--cyan)",
-            fontSize: "1.4rem"
-          }}>
-            ◫
-          </div>
-          <h2 style={{ fontSize: "1.2rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", margin: "0 0 8px" }}>
-            NO ACTIVE INVESTIGATIONS
-          </h2>
-          <p className="muted" style={{ fontSize: "0.95rem", lineHeight: 1.6, maxWidth: 500, margin: "0 auto 24px" }}>
-            Create an investigation and upload a Bitcoin transaction/network dataset to begin analysis.
-          </p>
-          <div style={{ display: "flex", gap: 10, justifyContent: "center", alignItems: "center" }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setGuideOpen(true)}
-              style={{ padding: "10px 20px", fontSize: "0.95rem" }}
-            >
-              ◫ View SOP Flow
-            </button>
-            {can("create_investigation") && (
-              <Link to="/investigations/new" className="btn btn-primary" style={{ padding: "10px 24px", fontSize: "0.95rem", fontWeight: 700 }}>
-                + NEW INVESTIGATION
-              </Link>
-            )}
-          </div>
-          <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--hairline)" }}>
-            <span className="faint small">
-              Press <kbd className="mono" style={{ padding: "1px 5px", border: "1px solid var(--hairline)", borderRadius: 3 }}>⌘K</kbd> to search everything
-            </span>
-          </div>
-        </div>
-      ) : (
-        <>
-          {/* Hero: Continue Active Investigation if available */}
-          {(() => {
-            const activeCase = open[0];
-            if (!activeCase) return null;
-            return (
-              <div className="panel" style={{ 
-                background: "linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-raised) 100%)",
-                borderColor: "var(--border-strong)",
-                marginBottom: 20,
-                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)"
-              }}>
-                <div className="panel-body" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 24, padding: "20px 24px" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                      <span className="small muted mono" style={{ letterSpacing: "0.05em" }}>ACTIVE CASE WORKSPACE</span>
-                      <span className={`status-badge status-${activeCase.status.toLowerCase()}`}>
-                        ● {activeCase.status}
-                      </span>
-                      <span className="mono small faint">{activeCase.case_label}</span>
-                    </div>
-                    <h2 style={{ margin: "0 0 8px", fontSize: "1.3rem", fontWeight: 600 }}>{activeCase.name}</h2>
-                    <p className="muted small" style={{ margin: 0, maxWidth: 650 }}>
-                      {activeCase.description || "Comprehensive multi-layer forensic investigation workspace with blockchain graph, network correlation, and risk triage."}
-                    </p>
-                    <div style={{ display: "flex", gap: 24, marginTop: 14 }}>
-                      <div>
-                        <span className="small muted">Referenced Alerts: </span>
-                        <strong className="mono">{activeCase.summary?.alerts_referenced ?? 0}</strong>
-                      </div>
-                      <div>
-                        <span className="small muted">Pending Decisions: </span>
-                        <strong className="mono" style={{ color: (activeCase.summary?.outstanding ?? 0) > 0 ? "var(--high)" : "inherit" }}>
-                          {activeCase.summary?.outstanding ?? 0}
-                        </strong>
-                      </div>
-                      <div>
-                        <span className="small muted">Analytical Run: </span>
-                        <RunStatusChip status={activeCase.run_status ?? "UNBOUND"} />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <Link to={`/inv/${activeCase.id}`} className="btn btn-primary" style={{ padding: "10px 20px", whiteSpace: "nowrap" }}>
-                      Resume Investigation →
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Case-owned counts only */}
-          <div className="card-grid-4" style={{ marginBottom: 20 }}>
-            <div className="stat-card">
-              <span className="stat-card-value">{open.length}</span>
-              <span className="stat-card-label">Open cases</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-card-value">{referenced}</span>
-              <span className="stat-card-label">Alerts in your cases</span>
-            </div>
-            <div className="stat-card stat-card--high">
-              <span className="stat-card-value">{outstanding}</span>
-              <span className="stat-card-label">Awaiting a decision</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-card-value">{investigations.length}</span>
-              <span className="stat-card-label">Cases total</span>
-            </div>
-          </div>
-
+      <div className="grid-main-side">
+        <div className="stack">
           <section className="panel">
             <div className="panel-head">
               <h2>Your investigations</h2>
-              <Link to="/investigations" className="small muted">View all →</Link>
+              <span className="spacer" />
+              <Link to="/investigations" className="btn btn-sm btn-ghost">All investigations<Icon name="arrowRight" size={14} /></Link>
             </div>
-            <div className="panel-body flush">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Case</th><th>Name</th><th>Status</th>
-                    <th className="num">Alerts</th><th className="num">Outstanding</th>
-                    <th>Analytical run</th><th>Updated</th><th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {open.slice(0, 8).map((inv) => (
+            <div className="panel-body flush table-wrap">
+              {cases.loading ? <Skeleton rows={4} /> : open.length === 0 ? (
+                <div className="state">
+                  <h3>No open investigations</h3>
+                  <p>Open one from an alert, or create one and upload a dataset for the pipeline to score.</p>
+                </div>
+              ) : (
+                <table>
+                  <thead><tr><th>Case</th><th>Name</th><th>Status</th><th className="num">Alerts</th><th className="num">Undecided</th><th>Alert run</th><th>Updated</th></tr></thead>
+                  <tbody>{open.slice(0, 8).map((inv) => (
                     <tr key={inv.id}>
-                      <td className="mono">{inv.case_label}</td>
-                      <td>{inv.name}</td>
-                      <td>
-                        <span className={`status-badge status-${inv.status.toLowerCase()}`}>
-                          {inv.status}
-                        </span>
-                      </td>
+                      <td className="mono small">{inv.case_label}</td>
+                      <td><Link className="row-link" to={`/inv/${inv.id}`}>{inv.name}</Link></td>
+                      <td><span className={`status-badge status-${inv.status.toLowerCase()}`}>{inv.status}</span></td>
                       <td className="num">{inv.summary?.alerts_referenced ?? 0}</td>
                       <td className="num">{inv.summary?.outstanding ?? 0}</td>
                       <td><RunStatusChip status={inv.run_status ?? "UNBOUND"} /></td>
                       <td className="small muted">{timeAgo(inv.updated_at)}</td>
-                      <td><Link to={`/inv/${inv.id}`} className="btn btn-sm">Open</Link></td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  ))}</tbody>
+                </table>
+              )}
             </div>
           </section>
 
-          {/* RECENT ACTIVITY */}
           <section className="panel">
             <div className="panel-head">
-              <h2>Recent casework activity</h2>
-              <span className="small muted">Append-only audit events</span>
+              <h2>Top of the reference alert run</h2>
+              <span className="small faint">pipeline output, not an investigation</span>
+              <span className="spacer" />
+              <Link to="/alerts" className="btn btn-sm btn-ghost">Alert queue<Icon name="arrowRight" size={14} /></Link>
             </div>
-            {activity.length === 0 ? (
-              <div className="panel-body">
-                <p className="muted">No recent casework activity recorded.</p>
-              </div>
-            ) : (
-              <div className="panel-body flush">
+            <div className="panel-body flush table-wrap">
+              {alerts.loading ? <Skeleton rows={5} /> : alerts.error ? (
+                <p className="muted small" style={{ padding: 16 }}>The alert run is not available: {(alerts.error as Error).message}</p>
+              ) : (
                 <table>
-                  <thead>
-                    <tr>
-                      <th>Timestamp</th>
-                      <th>Investigator</th>
-                      <th>Action</th>
-                      <th>Object</th>
-                      <th>Details</th>
+                  <thead><tr><th className="num">#</th><th>Severity</th><th className="num">Model risk</th><th>Cluster</th><th className="num">Members</th><th>Active</th></tr></thead>
+                  <tbody>{alerts.data!.alerts.map((a) => (
+                    <tr key={a.alert_id}>
+                      <td className="num">{a.rank}</td>
+                      <td><SevTag severity={a.severity} /></td>
+                      <td className="num">{pct(a.risk_score, 1)}</td>
+                      <td><Link className="mono row-link" to={`/alerts/${encodeURIComponent(a.alert_id)}`}>{a.cluster_id}</Link></td>
+                      <td className="num">{int(a.members_total)}</td>
+                      <td className="mono small">t{a.first_timestep}{a.last_timestep !== a.first_timestep ? `–t${a.last_timestep}` : ""}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {activity.map((evt) => (
-                      <tr key={evt.id}>
-                        <td className="small muted">{timeAgo(evt.at)}</td>
-                        <td className="small">
-                          <strong>{evt.actor_display_name || evt.actor_username || "System"}</strong>
-                        </td>
-                        <td>
-                          <span className="status-badge status-draft">
-                            {evt.action.replace(/_/g, " ")}
-                          </span>
-                        </td>
-                        <td className="mono small">
-                          {evt.investigation_id ? (
-                            <Link to={`/inv/${evt.investigation_id}`}>
-                              {evt.object_id || evt.investigation_id}
-                            </Link>
-                          ) : (
-                            evt.object_id || "—"
-                          )}
-                        </td>
-                        <td className="small muted">
-                          {evt.detail && typeof evt.detail === "object"
-                            ? Object.entries(evt.detail)
-                                .map(([k, v]) => `${k}: ${v}`)
-                                .slice(0, 2)
-                                .join(", ") || "—"
-                            : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                  ))}</tbody>
                 </table>
+              )}
+            </div>
+            {alerts.data && (
+              <div className="panel-foot">
+                {int(alerts.data.alert_count_total)} alerts in run <span className="mono">{alerts.data.run_fingerprint.slice(0, 12)}</span>
+                {critical.data && ` · ${int(critical.data.alert_count_matched)} critical`}
+                {high.data && ` · ${int(high.data.alert_count_matched)} high`}
+                . Model risk ranks clusters for attention; it is not a finding.
               </div>
             )}
           </section>
-        </>
-      )}
+
+          <section className="panel">
+            <div className="panel-head"><h2>Recent casework activity</h2><span className="small faint">append-only audit log</span></div>
+            <div className="panel-body flush">
+              {activity.loading ? <Skeleton rows={3} /> : (activity.data?.events.length ?? 0) === 0 ? (
+                <p className="muted small" style={{ padding: 16 }}>No casework activity recorded yet.</p>
+              ) : (
+                <table>
+                  <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Object</th></tr></thead>
+                  <tbody>{activity.data!.events.map((e) => (
+                    <tr key={e.id}>
+                      <td className="small muted nowrap">{timeAgo(e.at)}</td>
+                      <td className="small">{e.actor_display_name || e.actor_username || "system"}</td>
+                      <td><span className="audit">{e.action.replace(/_/g, " ")}</span></td>
+                      <td className="mono small">
+                        {e.investigation_id ? <Link to={`/inv/${e.investigation_id}`}>{e.object_id || e.investigation_id}</Link> : (e.object_id || "—")}
+                      </td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              )}
+            </div>
+          </section>
+        </div>
+
+        <div className="stack">
+          <section className="panel">
+            <div className="panel-head"><h2>Start from</h2></div>
+            <div className="panel-body" style={{ display: "grid", gap: 8 }}>
+              <Link className="btn" style={{ justifyContent: "flex-start" }} to="/alerts"><Icon name="alert" />Triage the alert queue</Link>
+              <Link className="btn" style={{ justifyContent: "flex-start" }} to="/graph"><Icon name="graph" />Trace an address or transaction</Link>
+              {canCreate && <Link className="btn" style={{ justifyContent: "flex-start" }} to="/investigations/new"><Icon name="upload" />Upload a dataset to score</Link>}
+              <p className="note">Press <kbd>/</kbd> or <kbd>⌘K</kbd> anywhere to search addresses, transactions, alerts and cases.</p>
+            </div>
+          </section>
+
+          <section className="panel">
+            <div className="panel-head">
+              <h2>Serving model</h2>
+              <span className="spacer" />
+              <Link to="/models" className="btn btn-sm btn-ghost">Details<Icon name="arrowRight" size={14} /></Link>
+            </div>
+            <div className="panel-body">
+              {registry.loading || model.loading ? <Skeleton rows={4} /> : !model.data ? (
+                <p className="muted small">No champion is registered. Uploaded datasets cannot be scored until one is.</p>
+              ) : (
+                <>
+                  <dl className="kv">
+                    <dt>Champion</dt><dd className="mono">{model.data.version}</dd>
+                    <dt>Type</dt><dd>{String(model.data.manifest.model_type ?? "n/a")}</dd>
+                    <dt>Features</dt><dd className="mono small">{model.data.feature_schema_version}</dd>
+                    <dt>Fallback</dt><dd className="mono small">{registry.data?.roles.fallback ?? "none"}</dd>
+                  </dl>
+                  <div style={{ display: "grid", gap: 6, marginTop: 12 }}>
+                    <div className="row"><ResultTypeTag type="CONFIRMATION" /><span className="num small">nAP {fixed(model.data.evaluation?.summary.confirm?.address.nap?.mean)}</span></div>
+                    <div className="row"><ResultTypeTag type="HOLDOUT" /><span className="num small">nAP {fixed(model.data.holdout?.address.nap)} · P@100 {fixed(model.data.holdout?.address["P@100"], 2)}</span></div>
+                    <div className="row"><ResultTypeTag type="PRODUCTION" /><span className="small muted">unknown until labels arrive</span></div>
+                  </div>
+                  <p className="note" style={{ marginTop: 10 }}>Known failure: ranking collapses in some holdout windows; input drift monitoring does not detect it.</p>
+                </>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
 
       <InvestigationGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
     </>
@@ -316,7 +201,7 @@ export function HomePage() {
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
+  if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
