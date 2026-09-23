@@ -8,7 +8,10 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from obsidianchain.pipeline.features_ps import CORE_PS_FEATURE_COLUMNS
+from obsidianchain.pipeline.features_ps import (
+    CORE_PS_FEATURE_COLUMNS,
+    PS_FEATURE_SCHEMA_VERSION,
+)
 
 
 DATASET_DIR = Path("data/models/ps_native/datasets")
@@ -25,7 +28,12 @@ class TestPsDatasetIntegrity:
         assert (DATASET_DIR / "manifest.json").is_file()
 
         manifest = json.loads((DATASET_DIR / "manifest.json").read_text())
-        assert manifest["feature_schema_version"] == "ps_native_features/1"
+        # The development files carry the live schema; the sealed holdout
+        # was never regenerated and still declares /1. Both are recorded so
+        # nothing can fit on one and score on the other unnoticed.
+        assert manifest["feature_schema_version"] == PS_FEATURE_SCHEMA_VERSION
+        assert manifest["development_schema_version"] == PS_FEATURE_SCHEMA_VERSION
+        assert manifest["holdout_schema_version"] == "ps_native_features/1"
         assert manifest["provenance_type"] == "RESEARCH_DERIVED_CANONICAL_TRAINING_REPRESENTATION"
         assert manifest["timestamp_source"] == "ELLIPTIC_TIMESTEP_SURROGATE"
 

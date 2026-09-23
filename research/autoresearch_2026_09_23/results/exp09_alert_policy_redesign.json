@@ -1,0 +1,60 @@
+{
+ "experiment_id": "exp09_alert_policy_redesign",
+ "fold": "t<=38 -> t39-40",
+ "split_sizes": {
+  "fit": 133503,
+  "threshold": 28608,
+  "holdout_check": 28608,
+  "eval_window": 11764
+ },
+ "corrected_procedure": {
+  "CRITICAL": {
+   "threshold": 0.42010777320816634,
+   "target": 0.9,
+   "precision_on_threshold_set_insample": 0.9004048582995952,
+   "support_on_threshold_set": 1235,
+   "precision_on_holdout_check_set": 0.9018355945730248,
+   "support_on_holdout_check_set": 1253,
+   "precision_on_eval_window": 0.592814371257485,
+   "support_on_eval_window": 334
+  },
+  "HIGH": {
+   "threshold": 0.2515331912671901,
+   "target": 0.75,
+   "precision_on_threshold_set_insample": 0.7502910360884749,
+   "support_on_threshold_set": 1718,
+   "precision_on_holdout_check_set": 0.7527568195008706,
+   "support_on_holdout_check_set": 1723,
+   "precision_on_eval_window": 0.4824742268041237,
+   "support_on_eval_window": 485
+  },
+  "MEDIUM": {
+   "threshold": 0.09837594087578899,
+   "target": 0.5,
+   "precision_on_threshold_set_insample": 0.5,
+   "support_on_threshold_set": 2982,
+   "precision_on_holdout_check_set": 0.49424909628655933,
+   "support_on_holdout_check_set": 3043,
+   "precision_on_eval_window": 0.17730870712401056,
+   "support_on_eval_window": 1895
+  }
+ },
+ "flawed_procedure_reproduction": {
+  "HIGH": {
+   "threshold": 0.9469286511335824,
+   "target": 0.75,
+   "precision_on_eval_window_insample": 0.8,
+   "support_on_eval_window": 10,
+   "precision_on_holdout_check_set": 1.0,
+   "support_on_holdout_check_set": 697
+  },
+  "MEDIUM": {
+   "threshold": 0.257477268080639,
+   "target": 0.5,
+   "precision_on_eval_window_insample": 0.5,
+   "support_on_eval_window": 468,
+   "precision_on_holdout_check_set": 0.7592267135325131,
+   "support_on_holdout_check_set": 1707
+  }
+ }
+}

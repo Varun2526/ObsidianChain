@@ -197,24 +197,21 @@ class TestPipelineAcceptance:
         # Check manifest contents
         manifest = outcome.manifest
         assert manifest["input_dataset"]["format"] == fmt
-        # PENDING RETRAIN. The generator fix (ADR 0001, schema
-        # ps_native_features/2) removed six fabricated columns and redefined
-        # two pattern flags. The frozen v1 model declares /1, so ps_model.py
-        # refuses it rather than scoring mismatched columns - which is the
-        # correct behaviour, and is why this asserts the refusal rather than
-        # a score. Restore the SCORED assertion when a v2 model is trained
-        # under ml/protocol.py.
-        assert manifest["provenance"]["ml_status"] == "MODEL_UNAVAILABLE_FOR_SCHEMA"
+        # v3 (schema ps_native_features/4) is trained on the live schema,
+        # so the model scores. The v1 refusal path is still covered by the
+        # MockLightGBM / MockEllipticModel tests in this file.
+        assert manifest["provenance"]["ml_status"] == "SCORED"
         # The run still completes: 17 stages, honest degradation, no crash.
         assert outcome.is_success
         assert len(manifest["stages"]) == 17
 
         # Verify Stage 10 (Supervised ML Risk) execution
         s10 = next(s for s in outcome.stages if s.stage_number == 10)
-        assert s10.status == "DEGRADED"
-        assert s10.summary["status"] == "MODEL_UNAVAILABLE_FOR_SCHEMA"
+        assert s10.status == "SUCCESS"
+        assert s10.summary["status"] == "SCORED"
+        assert s10.summary["model_version"] == "ps_native_v3"
 
-        # Check alerts contain MODEL_SIGNAL evidence (UNAVAILABLE pending retrained v2 model)
+        # Check alerts contain a scored MODEL_SIGNAL
         alerts = outcome.alert_result.alerts
         assert len(alerts) > 0
         has_model_signal = False
@@ -222,7 +219,8 @@ class TestPipelineAcceptance:
             for ev in a.evidence:
                 if ev.category == "MODEL_SIGNAL":
                     has_model_signal = True
-                    assert ev.status == "UNAVAILABLE"
+                    assert ev.status == "PRESENT"
+                    assert 0.0 <= ev.score <= 1.0
         assert has_model_signal, "Alerts must contain MODEL_SIGNAL evidence"
 
     def test_ps_model_inference_determinism(self, tmp_path) -> None:
@@ -258,14 +256,10 @@ class TestPipelineAcceptance:
         outcome = run_pipeline(pure_bc_path, runs_dir=tmp_path / "runs", geoip_provider=geoip.TestFixtureProvider())
         assert outcome.is_success
         manifest = outcome.manifest
-        # PENDING RETRAIN. The generator fix (ADR 0001, schema
-        # ps_native_features/2) removed six fabricated columns and redefined
-        # two pattern flags. The frozen v1 model declares /1, so ps_model.py
-        # refuses it rather than scoring mismatched columns - which is the
-        # correct behaviour, and is why this asserts the refusal rather than
-        # a score. Restore the SCORED assertion when a v2 model is trained
-        # under ml/protocol.py.
-        assert manifest["provenance"]["ml_status"] == "MODEL_UNAVAILABLE_FOR_SCHEMA"
+        # v3 (schema ps_native_features/4) is trained on the live schema,
+        # so the model scores. The v1 refusal path is still covered by the
+        # MockLightGBM / MockEllipticModel tests in this file.
+        assert manifest["provenance"]["ml_status"] == "SCORED"
         # The run still completes: 17 stages, honest degradation, no crash.
         assert outcome.is_success
 
@@ -274,7 +268,9 @@ class TestPipelineAcceptance:
             net_ev = next(e for e in a.evidence if e.category == "NETWORK_CONTEXT")
             assert net_ev.status == "NO_EVIDENCE"
             ml_ev = next(e for e in a.evidence if e.category == "MODEL_SIGNAL")
-            assert ml_ev.status == "UNAVAILABLE"
+            # The core schema needs no network column, so a chain-only
+            # capture is fully scorable.
+            assert ml_ev.status == "PRESENT"
 
     def test_explicit_incompatible_model_safeguard(self, tmp_path) -> None:
         """Passing an incompatible Elliptic++ feature model returns MODEL_UNAVAILABLE_FOR_SCHEMA."""
@@ -399,3 +395,17 @@ class TestCaseworkAcceptance:
             assert "nodes" in g_data["graph"]
             assert "edges" in g_data["graph"]
 
+
+
+def test_every_run_reports_model_trust(tmp_path) -> None:
+    """Drift, holdout status and unseen missingness travel with every run."""
+    import json
+    outcome = run_pipeline("tests/data/synthetic_acceptance_capture.json",
+                           runs_dir=tmp_path, geoip_provider=geoip.TestFixtureProvider())
+    trust = outcome.manifest["provenance"]["model_trust"]
+    assert trust["model_version"] == "ps_native_v3"
+    assert trust["holdout_evaluated"] is False
+    assert trust["drift_status"] in {"STABLE", "SHIFTED", "MAJOR_SHIFT"}
+    report = json.loads((outcome.run_dir / "monitoring.json").read_text())
+    assert report["drift"]["features"]
+    assert "monitoring.json" in outcome.manifest["artifacts"]

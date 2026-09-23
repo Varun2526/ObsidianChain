@@ -2,19 +2,18 @@
   "schema": "obsidianchain.ps_dataset_manifest/1",
   "provenance_type": "RESEARCH_DERIVED_CANONICAL_TRAINING_REPRESENTATION",
   "generator": "research/reproduction/build_ps_dataset.py",
-  "generated_at": "2026-09-22T16:19:29.276955+00:00",
+  "generated_at": "2026-09-23T14:58:39.697783+00:00",
   "source_dataset_hashes": {
     "AddrTx_edgelist.csv": "f5f903f752387f66a1bccaeff54e293b2e8470fcddf5eb56b88aa06fd23a8f3b",
     "TxAddr_edgelist.csv": "9f5afbdde7bc3d91fb7a4655be55799d6504cd0063ae55a0753a5a41189932b8",
     "txs_features.csv": "2db326ec8ddb68f1d810c1834e1ff62e0a8300378f0984a1e3b2ca82a439821b",
     "wallets_classes.csv": "4e5132c99f941666bf1fefd4100a1428d339c9252ec6987909e1adf8eac902f9"
   },
-  "feature_schema_version": "ps_native_features/1",
+  "feature_schema_version": "ps_native_features/4",
   "feature_list": [
     "input_count",
     "output_count",
     "total_input_amount",
-    "total_output_amount",
     "fee",
     "fee_ratio",
     "input_amount_mean",
@@ -24,17 +23,25 @@
     "n_txs_asof_t",
     "n_sent_asof_t",
     "n_recv_asof_t",
-    "btc_sent_total_asof_t",
     "btc_recv_total_asof_t",
     "net_flow_asof_t",
-    "mean_fee_ratio_asof_t",
     "active_duration_seconds",
-    "tx_velocity_per_hour",
     "gap_since_last_tx",
     "unique_counterparties_asof_t",
     "cluster_size_asof_t",
     "is_peeling_candidate",
-    "is_mixing_candidate"
+    "is_mixing_candidate",
+    "addr_is_sender",
+    "addr_is_self_change",
+    "counterparty_max_n_txs_asof_t",
+    "counterparty_mean_n_txs_asof_t",
+    "upstream_funded_share",
+    "upstream_mean_output_count",
+    "upstream_mean_input_count",
+    "upstream_peel_share",
+    "upstream_mix_share",
+    "upstream_min_hold_seconds",
+    "upstream_chain_depth"
   ],
   "label_schema": {
     "0": "licit (class 2)",
@@ -48,8 +55,8 @@
     "validation": "step 35-41",
     "test": "step 42-49"
   },
-  "schema_note": "train and validation are ps_native_features/2. The sealed holdout was NOT regenerated and remains ps_native_features/1. A model must not be fitted on /2 and scored on /1.",
-  "development_schema_version": "ps_native_features/2",
+  "schema_note": "train and validation are ps_native_features/4. The sealed holdout was NOT regenerated and remains ps_native_features/1. A model must not be fitted on the development schema and scored on /1.",
+  "development_schema_version": "ps_native_features/4",
   "holdout_schema_version": "ps_native_features/1",
   "row_counts": {
     "train": 170404,
@@ -67,10 +74,10 @@
     "test": 51817
   },
   "artifact_hashes": {
-    "train.parquet": "8ade0bcc995de2588b2c2e0f4022682b90d6c6997f7d856d4d1c44be1f3e1e97",
-    "validation.parquet": "87721a3dbc55656c39bf749bea7ff32d86a06bbf91f0328d0fcf6ab57a85bf62",
+    "train.parquet": "287d053cb3b903a60037b2a0263ba902b6de2ef79c8b987c7b90027012b53f82",
+    "validation.parquet": "2dfb9da4d6670217742b80f1e2583c915f8efd3dee9cb718e8a31349792aab63",
     "test.parquet": "1386d8afd87b9b3844eaa7797d44d8ae00518b0efda3c86cdaa7b94b10e70973"
   },
   "total_usable_rows": 262433,
-  "duration_seconds": 28.0
+  "duration_seconds": 32.83
 }

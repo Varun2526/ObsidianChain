@@ -67,7 +67,10 @@ class TestTemporalLeakageSafeguards:
         for col in CORE_PS_FEATURE_COLUMNS:
             val_early = addrA_early[col]
             val_extended = addrA_at_tx1_in_extended[col]
-            assert val_early == val_extended, (
+            # NaN ("not observed") must stay NaN; NaN != NaN, so compare it
+            # explicitly rather than let a missing value read as a change.
+            both_missing = pd.isna(val_early) and pd.isna(val_extended)
+            assert both_missing or val_early == val_extended, (
                 f"Leakage detected on '{col}': value changed from {val_early} to {val_extended} "
                 f"after future transaction was appended!"
             )
@@ -83,12 +86,14 @@ class TestTemporalLeakageSafeguards:
         row_t1 = features[(features["address"] == "addrA") & (features["txid"] == "tx1")].iloc[0]
         # At t1, addrA had 0 prior counterparties
         assert row_t1["unique_counterparties_asof_t"] == 0
-        assert row_t1["out_degree_asof_t"] == 0
+        # schema v2: out_degree_asof_t was an exact duplicate of
+        # n_sent_asof_t on every row and was removed. Same quantity.
+        assert row_t1["n_sent_asof_t"] == 0
 
         row_t2 = features[(features["address"] == "addrA") & (features["txid"] == "tx2")].iloc[0]
         # At t2, addrA has observed addrB as counterparty from tx1
         assert row_t2["unique_counterparties_asof_t"] == 1
-        assert row_t2["out_degree_asof_t"] == 1
+        assert row_t2["n_sent_asof_t"] == 1
 
     def test_c_future_cluster_expansion_does_not_change_earlier_cluster_size(self) -> None:
         """C. Adding a future transaction to a cluster does not change earlier cluster size."""
@@ -120,10 +125,13 @@ class TestTemporalLeakageSafeguards:
         """D. Future transactions cannot alter an earlier peeling/mixing feature."""
         # Normal tx at t=100
         tx1 = _base_tx("tx1", 100.0, ["addrA", "addrB"], [1.0, 1.0], ["out1"], [1.999])
-        # Mixing tx at t=200
+        # A genuine mixing shape under schema v2: several INDEPENDENT funders
+        # bringing unrelated amounts, every one receiving the same
+        # denomination back. v1 required only that both sides had >=3
+        # participants, which fired on 20-34% of addresses.
         tx2_mix = _base_tx(
             "tx2", 200.0,
-            ["addr1", "addr2", "addr3"], [1.0, 1.0, 1.0],
+            ["addr1", "addr2", "addr3"], [0.31, 1.84, 3.05],
             ["outA", "outB", "outC"], [0.99, 0.99, 0.99],
             fee=0.03
         )
@@ -136,6 +144,26 @@ class TestTemporalLeakageSafeguards:
 
         row_t2 = features[(features["txid"] == "tx2")].iloc[0]
         assert row_t2["is_mixing_candidate"] == 1
+
+    def test_d2_a_uniform_payout_round_is_not_a_mixing_candidate(self) -> None:
+        """The benign shape v1 could not separate from a collaborative spend.
+
+        Three funders paying three equal outputs, but the funders bring
+        IDENTICAL amounts - which is what a service paying a fixed sum looks
+        like, not a mix. v1 flagged it because it tested cardinality only.
+        """
+        payout = _base_tx(
+            "tx-payout", 300.0,
+            ["p1", "p2", "p3"], [1.0, 1.0, 1.0],
+            ["r1", "r2", "r3"], [0.99, 0.99, 0.99],
+            fee=0.03
+        )
+        features = extract_ps_features(pd.DataFrame([payout]))
+        row = features[features["txid"] == "tx-payout"].iloc[0]
+        assert row["is_mixing_candidate"] == 0, (
+            "a uniform payout round is being classified as mixing; the "
+            "input-variety condition is not being applied"
+        )
 
     def test_e_label_columns_cannot_enter_feature_matrix(self) -> None:
         """E. Labels from validation/test cannot enter feature construction."""

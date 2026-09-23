@@ -1,0 +1,11 @@
+{
+  "method": "Platt (logistic on logit of the raw score)",
+  "fitted_on": "out-of-fold scores, last 4 rolling folds",
+  "n_rows": 43035,
+  "reference_prevalence": 0.06782851167654234,
+  "coef": 0.7957591421872297,
+  "intercept": -0.16159890222881285,
+  "brier_raw_oof": 0.03283567494579952,
+  "brier_calibrated_in_sample": 0.0330351835113777,
+  "note": "The raw score ranks; the calibrated probability is for display. Calibration is monotone, so it never changes the order."
+}

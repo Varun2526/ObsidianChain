@@ -39,6 +39,9 @@ GENERATOR_MODULES = {
     # matters is that no INFERENCE module reads that directory, which the
     # rest of this file checks.
     "world/generate.py",
+    # World v2, same role: it invents behaviour labels and writes them to its
+    # own world_truth/. exp15 reads that directory only after features exist.
+    "world/noisy.py",
 }
 
 DISPATCH_MODULES = {

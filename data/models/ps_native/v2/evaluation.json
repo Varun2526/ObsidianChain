@@ -1,0 +1,278 @@
+{
+  "protocol_version": "obsidianchain.eval_protocol/2",
+  "mde_80_power": 0.164,
+  "folds": [
+    {
+      "fold": "t<=16 -> t17-18",
+      "n_eval": 4018,
+      "prevalence": 0.0495,
+      "nap": 0.5016,
+      "nap_tx_weighted": 0.6826,
+      "precision_at_100_distinct_tx": 0.71,
+      "distinct_tx": 970
+    },
+    {
+      "fold": "t<=18 -> t19-20",
+      "n_eval": 7125,
+      "prevalence": 0.0747,
+      "nap": 0.7085,
+      "nap_tx_weighted": 0.8437,
+      "precision_at_100_distinct_tx": 1.0,
+      "distinct_tx": 1374
+    },
+    {
+      "fold": "t<=20 -> t21-22",
+      "n_eval": 21200,
+      "prevalence": 0.0621,
+      "nap": 0.492,
+      "nap_tx_weighted": 0.7905,
+      "precision_at_100_distinct_tx": 0.99,
+      "distinct_tx": 2183
+    },
+    {
+      "fold": "t<=22 -> t23-24",
+      "n_eval": 6777,
+      "prevalence": 0.1368,
+      "nap": 0.6321,
+      "nap_tx_weighted": 0.3872,
+      "precision_at_100_distinct_tx": 0.71,
+      "distinct_tx": 1927
+    },
+    {
+      "fold": "t<=24 -> t25-26",
+      "n_eval": 7946,
+      "prevalence": 0.2282,
+      "nap": 0.8476,
+      "nap_tx_weighted": 0.8363,
+      "precision_at_100_distinct_tx": 1.0,
+      "distinct_tx": 1142
+    },
+    {
+      "fold": "t<=26 -> t27-28",
+      "n_eval": 1379,
+      "prevalence": 0.1022,
+      "nap": 0.8794,
+      "nap_tx_weighted": 0.9229,
+      "precision_at_100_distinct_tx": 0.92,
+      "distinct_tx": 452
+    },
+    {
+      "fold": "t<=28 -> t29-30",
+      "n_eval": 5572,
+      "prevalence": 0.0957,
+      "nap": 0.4629,
+      "nap_tx_weighted": 0.4734,
+      "precision_at_100_distinct_tx": 0.91,
+      "distinct_tx": 1435
+    },
+    {
+      "fold": "t<=30 -> t31-32",
+      "n_eval": 8912,
+      "prevalence": 0.1032,
+      "nap": 0.5876,
+      "nap_tx_weighted": 0.6422,
+      "precision_at_100_distinct_tx": 1.0,
+      "distinct_tx": 1915
+    },
+    {
+      "fold": "t<=32 -> t33-34",
+      "n_eval": 10956,
+      "prevalence": 0.0666,
+      "nap": 0.8298,
+      "nap_tx_weighted": 0.4703,
+      "precision_at_100_distinct_tx": 0.6,
+      "distinct_tx": 1001
+    },
+    {
+      "fold": "t<=34 -> t35-36",
+      "n_eval": 13712,
+      "prevalence": 0.074,
+      "nap": 0.7233,
+      "nap_tx_weighted": 0.7077,
+      "precision_at_100_distinct_tx": 0.99,
+      "distinct_tx": 2714
+    },
+    {
+      "fold": "t<=36 -> t37-38",
+      "n_eval": 6603,
+      "prevalence": 0.0922,
+      "nap": 0.7082,
+      "nap_tx_weighted": 0.8482,
+      "precision_at_100_distinct_tx": 0.98,
+      "distinct_tx": 1194
+    },
+    {
+      "fold": "t<=38 -> t39-40",
+      "n_eval": 11764,
+      "prevalence": 0.048,
+      "nap": 0.4086,
+      "nap_tx_weighted": 0.5267,
+      "precision_at_100_distinct_tx": 0.8,
+      "distinct_tx": 2158
+    }
+  ],
+  "summary": {
+    "nap_mean": 0.6485,
+    "nap_sd": 0.1597,
+    "nap_tx_weighted_mean": 0.6776,
+    "precision_at_100_distinct_tx_mean": 0.8842
+  },
+  "group_F_ablation": {
+    "row_nap": {
+      "verdict": "INDISTINGUISHABLE",
+      "favours": null,
+      "a": "with_F",
+      "b": "without_F",
+      "n_folds": 12,
+      "mean_difference": 0.041800000000000025,
+      "sd_difference": 0.07006737017782502,
+      "ci95": [
+        -0.002718683081964837,
+        0.08631868308196489
+      ],
+      "test": "paired_t",
+      "p_value": 0.0631451542517576,
+      "permutation_p": 0.06298828125,
+      "permutation_usable": true,
+      "folds_won_by_a": 9,
+      "folds_won_by_b": 3,
+      "underpowered_for": "|difference| 0.0418 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+      "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+      "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+      "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate."
+    },
+    "tx_weighted_nap": {
+      "verdict": "FAVOURS",
+      "favours": "with_F",
+      "a": "with_F",
+      "b": "without_F",
+      "n_folds": 12,
+      "mean_difference": 0.059141666666666676,
+      "sd_difference": 0.06518162678007483,
+      "ci95": [
+        0.017727236839708095,
+        0.10055609649362526
+      ],
+      "test": "paired_t",
+      "p_value": 0.00935645865933383,
+      "permutation_p": 0.013671875,
+      "permutation_usable": true,
+      "folds_won_by_a": 11,
+      "folds_won_by_b": 1,
+      "underpowered_for": "|difference| 0.0591 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+      "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+      "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+      "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate."
+    }
+  },
+  "folds_without_group_F": [
+    {
+      "fold": "t<=16 -> t17-18",
+      "n_eval": 4018,
+      "prevalence": 0.0495,
+      "nap": 0.3222,
+      "nap_tx_weighted": 0.5418,
+      "precision_at_100_distinct_tx": 0.6,
+      "distinct_tx": 970
+    },
+    {
+      "fold": "t<=18 -> t19-20",
+      "n_eval": 7125,
+      "prevalence": 0.0747,
+      "nap": 0.6817,
+      "nap_tx_weighted": 0.7939,
+      "precision_at_100_distinct_tx": 0.99,
+      "distinct_tx": 1374
+    },
+    {
+      "fold": "t<=20 -> t21-22",
+      "n_eval": 21200,
+      "prevalence": 0.0621,
+      "nap": 0.3728,
+      "nap_tx_weighted": 0.6854,
+      "precision_at_100_distinct_tx": 0.99,
+      "distinct_tx": 2183
+    },
+    {
+      "fold": "t<=22 -> t23-24",
+      "n_eval": 6777,
+      "prevalence": 0.1368,
+      "nap": 0.5897,
+      "nap_tx_weighted": 0.2673,
+      "precision_at_100_distinct_tx": 0.54,
+      "distinct_tx": 1927
+    },
+    {
+      "fold": "t<=24 -> t25-26",
+      "n_eval": 7946,
+      "prevalence": 0.2282,
+      "nap": 0.756,
+      "nap_tx_weighted": 0.7867,
+      "precision_at_100_distinct_tx": 1.0,
+      "distinct_tx": 1142
+    },
+    {
+      "fold": "t<=26 -> t27-28",
+      "n_eval": 1379,
+      "prevalence": 0.1022,
+      "nap": 0.8347,
+      "nap_tx_weighted": 0.868,
+      "precision_at_100_distinct_tx": 0.87,
+      "distinct_tx": 452
+    },
+    {
+      "fold": "t<=28 -> t29-30",
+      "n_eval": 5572,
+      "prevalence": 0.0957,
+      "nap": 0.5546,
+      "nap_tx_weighted": 0.578,
+      "precision_at_100_distinct_tx": 0.94,
+      "distinct_tx": 1435
+    },
+    {
+      "fold": "t<=30 -> t31-32",
+      "n_eval": 8912,
+      "prevalence": 0.1032,
+      "nap": 0.6194,
+      "nap_tx_weighted": 0.6154,
+      "precision_at_100_distinct_tx": 0.99,
+      "distinct_tx": 1915
+    },
+    {
+      "fold": "t<=32 -> t33-34",
+      "n_eval": 10956,
+      "prevalence": 0.0666,
+      "nap": 0.8005,
+      "nap_tx_weighted": 0.3407,
+      "precision_at_100_distinct_tx": 0.51,
+      "distinct_tx": 1001
+    },
+    {
+      "fold": "t<=34 -> t35-36",
+      "n_eval": 13712,
+      "prevalence": 0.074,
+      "nap": 0.6611,
+      "nap_tx_weighted": 0.6602,
+      "precision_at_100_distinct_tx": 0.99,
+      "distinct_tx": 2714
+    },
+    {
+      "fold": "t<=36 -> t37-38",
+      "n_eval": 6603,
+      "prevalence": 0.0922,
+      "nap": 0.6701,
+      "nap_tx_weighted": 0.822,
+      "precision_at_100_distinct_tx": 0.99,
+      "distinct_tx": 1194
+    },
+    {
+      "fold": "t<=38 -> t39-40",
+      "n_eval": 11764,
+      "prevalence": 0.048,
+      "nap": 0.4172,
+      "nap_tx_weighted": 0.4626,
+      "precision_at_100_distinct_tx": 0.69,
+      "distinct_tx": 2158
+    }
+  ]
+}

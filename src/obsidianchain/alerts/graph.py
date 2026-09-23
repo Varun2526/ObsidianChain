@@ -54,7 +54,7 @@ class GraphEdge:
     source: str
     target: str
     kind: str
-    """'MEMBER_OF', 'SPENDS', 'RECEIVES', 'ANNOUNCED_BY', 'PEEL_HOP'."""
+    """'MEMBER_OF', 'SPENDS', 'RECEIVES', 'ANNOUNCED_BY', 'PEEL_HOP', 'SUGGESTED_LINK'."""
     data: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
@@ -111,8 +111,13 @@ def project_investigation_graph(
     anomaly_result: AnomalyDetectionResult | None = None,
     peeling_result: PeelingResult | None = None,
     mixing_result: MixingResult | None = None,
+    link_suggestions: Any | None = None,
 ) -> InvestigationGraph:
-    """Project the complete multi-layer investigation graph."""
+    """Project the complete multi-layer investigation graph.
+
+    ``link_suggestions`` (``ml.embeddings.LinkSuggestions``) adds
+    cluster--[SUGGESTED_LINK]-->cluster edges. They are drawn, never merged.
+    """
     nodes: dict[str, GraphNode] = {}
     edges: list[GraphEdge] = []
     edge_ids: set[str] = set()
@@ -226,6 +231,16 @@ def project_investigation_graph(
                     "observer_id": obs.observer_id,
                 },
             )
+
+    if link_suggestions is not None:
+        for pair in link_suggestions.pairs:
+            a, b = f"cluster:{pair['cluster_a']}", f"cluster:{pair['cluster_b']}"
+            if a in nodes and b in nodes:
+                _add_edge(f"suggest:{a}:{b}", a, b, "SUGGESTED_LINK", {
+                    "similarity": pair["similarity"],
+                    "address_a": pair["address_a"], "address_b": pair["address_b"],
+                    "status": "SUGGESTION_ONLY",
+                })
 
     return InvestigationGraph(nodes=list(nodes.values()), edges=edges)
 
