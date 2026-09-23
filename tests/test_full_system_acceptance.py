@@ -407,7 +407,8 @@ def test_every_run_reports_model_trust(tmp_path) -> None:
     trust = outcome.manifest["provenance"]["model_trust"]
     from obsidianchain.ml import registry
     assert trust["model_version"] == registry.Registry.open().role("champion")
-    assert trust["holdout_evaluated"] is False
+    assert trust["holdout_evaluated"] is True
+    assert trust["holdout_summary"]["nap"] > 0
     assert trust["drift_status"] in {"STABLE", "SHIFTED", "MAJOR_SHIFT"}
     report = json.loads((outcome.run_dir / "monitoring.json").read_text())
     assert report["drift"]["features"]
