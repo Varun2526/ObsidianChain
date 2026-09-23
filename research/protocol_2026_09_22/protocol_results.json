@@ -1,10 +1,11 @@
 {
  "RandomForest": {
   "candidate": "RandomForest",
+  "scope": "undeclared",
   "seed": 20260919,
   "folds": 12,
-  "nap_mean": 0.5723086104154046,
-  "nap_sd": 0.18260924050435667,
+  "nap_mean": 0.5723196356082271,
+  "nap_sd": 0.182615534952035,
   "nap_min": 0.29554114227600103,
   "nap_max": 0.8414390433951737,
   "per_fold": [
@@ -158,7 +159,7 @@
     "n_train": 159448,
     "n_eval": 10956,
     "prevalence": 0.06663015699160277,
-    "nap": 0.6678161063031818,
+    "nap": 0.6679484086170506,
     "precision_at_k_worst": {
      "P@100": 0.7,
      "P@200": 0.765,
@@ -228,6 +229,7 @@
  },
  "LightGBM": {
   "candidate": "LightGBM",
+  "scope": "undeclared",
   "seed": 20260919,
   "folds": 12,
   "nap_mean": 0.5913694504736406,
@@ -455,6 +457,7 @@
  },
  "LogisticRegression": {
   "candidate": "LogisticRegression",
+  "scope": "undeclared",
   "seed": 20260919,
   "folds": 12,
   "nap_mean": 0.2915465313486186,

@@ -97,6 +97,7 @@ def run_pipeline(
     geoip_provider: GeoIPProvider | None = None,
     declared_format: str | None = None,
     stage_callback: Any | None = None,
+    seed_addresses: Any | None = None,
 ) -> PipelineRunOutcome:
     """Execute the full 17-stage analytical pipeline on a canonical capture file."""
     input_file = Path(input_path)
@@ -188,10 +189,28 @@ def run_pipeline(
         status="SUCCESS", duration_seconds=dt_bc,
         summary={"n_nodes": bg.n_transactions + bg.n_addresses, "n_edges": bg.n_edges},
     ))
+    # Graph embeddings: cross-cluster link SUGGESTIONS beside co-spend
+    # clustering. Nothing is merged on the strength of a similarity.
+    from obsidianchain.ml.embeddings import embed, flows_from_capture, suggest_links
+    t0 = datetime.datetime.now(datetime.timezone.utc)
+    flows = flows_from_capture(frame)
+    tx_counts: dict[str, int] = {}
+    for fact in bg.transactions.values():
+        for a in {x for x, _ in fact.inputs} | {x for x, _ in fact.outputs}:
+            tx_counts[a] = tx_counts.get(a, 0) + 1
+    link_suggestions = suggest_links(
+        embed(flows), clusters.address_to_cluster, tx_counts=tx_counts,
+    ) if not flows.empty else None
+    dt_emb = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     _add_stage(StageExecutionRecord(
         stage_number=8, stage_name="Entity Clustering",
-        status="SUCCESS", duration_seconds=dt_bc,
-        summary=clusters.summary(),
+        status="SUCCESS", duration_seconds=dt_bc + dt_emb,
+        summary={
+            **clusters.summary(),
+            "embedding_link_suggestions": (
+                link_suggestions.summary() if link_suggestions else {"status": "NO_FLOWS"}
+            ),
+        },
     ))
 
     # 9. Features
@@ -223,12 +242,18 @@ def run_pipeline(
     feats_to_use = address_features
 
     if active_model is None:
-        ps_model_path = Path("data") / "models" / "ps_native" / "v1" / "model.joblib"
-        if ps_model_path.is_file():
+        # Newest artifact first. v2 is trained on the live feature schema; v1
+        # is kept frozen and, on the live schema, is refused by the
+        # compatibility manifest rather than scored on misaligned columns.
+        from obsidianchain.ml.ps_model import DEFAULT_MODEL_DIR, PsNativeRiskModel
+        root = Path("data") / "models" / "ps_native"
+        for model_dir in (DEFAULT_MODEL_DIR, root / "v2", root / "v1"):
+            if not (model_dir / "model.joblib").is_file():
+                continue
             try:
-                from obsidianchain.ml.ps_model import PsNativeRiskModel
-                active_model = PsNativeRiskModel.load(ps_model_path.parent)
+                active_model = PsNativeRiskModel.load(model_dir)
                 feats_to_use = ps_addr_features
+                break
             except Exception:
                 active_model = None
     elif hasattr(active_model, "features") and not ps_addr_features.empty:
@@ -236,6 +261,22 @@ def run_pipeline(
             feats_to_use = ps_addr_features
 
     ml_result = execute_supervised_stage(active_model, feats_to_use)
+    # Model trust for THIS run: how far the scored rows sit from the data
+    # the model was trained on. Reported, never used to change a score.
+    if ml_result.is_available and hasattr(active_model, "drift_report"):
+        monitoring_report = active_model.drift_report(feats_to_use)
+    else:
+        monitoring_report = {"status": "NOT_SCORED", "reason": ml_result.reason}
+    model_trust = {
+        "model_version": getattr(active_model, "version", None),
+        "feature_schema_version": getattr(active_model, "feature_schema_version", None),
+        "holdout_evaluated": getattr(active_model, "holdout_evaluated", None),
+        "drift_status": monitoring_report.get("status"),
+        "score_psi": monitoring_report.get("score_psi"),
+        "major_shift_features": monitoring_report.get("major_shift_features", []),
+        "unseen_missingness_features": monitoring_report.get("unseen_missingness_features", []),
+        "cold_start_share_observed": monitoring_report.get("cold_start_share_observed"),
+    }
     dt_ml = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     ml_status = "SUCCESS" if ml_result.is_available else "DEGRADED"
     _add_stage(StageExecutionRecord(
@@ -247,6 +288,7 @@ def run_pipeline(
             "is_compatible": ml_result.manifest.is_compatible,
             "reason": ml_result.reason,
             "missing_features_count": len(ml_result.manifest.missing_features),
+            "model_trust": model_trust,
         },
     ))
 
@@ -280,6 +322,19 @@ def run_pipeline(
 
     # 13. Evidence Fusion & 14. Ranked Alerts & 15. Explanation
     t0 = datetime.datetime.now(datetime.timezone.utc)
+    # Seed-wallet risk propagation. Seeds come from offline sources (OFAC SDN,
+    # data/watchlists/*.csv) unless the caller supplies them.
+    from obsidianchain.io.watchlist import Seed, load_default_seeds
+    from obsidianchain.ml.propagation import edges_from_capture, propagate
+    if seed_addresses is None:
+        seed_list = load_default_seeds()
+    else:
+        seed_list = [s if isinstance(s, Seed) else Seed(str(s), "CALLER") for s in seed_addresses]
+    seed_sources = {s.address: s for s in seed_list}
+    capture_edges = edges_from_capture(frame)
+    prop_result = propagate(
+        capture_edges, seed_sources, explain=set(capture_edges.address),
+    ) if not capture_edges.empty else None
     alert_result = build_alert_run(
         run_id=run_id,
         blockchain_graph=bg,
@@ -290,12 +345,19 @@ def run_pipeline(
         peeling_result=peel_result,
         mixing_result=mix_result,
         geoip_provider=geoip_provider,
+        propagation_result=prop_result,
+        seed_sources=seed_sources,
+        link_suggestions=link_suggestions,
+        stacker=_load_stacker(active_model),
     )
     dt_alerts = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     _add_stage(StageExecutionRecord(
         stage_number=13, stage_name="Evidence Fusion",
         status="SUCCESS", duration_seconds=dt_alerts,
-        summary={"clusters_fused": len(alert_result.alerts)},
+        summary={
+            "clusters_fused": len(alert_result.alerts),
+            "risk_propagation": prop_result.summary() if prop_result else {"status": "NOT_RUN"},
+        },
     ))
     _add_stage(StageExecutionRecord(
         stage_number=14, stage_name="Ranked Alerts",
@@ -321,6 +383,7 @@ def run_pipeline(
         anomaly_result=anom_result,
         peeling_result=peel_result,
         mixing_result=mix_result,
+        link_suggestions=link_suggestions,
     )
     dt_graph = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     _add_stage(StageExecutionRecord(
@@ -355,13 +418,20 @@ def run_pipeline(
     val_file.write_bytes(val_bytes)
     val_sha = hashlib.sha256(val_bytes).hexdigest()
 
+    # Serialize the model-trust report
+    mon_file = run_dir / "monitoring.json"
+    mon_bytes = json.dumps({"model_trust": model_trust, "drift": monitoring_report},
+                           indent=2, default=str).encode("utf-8")
+    mon_file.write_bytes(mon_bytes)
+    mon_sha = hashlib.sha256(mon_bytes).hexdigest()
+
     dt_pub = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     manifest_file = run_dir / "manifest.json"
 
     _add_stage(StageExecutionRecord(
         stage_number=17, stage_name="Reporting & Integrity",
         status="SUCCESS", duration_seconds=dt_pub,
-        summary={"manifest_path": str(manifest_file), "artifacts_published": 4},
+        summary={"manifest_path": str(manifest_file), "artifacts_published": 5},
     ))
 
     # Assemble complete run manifest
@@ -385,11 +455,13 @@ def run_pipeline(
             "geoip_provider_sha256": geoip_provider.sha256,
             "ml_status": ml_result.status,
             "ml_incompatibility_reason": ml_result.reason,
+            "model_trust": model_trust,
         },
         "artifacts": {
             "alerts.json": alerts_sha,
             "investigation_graph.json": graph_sha,
             "validation_report.json": val_sha,
+            "monitoring.json": mon_sha,
         },
         "stages": [
             {
@@ -425,3 +497,11 @@ def run_pipeline(
         investigation_graph=inv_graph,
         manifest=manifest,
     )
+
+
+def _load_stacker(model: Any) -> dict[str, Any] | None:
+    """The stacker frozen beside the default model, only for that model."""
+    if getattr(model, "version", None) != "ps_native_v3":
+        return None
+    from obsidianchain.ml.stacking import load_stacker
+    return load_stacker()

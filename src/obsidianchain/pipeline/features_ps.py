@@ -6,7 +6,11 @@ P0 CRITICAL CONSTRAINTS:
    the feature vector at t.
 3. Label-blind: labels, classes, categories, or ground-truth indicators NEVER enter
    the feature matrix.
-4. Missing network telemetry is represented as NaN, NEVER fabricated as zero.
+4. Missing values - network telemetry, fee, anything the source did not
+   carry - are represented as NaN, NEVER fabricated as zero.
+5. One transaction is ONE chain event. A capture may carry several network
+   observations of the same txid; they are aggregated into the network
+   group, never replayed as repeated transactions.
 """
 
 from __future__ import annotations
@@ -27,7 +31,8 @@ GROUP_A_TRANSACTION = [
     "input_count",
     "output_count",
     "total_input_amount",
-    "total_output_amount",
+    # v3. total_output_amount removed: it is total_input_amount minus the
+    # fee, Spearman 1.000 on the development data.
     "fee",
     "fee_ratio",
     "input_amount_mean",
@@ -46,12 +51,15 @@ GROUP_B_ADDRESS_HISTORY = [
     "n_txs_asof_t",
     "n_sent_asof_t",
     "n_recv_asof_t",
-    "btc_sent_total_asof_t",
+    # v3. btc_sent_total_asof_t, mean_fee_ratio_asof_t and
+    # tx_velocity_per_hour removed. Each restated a sibling at Spearman
+    # >= 0.995 (n_sent_asof_t, n_sent_asof_t, n_txs_asof_t), so they split
+    # importance with their twins and made every explanation worse.
+    # mean_fee_ratio_asof_t also carried 83% of the train-vs-validation
+    # adversarial signal: it tracked the fee market, not the address.
     "btc_recv_total_asof_t",
     "net_flow_asof_t",
-    "mean_fee_ratio_asof_t",
     "active_duration_seconds",
-    "tx_velocity_per_hour",
     "gap_since_last_tx",
 ]
 
@@ -73,11 +81,51 @@ GROUP_D_PATTERNS = [
     "is_mixing_candidate",
 ]
 
+# v3. Features that DIFFER between addresses of the same transaction. Every
+# group-A column is a property of the transaction, so before v3 all
+# addresses in one transaction carried identical group-A values - 83% of
+# development rows were exact duplicates of another row. Role and the
+# counterparties' history are what distinguish a payer from a payee.
+GROUP_F_ROLE = [
+    "addr_is_sender",
+    "addr_is_self_change",
+    "counterparty_max_n_txs_asof_t",
+    "counterparty_mean_n_txs_asof_t",
+]
+
+# v4. Group G, upstream flow. Admitted to CORE after exp20 (causal
+# ordering): 12-fold nAP 0.594 -> 0.714, paired +0.120, p = 0.0001; on
+# held-back confirmation folds 0.541 -> 0.682, worst fold 0.227 -> 0.446.
+# Where this transaction's money came from, one hop back: a summary of the
+# transactions that funded its inputs, as known before this transaction.
+# Shared by every participant, so a first-seen receiver - 88% of rows have no
+# history of their own - still inherits information about the flow reaching
+# it. Label-free and as-of-t by construction.
+GROUP_G_UPSTREAM = [
+    "upstream_funded_share",
+    "upstream_mean_output_count",
+    "upstream_mean_input_count",
+    "upstream_peel_share",
+    "upstream_mix_share",
+    "upstream_min_hold_seconds",
+    "upstream_chain_depth",
+]
+
+#: Chain depth is capped: beyond this every chain is simply "long".
+UPSTREAM_DEPTH_CAP = 10
+
 GROUP_E_NETWORK = [
     "network_observation_count",
     "observer_diversity",
     "peer_count",
     "asn_count",
+    # v3. How the transaction reached the observers, not just how often.
+    # A node connected directly to many observers is seen announcing its own
+    # transaction repeatedly (high dominant-peer share) and within a tight
+    # window (small arrival spread); a transaction relayed through the
+    # network arrives from many peers over seconds.
+    "dominant_peer_share",
+    "arrival_spread_seconds",
 ]
 
 PS_FEATURE_GROUPS: dict[str, list[str]] = {
@@ -86,16 +134,19 @@ PS_FEATURE_GROUPS: dict[str, list[str]] = {
     "C_graph": GROUP_C_GRAPH,
     "D_patterns": GROUP_D_PATTERNS,
     "E_network": GROUP_E_NETWORK,
+    "F_role": GROUP_F_ROLE,
+    "G_upstream": GROUP_G_UPSTREAM,
 }
 
 #: Bumped because a v1 row and a v2 row are not the same observation. A
 #: model, a metric or an ablation carried across the two would be comparing
 #: different quantities under one name.
-PS_FEATURE_SCHEMA_VERSION = "ps_native_features/2"
+PS_FEATURE_SCHEMA_VERSION = "ps_native_features/4"
 
 # The core feature set without optional network features
 CORE_PS_FEATURE_COLUMNS: list[str] = (
-    GROUP_A_TRANSACTION + GROUP_B_ADDRESS_HISTORY + GROUP_C_GRAPH + GROUP_D_PATTERNS
+    GROUP_A_TRANSACTION + GROUP_B_ADDRESS_HISTORY + GROUP_C_GRAPH
+    + GROUP_D_PATTERNS + GROUP_F_ROLE + GROUP_G_UPSTREAM
 )
 
 # The full feature set including optional network features
@@ -198,6 +249,45 @@ def _calculate_entropy(amounts: list[float]) -> float:
     return -sum(p * math.log2(p) for p in probs)
 
 
+#: Network group for a transaction nobody observed: every value NaN, because
+#: "not observed" and "observed zero times" are different statements.
+_NO_NETWORK: dict[str, float] = {c: float("nan") for c in GROUP_E_NETWORK}
+
+
+def _aggregate_network(df: pd.DataFrame) -> dict[str, dict[str, float]]:
+    """Per-txid counts over every network observation in the capture.
+
+    ``observer_diversity`` counts distinct vantage points (``observer_id``
+    when the capture has it, else ``dst_ip`` - the observer is the
+    destination of an announcement). ``peer_count`` counts distinct
+    announcing peers, ``asn_count`` distinct announcing ASNs,
+    ``dominant_peer_share`` the share of observations from the most frequent
+    announcing peer, and ``arrival_spread_seconds`` the gap between the first
+    and last observation.
+    """
+    if "src_ip" not in df.columns:
+        return {}
+    ip = df["src_ip"].map(lambda v: str(v).strip() if v is not None and not pd.isna(v) else "")
+    seen = df[ip != ""].assign(_ip=ip[ip != ""])
+    if seen.empty:
+        return {}
+    observer_col = "observer_id" if "observer_id" in seen.columns else "dst_ip"
+    out: dict[str, dict[str, float]] = {}
+    for txid, g in seen.groupby("_txid", sort=False):
+        observers = g[observer_col].dropna() if observer_col in g.columns else pd.Series(dtype=object)
+        asns = g["asn"].dropna() if "asn" in g.columns else pd.Series(dtype=float)
+        ts = pd.to_numeric(g["timestamp"], errors="coerce").dropna() if "timestamp" in g.columns else pd.Series(dtype=float)
+        out[txid] = {
+            "network_observation_count": float(len(g)),
+            "observer_diversity": float(observers.astype(str).nunique()),
+            "peer_count": float(g["_ip"].nunique()),
+            "asn_count": float(asns.nunique()),
+            "dominant_peer_share": float(g["_ip"].value_counts().iloc[0] / len(g)),
+            "arrival_spread_seconds": float(ts.max() - ts.min()) if len(ts) else float("nan"),
+        }
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Incremental Union-Find for Cluster Size as-of-T
 # ---------------------------------------------------------------------------
@@ -250,12 +340,15 @@ class AddressState:
     n_recv: int = 0
     btc_sent: float = 0.0
     btc_recv: float = 0.0
-    fee_ratios: list[float] = field(default_factory=list)
     first_seen: float | None = None
     last_seen: float | None = None
     in_tx_ids: set[str] = field(default_factory=set)
     out_tx_ids: set[str] = field(default_factory=set)
     counterparties: set[str] = field(default_factory=set)
+    #: Summary of the transaction that last paid this address, recorded when
+    #: it is paid: (timestamp, n_in, n_out, is_peel, is_mix, chain_depth,
+    #: (timestamp, event_order)).
+    funded_by: tuple | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +376,8 @@ class PsTemporalFeatureEngine:
         1. Records are processed strictly in increasing timestamp order.
         2. Features at event T use only state established up to T.
         3. Features are completely label-blind (labels are ignored).
+        4. Each txid is replayed exactly once, at its first-seen timestamp,
+           however many network observations of it the capture holds.
         """
         if frame.empty:
             cols = METADATA_COLUMNS + (ALL_PS_FEATURE_COLUMNS if include_network else CORE_PS_FEATURE_COLUMNS)
@@ -294,16 +389,32 @@ class PsTemporalFeatureEngine:
             df["_sort_ts"] = pd.to_numeric(df["timestamp"], errors="coerce").fillna(0.0)
         else:
             df["_sort_ts"] = 0.0
-        
-        df = df.sort_values(by=["_sort_ts"], ascending=True, kind="stable")
+
+        # Optional ``event_order``: a causal tie-break for records sharing a
+        # timestamp (the dataset builder supplies spend-DAG levels for
+        # Elliptic++). It orders events; it never enters a feature value, so
+        # time features keep the meaning they have on a real capture.
+        if "event_order" in df.columns:
+            df["_order"] = pd.to_numeric(df["event_order"], errors="coerce").fillna(0.0)
+        else:
+            df["_order"] = 0.0
+        df = df.sort_values(by=["_sort_ts", "_order"], ascending=True, kind="stable")
+        df["_txid"] = df["txid"].map(lambda v: str(v or "").strip()) if "txid" in df.columns else ""
+
+        # One chain event per txid. The canonical capture is one row per
+        # network OBSERVATION, so a transaction seen by three peers arrives
+        # three times; replaying each copy counted it three times in every
+        # address's history. Network facts are aggregated across all copies
+        # first, then only the earliest copy is replayed.
+        network_by_tx = _aggregate_network(df) if include_network else {}
+        df = df[df["_txid"] != ""].drop_duplicates(subset="_txid", keep="first")
 
         output_rows: list[dict[str, Any]] = []
 
         for _, row in df.iterrows():
             t = float(row["_sort_ts"])
-            txid = str(row.get("txid") or "").strip()
-            if not txid:
-                continue
+            when = (t, float(row["_order"]))
+            txid = row["_txid"]
 
             raw_in_addrs = row.get("input_addresses")
             raw_in_amts = row.get("input_amounts")
@@ -322,10 +433,13 @@ class PsTemporalFeatureEngine:
             while len(out_amts) < len(out_addrs):
                 out_amts.append(0.0)
 
-            fee = _safe_float(row.get("fee"))
+            # v3. A missing fee is NaN, not 0.0. Encoding it as zero put 7% of
+            # development rows (25 very large transactions) at fee == 0, where
+            # the model learned "no fee means licit" from a data gap.
+            fee = _safe_float(row.get("fee"), default=float("nan"))
             total_in = sum(in_amts)
             total_out = sum(out_amts)
-            fee_ratio = (fee / total_in) if total_in > 0 else 0.0
+            fee_ratio = (fee / total_in) if (total_in > 0 and math.isfinite(fee)) else float("nan")
 
             # v2. The REAL per-transaction value summary, when the caller has
             # it. The source data carries in/out min, max and mean per
@@ -367,17 +481,9 @@ class PsTemporalFeatureEngine:
             ) else 0
 
             # --- Group E: Optional Network Features ---
-            net_obs_count = np.nan
-            obs_div = np.nan
-            peer_cnt = np.nan
-            asn_cnt = np.nan
-            if include_network:
-                src_ip = row.get("src_ip")
-                if src_ip is not None and not pd.isna(src_ip) and str(src_ip).strip():
-                    net_obs_count = 1.0
-                    obs_div = 1.0 if row.get("observer_id") is not None else 1.0
-                    peer_cnt = 1.0
-                    asn_cnt = 1.0 if row.get("asn") is not None and not pd.isna(row.get("asn")) else 0.0
+            # v3. Real per-transaction counts. v2 set observer_diversity and
+            # peer_count to the literal 1.0 whenever any observation existed.
+            network = network_by_tx.get(txid, _NO_NETWORK)
 
             # --- Co-spend Union-Find Update as of t ---
             if len(in_addrs) > 1:
@@ -387,6 +493,42 @@ class PsTemporalFeatureEngine:
 
             # --- Process Address State & Extract Features as-of-t ---
             participating = sorted(set(in_addrs) | set(out_addrs))
+            in_set, out_set = set(in_addrs), set(out_addrs)
+
+            # --- Group G: upstream flow, from the inputs' funding transactions,
+            # read before this transaction updates anything.
+            # Strictly earlier funding only, by (timestamp, event_order): an
+            # event at the same point is not provably earlier and is ignored.
+            # On Elliptic++ the builder supplies spend-DAG levels as
+            # event_order; without them "processed before" inside a step was
+            # txId order and 1.4% of funding pairs ran backwards in time.
+            funding = [self.address_states[a].funded_by for a in in_set
+                       if a in self.address_states and self.address_states[a].funded_by is not None
+                       and self.address_states[a].funded_by[6] < when]
+            if funding:
+                upstream = {
+                    "upstream_funded_share": len(funding) / max(len(in_set), 1),
+                    "upstream_mean_output_count": float(np.mean([f[2] for f in funding])),
+                    "upstream_mean_input_count": float(np.mean([f[1] for f in funding])),
+                    "upstream_peel_share": float(np.mean([f[3] for f in funding])),
+                    "upstream_mix_share": float(np.mean([f[4] for f in funding])),
+                    "upstream_min_hold_seconds": float(max(0.0, t - max(f[0] for f in funding))),
+                    "upstream_chain_depth": float(max(f[5] for f in funding)),
+                }
+            else:
+                upstream = {c: float("nan") for c in GROUP_G_UPSTREAM}
+                upstream["upstream_funded_share"] = 0.0
+                upstream["upstream_chain_depth"] = 0.0
+            tx_depth = min(UPSTREAM_DEPTH_CAP, int(upstream["upstream_chain_depth"]) + 1)
+            tx_summary = (t, in_count, out_count, is_peel, is_mix, tx_depth, when)
+
+            # Every participant's history is snapshotted BEFORE any of them is
+            # updated for this transaction, so a counterparty's count never
+            # includes the transaction being described.
+            prior_n = {
+                a: (self.address_states[a].n_txs if a in self.address_states else 0)
+                for a in participating
+            }
 
             for addr in participating:
                 st = self.address_states.setdefault(addr, AddressState())
@@ -397,19 +539,25 @@ class PsTemporalFeatureEngine:
                 prior_sent_btc = st.btc_sent
                 prior_recv_btc = st.btc_recv
                 prior_net_flow = prior_recv_btc - prior_sent_btc
-                prior_mean_fee_ratio = float(np.mean(st.fee_ratios)) if st.fee_ratios else 0.0
 
                 first_s = st.first_seen if st.first_seen is not None else t
                 last_s = st.last_seen if st.last_seen is not None else t
                 duration_sec = max(t - first_s, 0.0)
                 gap_sec = max(t - last_s, 0.0)
-                duration_hours = max(duration_sec / 3600.0, 1.0 / 3600.0)
-                velocity = prior_txs / duration_hours if duration_sec > 0 else float(prior_txs)
 
-                in_degree = len(st.in_tx_ids)
-                out_degree = len(st.out_tx_ids)
                 unique_cps = len(st.counterparties)
                 cluster_size = self.uf.get_cluster_size(addr)
+
+                # --- Group F: role within this transaction ---
+                is_sender = addr in in_set
+                is_receiver = addr in out_set
+                if is_sender and is_receiver:
+                    counterparties = (in_set | out_set) - {addr}
+                elif is_sender:
+                    counterparties = out_set - {addr}
+                else:
+                    counterparties = in_set - {addr}
+                cp_hist = [prior_n[c] for c in counterparties]
 
                 feature_dict = {
                     "address": addr,
@@ -419,7 +567,6 @@ class PsTemporalFeatureEngine:
                     "input_count": in_count,
                     "output_count": out_count,
                     "total_input_amount": total_in,
-                    "total_output_amount": total_out,
                     "fee": fee,
                     "fee_ratio": fee_ratio,
                     "input_amount_mean": in_mean,
@@ -430,29 +577,27 @@ class PsTemporalFeatureEngine:
                     "n_txs_asof_t": prior_txs,
                     "n_sent_asof_t": prior_sent_count,
                     "n_recv_asof_t": prior_recv_count,
-                    "btc_sent_total_asof_t": prior_sent_btc,
                     "btc_recv_total_asof_t": prior_recv_btc,
                     "net_flow_asof_t": prior_net_flow,
-                    "mean_fee_ratio_asof_t": prior_mean_fee_ratio,
                     "active_duration_seconds": duration_sec,
-                    "tx_velocity_per_hour": velocity,
                     "gap_since_last_tx": gap_sec,
                     # Group C
-
                     "unique_counterparties_asof_t": unique_cps,
                     "cluster_size_asof_t": cluster_size,
                     # Group D
                     "is_peeling_candidate": is_peel,
                     "is_mixing_candidate": is_mix,
+                    # Group F
+                    "addr_is_sender": int(is_sender),
+                    "addr_is_self_change": int(is_sender and is_receiver),
+                    "counterparty_max_n_txs_asof_t": float(max(cp_hist)) if cp_hist else 0.0,
+                    "counterparty_mean_n_txs_asof_t": float(np.mean(cp_hist)) if cp_hist else 0.0,
                 }
 
+                feature_dict.update(upstream)
+
                 if include_network:
-                    feature_dict.update({
-                        "network_observation_count": net_obs_count,
-                        "observer_diversity": obs_div,
-                        "peer_count": peer_cnt,
-                        "asn_count": asn_cnt,
-                    })
+                    feature_dict.update(network)
 
                 output_rows.append(feature_dict)
 
@@ -462,15 +607,15 @@ class PsTemporalFeatureEngine:
                     st.first_seen = t
                 st.last_seen = t
 
-                if addr in in_addrs:
+                if is_sender:
                     st.n_sent += 1
                     addr_idx = in_addrs.index(addr)
                     st.btc_sent += in_amts[addr_idx]
                     st.out_tx_ids.add(txid)
-                    st.fee_ratios.append(fee_ratio)
                     st.counterparties.update(out_addrs)
 
-                if addr in out_addrs:
+                if is_receiver:
+                    st.funded_by = tx_summary
                     st.n_recv += 1
                     addr_idx = out_addrs.index(addr)
                     st.btc_recv += out_amts[addr_idx]

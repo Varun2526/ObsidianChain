@@ -22,6 +22,7 @@ data/runs/
 # Both are generated artifacts: reproducible from a seed and a
 # command, and large enough that committing them would be noise.
 data/synthetic_world/
+data/synthetic_world_v2/
 data/processed/tx_mixing.parquet
 data/processed/tx_mixing.parquet.meta.json
 data/reach_stress/

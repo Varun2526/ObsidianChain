@@ -103,7 +103,31 @@ def test_the_mixing_flag_rejects_a_uniform_payout() -> None:
 def test_the_schema_version_records_the_break() -> None:
     """v1 datasets and v2 datasets are not comparable and must not share a
     version string."""
-    assert features_ps.PS_FEATURE_SCHEMA_VERSION == "ps_native_features/2"
+    assert features_ps.PS_FEATURE_SCHEMA_VERSION == "ps_native_features/4"
+
+
+#: Removed in v3 as restatements of a sibling (Spearman >= 0.995 on the
+#: development data, research/autoresearch_2026_09_23/17_dataset_metrics_audit.md).
+V3_REDUNDANT = (
+    "total_output_amount",
+    "tx_velocity_per_hour",
+    "btc_sent_total_asof_t",
+    "mean_fee_ratio_asof_t",
+)
+
+
+def test_the_v3_redundant_columns_stay_removed() -> None:
+    present = [c for c in V3_REDUNDANT if c in features_ps.CORE_PS_FEATURE_COLUMNS]
+    assert not present
+
+
+def test_the_role_group_is_part_of_the_core_schema() -> None:
+    assert set(features_ps.GROUP_F_ROLE) <= set(features_ps.CORE_PS_FEATURE_COLUMNS)
+
+
+def test_the_upstream_group_is_part_of_the_core_schema() -> None:
+    """Admitted in /4 after exp20 on causally ordered data."""
+    assert set(features_ps.GROUP_G_UPSTREAM) <= set(features_ps.CORE_PS_FEATURE_COLUMNS)
 
 
 #: The one v1 degenerate column that v2 KEEPS rather than drops. It was

@@ -19,14 +19,40 @@ class TestPsNativeModel:
     """Validate model loading, schema integrity, and inference contracts."""
 
     def test_model_loads_and_verifies_hash(self, ps_model) -> None:
+        """The frozen artifact is intact and still declares its own schema.
+
+        It declares ps_native_features/1 (30 columns). The live pipeline has
+        moved to /2 (24 columns) after the generator fix, so the model is
+        asserted against its OWN feature list rather than the live one - a
+        model declares what it needs, and comparing it to whatever the
+        pipeline currently emits would make this test fail for the wrong
+        reason.
+        """
         assert ps_model.version == "ps_native_v1"
         assert len(ps_model.features) == 30
-        assert ps_model.features == CORE_PS_FEATURE_COLUMNS
         assert len(ps_model._sha256) == 64
+
+    def test_the_frozen_model_predates_the_live_schema(self, ps_model) -> None:
+        """The pending-retrain gap, pinned so it cannot be forgotten.
+
+        This is the deliberate consequence of fixing the generator without
+        retraining: the model cannot consume pipeline output until a v2 model
+        is trained under ml/protocol.py. ps_model.py refuses the mismatch
+        rather than scoring misaligned columns, and the orchestrator reports
+        MODEL_UNAVAILABLE_FOR_SCHEMA. Delete this test when v2 ships.
+        """
+        assert set(ps_model.features) != set(CORE_PS_FEATURE_COLUMNS)
+        removed = set(ps_model.features) - set(CORE_PS_FEATURE_COLUMNS)
+        assert "output_entropy" in removed
+        assert "is_peeling_candidate" not in removed, (
+            "the peeling flag was redefined, not removed"
+        )
 
     def test_model_inference_valid_range_and_severity(self, ps_model) -> None:
         # Create synthetic feature row
-        row_data = {feat: 1.0 for feat in CORE_PS_FEATURE_COLUMNS}
+        # The model's own feature list, not the live schema: this test
+        # is about inference behaviour, not about schema drift.
+        row_data = {feat: 1.0 for feat in ps_model.features}
         row_data["address"] = "1TestAddr"
         row_data["txid"] = "tx_test_01"
 
@@ -51,7 +77,8 @@ class TestPsNativeModel:
             ps_model.predict_address_features(incomplete_df)
 
     def test_deterministic_output(self, ps_model) -> None:
-        row_data = {feat: float(i % 5) for i, feat in enumerate(CORE_PS_FEATURE_COLUMNS)}
+        row_data = {feat: float(i % 5)
+                    for i, feat in enumerate(ps_model.features)}
         row_data["address"] = "1DetAddr"
         row_data["txid"] = "tx_det_01"
         df = pd.DataFrame([row_data])
