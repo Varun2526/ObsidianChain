@@ -317,10 +317,10 @@ export function AdminUsersPage() {
       {/* Create User Modal */}
       {showCreateModal && (
         <div className="modal-backdrop" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-card" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card" role="dialog" aria-modal="true" aria-label="Create user" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
             <div className="panel-head">
               <h2>Provision New Account</h2>
-              <button className="btn btn-sm" onClick={() => setShowCreateModal(false)}>✕</button>
+              <button type="button" className="btn btn-sm btn-ghost" aria-label="Close" onClick={() => setShowCreateModal(false)}>Close</button>
             </div>
             <div className="panel-body">
               <form onSubmit={handleCreate}>

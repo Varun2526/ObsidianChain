@@ -384,7 +384,7 @@ export function NewInvestigation() {
               <div className="card-grid-4" style={{ marginBottom: 20 }}>
                 <div className="stat-card">
                   <span className="stat-card-value" style={{ color: "var(--model)" }}>
-                    {validation?.validation ? `${validation.validation.columns_present.length} / 14` : "14 / 14"}
+                    {validation?.validation ? `${validation.validation.columns_present.length} / 14` : "n/a"}
                   </span>
                   <span className="stat-card-label">FIELD COVERAGE</span>
                   <span className="small faint">
@@ -414,7 +414,7 @@ export function NewInvestigation() {
 
                 <div className="stat-card">
                   <span className="stat-card-value" style={{ color: validation?.validation?.rows_rejected === 0 ? "var(--model)" : "var(--high)" }}>
-                    {validation?.validation?.rows_read ? `${Math.round((validation.validation.rows_valid / validation.validation.rows_read) * 100)}%` : "100%"}
+                    {validation?.validation?.rows_read ? `${Math.round((validation.validation.rows_valid / validation.validation.rows_read) * 100)}%` : "n/a"}
                   </span>
                   <span className="stat-card-label">DATA QUALITY</span>
                   <span className="small faint">
@@ -587,21 +587,21 @@ export function NewInvestigation() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div>
                   <strong style={{ fontSize: "1.1rem" }}>
-                    Stage {progress?.current_stage ?? 1} of {progress?.total_stages ?? 17}:
+                    {progress ? `Stage ${progress.current_stage} of ${progress.total_stages}:` : "Waiting for the first progress report"}
                   </strong>
                   <span className="mono" style={{ marginLeft: 8, color: "var(--cyan)" }}>
-                    {progress?.stage_name || CANONICAL_STAGES[0]}
+                    {progress?.stage_name ?? ""}
                   </span>
                 </div>
                 <div className="mono" style={{ fontWeight: 600, fontSize: "1.2rem" }}>
-                  {progress?.progress_pct ?? 5}%
+                  {progress ? `${progress.progress_pct}%` : "waiting"}
                 </div>
               </div>
 
               <div style={{ width: "100%", height: 8, background: "var(--bg-raised)", borderRadius: 4, overflow: "hidden", border: "1px solid var(--hairline)" }}>
                 <div
                   style={{
-                    width: `${progress?.progress_pct ?? 5}%`,
+                    width: `${progress ? `${progress.progress_pct}%` : "waiting"}`,
                     height: "100%",
                     background: progress?.status === "FAILED" ? "var(--critical)" : "var(--cyan)",
                     transition: "width 0.3s ease",

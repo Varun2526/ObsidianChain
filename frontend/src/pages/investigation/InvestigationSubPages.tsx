@@ -12,7 +12,7 @@ import * as api from "../../api/console";
 import type { AlertDetail, CaseAlertRow, InvestigatorNote } from "../../api/types";
 import { Skeleton } from "../../components/ui/primitives";
 import { DispositionBadge } from "../../components/layout/CaseChrome";
-import { InvestigationGraph } from "../../components/forensics/InvestigationGraph";
+import { AlertMoneyFlow } from "../../components/graph/AlertMoneyFlow";
 import { Timeline } from "../../components/forensics/Timeline";
 import { CorrelationPanel } from "../../components/forensics/CorrelationPanel";
 import { NetworkContextPanel } from "../../components/forensics/NetworkContextPanel";
@@ -150,11 +150,11 @@ function SubPage({
 
 export function GraphSubPage() {
   return (
-    <SubPage title="Investigation graph">
+    <SubPage title="Money flow">
       {({ detail }) =>
         detail ? (
-          <div style={{ minHeight: 500 }}><InvestigationGraph alert={detail} /></div>
-        ) : <p className="muted">No graph data available.</p>
+          <AlertMoneyFlow alertId={detail.alert_id} />
+        ) : <p className="muted">Reference an alert in this case to trace its money flow.</p>
       }
     </SubPage>
   );

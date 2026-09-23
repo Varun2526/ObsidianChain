@@ -1,0 +1,106 @@
+/* ObsidianChain design tokens.
+ *
+ * Design read (Garden web-design-engineer, docs/design/design-system.md):
+ * an institutional information-architecture workstation for investigators.
+ * Dense, calm, and legible for hours. One accent, used only for focus and
+ * selection. Semantic colour only where it carries meaning (severity,
+ * evidence class), and never alone: every coloured state also has a text
+ * label.
+ *
+ * Fonts are bundled (@fontsource), never fetched: the product runs
+ * air-gapped and tests/test_frontend_offline.py forbids remote URLs.
+ */
+
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+:root {
+  /* ---- ground and surfaces (warm graphite, not pure black) ---- */
+  --oc-ground: #0e0f11;
+  --oc-surface-1: #15171a;
+  --oc-surface-2: #1b1d21;
+  --oc-surface-3: #22252a;
+  --oc-surface-inset: #0b0c0e;
+  --oc-hairline: #2a2d33;
+  --oc-hairline-strong: #3a3e46;
+
+  /* ---- text ---- */
+  --oc-text: #e9e7e2;
+  --oc-text-2: #a9a69f;
+  --oc-text-3: #908d86;
+  --oc-text-inverse: #121315;
+
+  /* ---- the one accent: signal amber (focus, selection, primary action) ---- */
+  --oc-accent: #e7a33e;
+  --oc-accent-strong: #f2b556;
+  --oc-accent-wash: rgba(231, 163, 62, 0.12);
+  --oc-accent-line: rgba(231, 163, 62, 0.45);
+
+  /* ---- severity (always shown with its word) ---- */
+  --oc-sev-critical: #f06368;
+  --oc-sev-high: #e8743b;
+  --oc-sev-medium: #d9b44a;
+  --oc-sev-low: #9a9ca2;
+  --oc-sev-info: #8f9198;
+
+  /* ---- evidence classes (always shown with their name) ---- */
+  --oc-ev-model: #7aa7d9;     /* learned association */
+  --oc-ev-chain: #9fb98a;     /* observed on-chain fact */
+  --oc-ev-network: #b59ad6;   /* observed P2P / network */
+  --oc-ev-watchlist: #d98f6a; /* external attribution */
+  --oc-ev-rule: #c9b98a;      /* deterministic rule */
+
+  /* ---- status ---- */
+  --oc-ok: #6fae7f;
+  --oc-warn: #d9b44a;
+  --oc-danger: #f06368;
+
+  /* ---- type ---- */
+  --oc-font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --oc-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --oc-fs-xs: 11px;
+  --oc-fs-sm: 12px;
+  --oc-fs-md: 13px;
+  --oc-fs-base: 14px;
+  --oc-fs-lg: 16px;
+  --oc-fs-xl: 20px;
+  --oc-fs-2xl: 26px;
+  --oc-lh: 1.45;
+
+  /* ---- space (4px grid) ---- */
+  --oc-1: 4px;
+  --oc-2: 8px;
+  --oc-3: 12px;
+  --oc-4: 16px;
+  --oc-5: 20px;
+  --oc-6: 24px;
+  --oc-8: 32px;
+  --oc-10: 40px;
+
+  /* ---- radius grammar: 2 = chips, 4 = controls, 6 = panels/overlays ---- */
+  --oc-r-chip: 2px;
+  --oc-r-ctl: 4px;
+  --oc-r-panel: 6px;
+
+  /* ---- elevation: overlays only; panels separate by hairline ---- */
+  --oc-shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--oc-hairline-strong);
+
+  /* ---- motion: state feedback only ---- */
+  --oc-ease: cubic-bezier(0.2, 0, 0, 1);
+  --oc-dur: 120ms;
+
+  /* ---- layout ---- */
+  --oc-rail-w: 216px;
+  --oc-top-h: 44px;
+  --oc-inspector-w: 380px;
+
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --oc-dur: 0ms; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

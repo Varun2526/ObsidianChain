@@ -61,7 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // leaves us unauthenticated, which is the safe state to fail into.
       setIdentity(null);
     } finally {
-      setLoading(false);
+      // An aborted probe has not answered the question. Settling `loading`
+      // on it (React StrictMode aborts the first effect run) drew the
+      // logged-out state for a moment, redirected a deep link to /login,
+      // and from there to "/" - so a refresh lost the page being viewed.
+      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 

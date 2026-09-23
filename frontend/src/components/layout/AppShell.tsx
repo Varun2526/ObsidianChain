@@ -1,72 +1,120 @@
 /**
- * Application shell: sidebar + topbar + content area.
+ * Application shell: navigation rail, top bar with search, content area.
  *
- * The case shown in the sidebar is fetched from the backend rather than read
+ * The rail is grouped by the investigator's workflow (triage, investigate,
+ * understand the model, administer). Role only decides which groups are
+ * drawn; the backend re-checks every request regardless.
+ *
+ * The case shown in the chrome is fetched from the backend rather than read
  * out of browser storage, so the chrome cannot claim a case that does not
  * exist or that this user may not see.
  */
-import { useState, useEffect } from "react";
-import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Suspense, useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+
 import { useAuth } from "../../store/auth";
 import { useInvestigation } from "../../store/investigation";
+import { CommandPalette } from "../modals/CommandPalette";
+import { ErrorBoundary } from "../ui/ErrorBoundary";
+import { Icon } from "../ui/Icon";
+import type { IconName } from "../ui/Icon";
 import { PersistentCaseHeader } from "./CaseChrome";
-import { OmniSearchModal } from "../modals/OmniSearchModal";
-import { HookSidebar } from "../ui/hook-sidebar";
 
-const INVESTIGATOR_NAV = [
-  { to: "/", icon: "⌂", label: "Home" },
-  { to: "/investigations", icon: "◫", label: "Investigations" },
-  { to: "/settings", icon: "⚙", label: "Settings" },
+interface NavItem { to: string; icon: IconName; label: string; end?: boolean }
+interface NavGroup { heading: string; items: NavItem[]; roles?: string[] }
+
+const NAV: NavGroup[] = [
+  {
+    heading: "Investigate",
+    items: [
+      { to: "/", icon: "overview", label: "Overview", end: true },
+      { to: "/alerts", icon: "alert", label: "Alerts" },
+      { to: "/investigations", icon: "folder", label: "Investigations" },
+      { to: "/graph", icon: "graph", label: "Graph explorer" },
+    ],
+  },
+  {
+    heading: "Review",
+    roles: ["REVIEWER", "ADMIN"],
+    items: [{ to: "/reviewer", icon: "review", label: "Review queue" }],
+  },
+  {
+    heading: "Intelligence",
+    items: [
+      { to: "/models", icon: "model", label: "Models" },
+      { to: "/evaluation", icon: "flask", label: "Synthetic evaluation" },
+    ],
+  },
+  {
+    heading: "Administration",
+    roles: ["ADMIN"],
+    items: [
+      { to: "/admin", icon: "shield", label: "System", end: true },
+      { to: "/admin/users", icon: "users", label: "Users and roles" },
+      { to: "/admin/datasets", icon: "database", label: "Datasets" },
+      { to: "/admin/audit", icon: "log", label: "Audit log" },
+    ],
+  },
 ];
 
-const REVIEWER_NAV = [
-  { to: "/reviewer", icon: "✓", label: "Review Queue" },
-  { to: "/investigations", icon: "◫", label: "Investigations" },
-  { to: "/settings", icon: "⚙", label: "Settings" },
-];
+const FLUSH_ROUTES = [/^\/graph/];
 
-const ADMIN_NAV = [
-  { to: "/admin", icon: "❖", label: "System Overview" },
-  { to: "/admin/users", icon: "👥", label: "Users & Roles" },
-  { to: "/investigations", icon: "◫", label: "Investigations" },
-  { to: "/admin/datasets", icon: "🗄", label: "Datasets" },
-  { to: "/admin/audit", icon: "📋", label: "Audit Log" },
-  { to: "/settings", icon: "⚙", label: "System Settings" },
-];
+function pageTitle(path: string): string {
+  if (path === "/") return "Overview";
+  if (path.startsWith("/alerts/")) return "Alert";
+  if (path.startsWith("/alerts")) return "Alerts";
+  if (path.startsWith("/investigations/new")) return "New investigation";
+  if (path.startsWith("/investigations")) return "Investigations";
+  if (path.startsWith("/graph")) return "Graph explorer";
+  if (path.startsWith("/entity/")) return "Address";
+  if (path.startsWith("/tx/")) return "Transaction";
+  if (path.startsWith("/models")) return "Models";
+  if (path.startsWith("/evaluation")) return "Synthetic evaluation";
+  if (path.startsWith("/reviewer")) return "Review queue";
+  if (path.startsWith("/admin/users")) return "Users and roles";
+  if (path.startsWith("/admin/datasets")) return "Datasets";
+  if (path.startsWith("/admin/audit")) return "Audit log";
+  if (path.startsWith("/admin")) return "System";
+  if (path.startsWith("/settings")) return "Settings";
+  return "";
+}
 
 export function AppShell() {
   const { identity, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Only consider investigation active when on an /inv/:invId route
   const pathMatch = location.pathname.match(/^\/inv\/([^/]+)/);
   const currentInvId = pathMatch ? pathMatch[1] : undefined;
-  const isCaseRoute = Boolean(currentInvId);
   const { investigation: inv } = useInvestigation(currentInvId);
-  const activeInv = isCaseRoute ? inv : null;
+  const activeInv = currentInvId ? inv : null;
 
   const [searchOpen, setSearchOpen] = useState(false);
-
+  const [railOpen, setRailOpen] = useState(false);
   const role = identity?.user.role ?? "INVESTIGATOR";
+  const flush = FLUSH_ROUTES.some((r) => r.test(location.pathname));
 
-  // Determine active workspace from location
-  const inAdmin = location.pathname.startsWith("/admin");
-  const inReviewer = location.pathname.startsWith("/reviewer");
-
-  const navItems = inAdmin ? ADMIN_NAV : inReviewer ? REVIEWER_NAV : INVESTIGATOR_NAV;
-
-  // Global keyboard shortcut ⌘K / Ctrl+K
   useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setSearchOpen((prev) => !prev);
+        setSearchOpen((v) => !v);
+        return;
       }
+      const t = e.target as HTMLElement | null;
+      const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+      if (e.key === "/" && !typing) { e.preventDefault(); setSearchOpen(true); }
     };
-    window.addEventListener("keydown", handleGlobalKeyDown);
-    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => { setRailOpen(false); }, [location.pathname]);
+
+  useEffect(() => {
+    const t = activeInv ? `${activeInv.case_label} · ${activeInv.name}` : pageTitle(location.pathname);
+    document.title = t ? `${t} · ObsidianChain` : "ObsidianChain";
+  }, [location.pathname, activeInv]);
 
   const signOut = async () => {
     await logout();
@@ -75,115 +123,84 @@ export function AppShell() {
 
   return (
     <>
-      <OmniSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
-      <div className="shell">
-
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <div className="sidebar-monogram">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" />
-            </svg>
+      <a className="skip-link" href="#main">Skip to content</a>
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <div className="shell" data-rail-open={railOpen}>
+        {railOpen && <div className="rail-scrim" onClick={() => setRailOpen(false)} aria-hidden="true" />}
+        <aside className="rail" aria-label="Primary">
+          <NavLink to="/" className="rail-brand" aria-label="ObsidianChain overview">
+            <span>
+              <span className="wordmark">Obsidian<b>Chain</b></span>
+              <span className="wordmark-sub">Investigation and risk intelligence</span>
+            </span>
+          </NavLink>
+          <nav className="rail-nav">
+            {NAV.filter((g) => !g.roles || g.roles.includes(role)).map((g) => (
+              <div className="rail-section" key={g.heading}>
+                <div className="rail-heading">{g.heading}</div>
+                {g.items.map((item) => (
+                  <NavLink key={item.to} to={item.to} end={item.end}
+                           className={({ isActive }) => `rail-link${isActive ? " active" : ""}`}>
+                    <Icon name={item.icon} />
+                    <span>{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            ))}
+            <div className="rail-section">
+              <NavLink to="/settings" className={({ isActive }) => `rail-link${isActive ? " active" : ""}`}>
+                <Icon name="settings" /><span>Settings</span>
+              </NavLink>
+            </div>
+          </nav>
+          <div className="rail-foot">
+            <div className="rail-user">
+              <span className="rail-user-name">{identity?.user.display_name ?? identity?.user.username ?? "Signed out"}</span>
+              <span className="rail-user-role">{identity?.user.role}</span>
+            </div>
+            <button type="button" className="btn btn-sm btn-ghost btn-icon" onClick={signOut} aria-label="Sign out" title="Sign out">
+              <Icon name="signout" />
+            </button>
           </div>
-          <span className="sidebar-title">OBSIDIANCHAIN</span>
-        </div>
+        </aside>
 
-        {/* Global Omni-Search button */}
-        <div className="sidebar-search-container">
-          <button
-            className="sidebar-search-btn"
-            onClick={() => setSearchOpen(true)}
-            title="Global discovery search (⌘K)"
-          >
-            <span className="search-icon">🔍</span>
-            <span className="search-placeholder">Quick Search…</span>
-            <kbd className="search-shortcut">⌘K</kbd>
-          </button>
-        </div>
-
-        <div style={{ flex: 1, padding: "8px 0" }}>
-          <HookSidebar
-            items={navItems.map((item) => ({
-              label: item.label,
-              href: item.to,
-              icon: item.icon,
-            }))}
-            color="var(--cyan, #00f0aa)"
-            dashed={true}
-          />
-        </div>
-
-        <div className="sidebar-footer">
-          <span className="sidebar-user">
-            {identity?.user.display_name ?? "—"}
-            <span className="sidebar-role">{identity?.user.role}</span>
-          </span>
-          <button className="sidebar-logout" onClick={signOut}>Sign out</button>
-        </div>
-      </aside>
-
-      <div className="shell-main">
-        <header className="topbar">
-          {activeInv ? (
-            <div className="topbar-inv">
-              <span className="topbar-inv-id">{activeInv.case_label}</span>
-              <span className="topbar-sep">·</span>
-              <span className="topbar-inv-name">{activeInv.name}</span>
-              <span className={`status-badge status-${activeInv.status.toLowerCase()}`}>
-                {activeInv.status}
-              </span>
+        <div className="shell-main">
+          <header className="topbar">
+            <button type="button" className="btn btn-sm btn-ghost btn-icon menu-toggle" aria-label="Open navigation"
+                    aria-expanded={railOpen} onClick={() => setRailOpen(true)}>
+              <Icon name="menu" />
+            </button>
+            <div className="topbar-context">
+              {activeInv ? (
+                <>
+                  <span className="mono small">{activeInv.case_label}</span>
+                  <span className="topbar-sep">/</span>
+                  <strong>{activeInv.name}</strong>
+                  <span className={`status-badge status-${activeInv.status.toLowerCase()}`}>{activeInv.status}</span>
+                </>
+              ) : (
+                <strong>{pageTitle(location.pathname)}</strong>
+              )}
             </div>
-          ) : (
-            <div className="topbar-workspace-indicator">
-              <span className="workspace-tag">
-                {inAdmin ? "ADMIN WORKSPACE" : inReviewer ? "REVIEWER WORKSPACE" : "INVESTIGATOR WORKSPACE"}
-              </span>
-            </div>
-          )}
+            <button type="button" className="topbar-search" onClick={() => setSearchOpen(true)} aria-label="Search (Ctrl K)">
+              <Icon name="search" size={14} />
+              <span>Search address, transaction, alert, case</span>
+              <kbd>⌘K</kbd>
+            </button>
+            <span className="env-chip" title="Analytical artifacts are read from local, provenance-checked files. No network access.">Elliptic++ · offline</span>
+          </header>
 
-          <span className="spacer" />
+          {activeInv && <PersistentCaseHeader inv={activeInv} />}
 
-          {/* Authorization-Aware Workspace Switcher */}
-          {role === "ADMIN" && (
-            <div className="workspace-switcher">
-              <NavLink to="/" end className={({ isActive }) => `ws-tab${isActive ? " active" : ""}`}>
-                Investigator
-              </NavLink>
-              <NavLink to="/reviewer" className={({ isActive }) => `ws-tab${isActive ? " active" : ""}`}>
-                Reviewer
-              </NavLink>
-              <NavLink to="/admin" className={({ isActive }) => `ws-tab${isActive ? " active" : ""}`}>
-                Admin
-              </NavLink>
-            </div>
-          )}
-
-          {role === "REVIEWER" && (
-            <div className="workspace-switcher">
-              <NavLink to="/reviewer" className={({ isActive }) => `ws-tab${isActive ? " active" : ""}`}>
-                Review Queue
-              </NavLink>
-              <NavLink to="/investigations" className={({ isActive }) => `ws-tab${isActive ? " active" : ""}`}>
-                Cases
-              </NavLink>
-            </div>
-          )}
-
-          <div className="topbar-user-chip">
-            <span className="user-dot" />
-            <span className="username">{identity?.user.username}</span>
-            <span className="role-pill">{identity?.user.role}</span>
-          </div>
-        </header>
-
-        {activeInv && <PersistentCaseHeader inv={activeInv} />}
-
-        <main className="content">
-          <Outlet />
-        </main>
+          <main id="main" className={`content${flush ? " content-flush" : ""}`} tabIndex={-1}>
+            <ErrorBoundary resetKey={location.pathname}>
+              <Suspense fallback={<div className="panel" aria-busy="true"><div className="panel-body"><div className="skeleton" /><div className="skeleton" style={{ width: "70%" }} /></div></div>}>
+                <Outlet />
+              </Suspense>
+            </ErrorBoundary>
+          </main>
+        </div>
       </div>
-    </div>
     </>
   );
 }
-

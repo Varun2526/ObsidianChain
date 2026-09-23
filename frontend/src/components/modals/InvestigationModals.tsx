@@ -35,10 +35,10 @@ export function TransactionModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h3>Transaction Drill-Down — {txid}</h3>
-          <button className="btn btn-sm btn-ghost" onClick={onClose}>✕</button>
+          <button type="button" className="btn btn-sm btn-ghost" aria-label="Close" onClick={onClose}>Close</button>
         </div>
         <div className="modal-body">
           {loading ? (
@@ -184,10 +184,10 @@ export function CrossAlertModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h3>Cross-Alert Investigation ({alerts.length} Selected)</h3>
-          <button className="btn btn-sm btn-ghost" onClick={onClose}>✕</button>
+          <button type="button" className="btn btn-sm btn-ghost" aria-label="Close" onClick={onClose}>Close</button>
         </div>
         <div className="modal-body">
           <div className="banner banner-synthetic" style={{ marginTop: 0 }}>
@@ -321,10 +321,10 @@ export function ClusterCompareModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h3>Entity / Cluster Comparison</h3>
-          <button className="btn btn-sm btn-ghost" onClick={onClose}>✕</button>
+          <button type="button" className="btn btn-sm btn-ghost" aria-label="Close" onClick={onClose}>Close</button>
         </div>
         <div className="modal-body">
           <div className="banner banner-synthetic" style={{ marginTop: 0 }}>

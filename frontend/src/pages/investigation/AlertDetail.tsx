@@ -33,7 +33,7 @@ import { useAuth } from "../../store/auth";
 import { DispositionBadge, DispositionHistory } from "../../components/layout/CaseChrome";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { EvidencePanel } from "../../components/forensics/EvidencePanel";
-import { InvestigationGraph } from "../../components/forensics/InvestigationGraph";
+import { AlertMoneyFlow } from "../../components/graph/AlertMoneyFlow";
 import { CorrelationPanel } from "../../components/forensics/CorrelationPanel";
 import { NetworkContextPanel } from "../../components/forensics/NetworkContextPanel";
 import { ProvenancePanel } from "../../components/forensics/ProvenancePanel";
@@ -475,81 +475,37 @@ function AnalyticalAssessment({ data }: { data: AlertDetailData }) {
   return (
     <>
       {/* 1. TOP: ALERT CONTEXT */}
-      <section className="panel" style={{
-        borderColor: summary.severity === "CRITICAL" ? "var(--critical)" : summary.severity === "HIGH" ? "var(--high)" : "var(--border-strong)",
-        background: "linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-raised) 100%)",
-        marginBottom: 20
-      }}>
-        <div className="panel-head" style={{ borderBottom: "1px solid var(--hairline)", padding: "14px 18px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span className="mono small" style={{ color: "var(--muted)", textTransform: "uppercase" }}>ALERT</span>
-            <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>
-              {data.alert_id}
-            </h2>
-            <SeverityBadge severity={summary.severity} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <div>
-              <span className="small muted" style={{ display: "block", fontSize: 11, textTransform: "uppercase" }}>RISK SCORE</span>
-              <span className="mono" style={{ fontSize: "1.3rem", fontWeight: 700, color: summary.severity === "CRITICAL" ? "var(--critical)" : summary.severity === "HIGH" ? "var(--high)" : "inherit" }}>
-                {((risk.score ?? 0) * 100).toFixed(0)} / 100
-              </span>
-            </div>
-            <div>
-              <span className="small muted" style={{ display: "block", fontSize: 11, textTransform: "uppercase" }}>INVESTIGATIVE PRIORITY</span>
-              <span className="mono" style={{ fontSize: "1.3rem", fontWeight: 700 }}>
-                {summary.severity}
-              </span>
-            </div>
-          </div>
+      <header className="page-header" style={{ marginBottom: 12 }}>
+        <div>
+          <div className="eyebrow"><span>Alert</span><span>·</span><span>reference run {data.run_fingerprint.slice(0, 12)}</span></div>
+          <h1 style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            Cluster {summary.cluster_id} <SeverityBadge severity={summary.severity} />
+          </h1>
+          <p className="mono small faint">{data.alert_id}</p>
         </div>
-
-        <div className="panel-body">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
-            <div style={{ padding: "12px 14px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
-              <span className="small muted" style={{ display: "block", fontSize: 11, textTransform: "uppercase", marginBottom: 4 }}>ENTITY</span>
-              <strong style={{ display: "block", fontSize: 14 }}>Cluster {summary.cluster_id}</strong>
-              <span className="small faint">{summary.members_total} address members</span>
-            </div>
-
-            <div style={{ padding: "12px 14px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
-              <span className="small muted" style={{ display: "block", fontSize: 11, textTransform: "uppercase", marginBottom: 4 }}>STATUS</span>
-              <strong style={{ display: "block", fontSize: 14 }}>
-                {summary.severity === "CRITICAL" || summary.severity === "HIGH" ? "Requires Investigation" : "Standard Monitoring"}
-              </strong>
-              <span className="small faint">Priority #{summary.rank} in queue</span>
-            </div>
-
-            <div style={{ padding: "12px 14px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
-              <span className="small muted" style={{ display: "block", fontSize: 11, textTransform: "uppercase", marginBottom: 4 }}>EVIDENCE LAYERS</span>
-              <strong style={{ display: "block", fontSize: 14 }}>
-                {networkAvailable ? "4 Layers (Fused)" : "3 Layers (Ledger + ML + Patterns)"}
-              </strong>
-              <span className="small faint">{networkAvailable ? "Network context mapped" : "No usable network telemetry"}</span>
-            </div>
-
-            <div style={{ padding: "12px 14px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
-              <span className="small muted" style={{ display: "block", fontSize: 11, textTransform: "uppercase", marginBottom: 4 }}>TEMPORAL WINDOW</span>
-              <strong style={{ display: "block", fontSize: 14 }}>
-                {summary.first_timestep === summary.last_timestep
-                  ? `Timestep t${summary.first_timestep}`
-                  : `t${summary.first_timestep} – t${summary.last_timestep}`}
-              </strong>
-              <span className="small faint">Observed active span</span>
-            </div>
-          </div>
-
-          <div className="banner banner-synthetic" style={{ marginTop: 16, marginBottom: 0 }}>
-            <h4 style={{ margin: "0 0 4px", fontSize: 13, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-              Investigative Prioritization Notice
-            </h4>
-            <p style={{ margin: 0, fontSize: 13 }}>
-              <strong>The risk score is an investigative priority indicator, not a determination of criminality or ownership.</strong>{" "}
-              Signals prioritize forensic attention by measuring statistical deviation, graph topology, and network timing. Attribution requires legal and exchange verification.
-            </p>
-          </div>
+        <div className="page-actions">
+          <Link className="btn btn-sm btn-primary" to={`/graph?alert=${encodeURIComponent(data.alert_id)}&hops=2`}>Trace money flow</Link>
         </div>
-      </section>
+      </header>
+      <div className="metric-strip">
+        <div className="metric">
+          <span className="metric-k">Model risk · {risk.ranking_aggregation}</span>
+          <span className="metric-v" style={{ color: summary.severity === "CRITICAL" ? "var(--oc-sev-critical)" : summary.severity === "HIGH" ? "var(--oc-sev-high)" : undefined }}>
+            {risk.score == null ? "n/a" : `${(risk.score * 100).toFixed(1)}%`}
+          </span>
+          <span className="metric-d">rank #{summary.rank} of the run</span>
+        </div>
+        <div className="metric"><span className="metric-k">Members</span><span className="metric-v">{summary.members_total.toLocaleString()}</span><span className="metric-d">{summary.members_scored.toLocaleString()} scored</span></div>
+        <div className="metric"><span className="metric-k">Active</span><span className="metric-v">{summary.first_timestep === summary.last_timestep ? `t${summary.first_timestep}` : `t${summary.first_timestep}–t${summary.last_timestep}`}</span><span className="metric-d">Elliptic++ timesteps</span></div>
+        <div className="metric"><span className="metric-k">Evidence available</span><span className="metric-v" style={{ fontSize: 14, whiteSpace: "normal" }}>Model · On-chain{networkAvailable ? " · Network" : ""}</span><span className="metric-d">{networkAvailable ? "network layer is a synthetic overlay" : "no network observations"}</span></div>
+      </div>
+      <div className="banner banner-model">
+        <h4>A ranking signal, not a finding</h4>
+        <p>
+          The score is a gradient-boosted model's association between these addresses' on-chain features and the Elliptic++ illicit class,
+          aggregated to the cluster. It decides where to look first. It does not establish criminality, ownership or identity.
+        </p>
+      </div>
 
       <AnalysisLayerToggle
         layer={layer}
@@ -621,13 +577,14 @@ function AnalyticalAssessment({ data }: { data: AlertDetailData }) {
         </div>
       </section>
 
+      {showChain && <AlertMoneyFlow alertId={data.alert_id} />}
+
       <div className="grid-2">
         <div>
           {/* CHAIN: evidence derived from the ledger and the model over it. */}
           {showChain && <WhyFlagged data={data.why_flagged} networkContext={data.network_context} />}
           {showChain && <EvidencePanel evidence={data.evidence} />}
           {showChain && <StructuralPatternsPanel alertId={data.alert_id} />}
-          {showChain && <InvestigationGraph alert={data} />}
           {/* NETWORK: announcement observations. Never an ownership claim. */}
           {showNetwork && (
             <CorrelationPanel

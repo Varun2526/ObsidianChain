@@ -467,3 +467,8 @@ export const getRunResults = (investigationId: string, runId: string, limit = 50
     {},
     signal,
   );
+
+/** The shared authenticated GET, for the typed modules beside this one (api/intel.ts). */
+export function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
+  return call<T>(path, {}, signal);
+}
