@@ -41,6 +41,8 @@ from obsidianchain.api import (
     demo,
     evaluation,
     evidence,
+    investigation,
+    models as models_api,
     patterns,
     provenance_gate,
     separation,
@@ -222,6 +224,34 @@ def create_app(data_root=None) -> FastAPI:
         return JSONResponse(
             status_code=404,
             content={"error": "alert_not_found", "detail": str(exc)},
+        )
+
+    @app.exception_handler(investigation.AddressNotFoundError)
+    async def _no_address(request: Request, exc):
+        return JSONResponse(
+            status_code=404,
+            content={"error": "address_not_found", "detail": str(exc)},
+        )
+
+    @app.exception_handler(investigation.TransactionNotFoundError)
+    async def _no_transaction(request: Request, exc):
+        return JSONResponse(
+            status_code=404,
+            content={"error": "transaction_not_found", "detail": str(exc)},
+        )
+
+    @app.exception_handler(investigation.TraceRequestError)
+    async def _bad_trace(request: Request, exc):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "trace_request_invalid", "detail": str(exc)},
+        )
+
+    @app.exception_handler(models_api.ModelNotFoundError)
+    async def _no_model(request: Request, exc):
+        return JSONResponse(
+            status_code=404,
+            content={"error": "model_not_found", "detail": str(exc)},
         )
 
     @app.exception_handler(alerts_api.AlertFilterError)
@@ -412,6 +442,75 @@ def create_app(data_root=None) -> FastAPI:
         boundary.assert_no_truth_fields(payload)
         return JSONResponse(content=payload)
 
+    # ---- investigation read path (chain index, api/investigation.py) ----
+    # Plain ``def``: these do CPU work over cached frames, so FastAPI runs
+    # them in its threadpool instead of on the event loop.
+
+    @app.get(
+        f"{API_PREFIX}/addresses/{{address}}",
+        summary="Address profile: observed activity, counterparties, cluster, watchlist, model association",
+        dependencies=[requires_session()],
+    )
+    def get_address(
+        address: str,
+        counterparty_limit: int = Query(default=25, ge=1, le=200),
+        transaction_limit: int = Query(default=200, ge=1, le=1000),
+    ) -> JSONResponse:
+        payload = investigation.get_address(address, data_root, counterparty_limit=counterparty_limit,
+                                            transaction_limit=transaction_limit)
+        boundary.assert_no_truth_fields(payload)
+        return JSONResponse(content=payload)
+
+    @app.get(
+        f"{API_PREFIX}/graph/trace",
+        summary="Directed money-flow trace from address and/or transaction seeds",
+        dependencies=[requires_session()],
+    )
+    def graph_trace(
+        address: list[str] = Query(default=[]),
+        txid: list[int] = Query(default=[]),
+        direction: str = Query(default="both"),
+        hops: int = Query(default=1, ge=1, le=investigation.MAX_HOPS),
+        max_nodes: int = Query(default=300, ge=10, le=investigation.MAX_NODES_CEILING),
+        min_timestep: int | None = Query(default=None, ge=1),
+        max_timestep: int | None = Query(default=None, ge=1),
+    ) -> JSONResponse:
+        if not address and not txid:
+            raise investigation.TraceRequestError("give at least one address or txid seed")
+        if len(address) + len(txid) > 50:
+            raise investigation.TraceRequestError("at most 50 seeds per trace")
+        payload = investigation.trace(address, data_root, direction=direction, hops=hops,
+                                      max_nodes=max_nodes, min_timestep=min_timestep,
+                                      max_timestep=max_timestep, seed_txids=txid)
+        boundary.assert_no_truth_fields(payload)
+        return JSONResponse(content=payload)
+
+    @app.get(
+        f"{API_PREFIX}/search",
+        summary="Find an alert id, transaction id or address (prefix of 4+ characters)",
+        dependencies=[requires_session()],
+    )
+    def search(q: str = Query(default="", max_length=128)) -> JSONResponse:
+        payload = investigation.search(q, data_root)
+        boundary.assert_no_truth_fields(payload)
+        return JSONResponse(content=payload)
+
+    @app.get(
+        f"{API_PREFIX}/models",
+        summary="Model registry: versions, roles, lineage, attestation",
+        dependencies=[requires_session()],
+    )
+    def list_models() -> JSONResponse:
+        return JSONResponse(content=models_api.list_models(data_root))
+
+    @app.get(
+        f"{API_PREFIX}/models/{{version}}",
+        summary="One model version's recorded evaluation, gate, holdout and drift baseline",
+        dependencies=[requires_session()],
+    )
+    def get_model(version: str) -> JSONResponse:
+        return JSONResponse(content=models_api.get_model(version, data_root))
+
     @app.get(
         f"{API_PREFIX}/demo/scenarios",
         summary="The five Phase 3.4 demonstration scenarios",
@@ -500,9 +599,12 @@ def create_app(data_root=None) -> FastAPI:
     )
     async def alert_graph(
         alert_id: str,
-        hops: int = Query(default=2, ge=1, le=5),
+        hops: int = Query(default=2, ge=1, le=investigation.MAX_HOPS),
+        direction: str = Query(default="both"),
+        max_nodes: int = Query(default=400, ge=10, le=investigation.MAX_NODES_CEILING),
     ) -> JSONResponse:
-        payload = alerts_api.get_alert_graph(alert_id, app.state.data_root, hops=hops)
+        payload = alerts_api.get_alert_graph(alert_id, app.state.data_root, hops=hops,
+                                             direction=direction, max_nodes=max_nodes)
         boundary.assert_no_truth_fields(payload)
         return JSONResponse(content=payload)
 

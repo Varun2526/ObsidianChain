@@ -226,6 +226,18 @@ EXPECTED_IMPORT_GRAPH = {
     # request - and the payload is stamped SYNTHETIC_CONTROL so it can never
     # be read as the production run.
     "obsidianchain.api.evaluation",
+    # Frontend redesign, reviewed: the investigation read path and model
+    # intelligence. api.investigation reads processed/chain_edges.parquet,
+    # chain_transactions.parquet and watchlist_seeds.parquet, which the
+    # offline 'build-chain-index' command writes with a PRODUCTION sidecar
+    # (obsidianchain/chain_index.py); it never opens raw/ and serves no class
+    # labels (the index contains none, asserted in tests/test_investigation_api.py).
+    # Tracing is a bounded walk over that written graph - traversal, not
+    # scoring. api.models reads the registry and evaluation JSON the ML
+    # pipeline already wrote, and deliberately does not import
+    # obsidianchain.ml (still on FORBIDDEN_RECOMPUTATION).
+    "obsidianchain.api.investigation",
+    "obsidianchain.api.models",
     # Phase 10, reviewed: the application layer. These modules hold MUTABLE
     # investigator state - users, sessions, cases, datasets, dispositions,
     # notes, reports, audit - in SQLite, and they are mounted on the same

@@ -71,6 +71,7 @@ REQUIRES_LOCAL_ARTIFACTS = {
     "test_run_fingerprint.py": "data/processed/evidence_funnel.parquet",
     "test_phase6_leakage.py": "data/processed/phase6_dataset_d5.parquet",
     "test_phase7_alerts.py": "data/processed/alerts.parquet",
+    "test_investigation_real_data.py": "data/processed/chain_edges.parquet",
     "test_ps_dataset_and_eval.py": "data/models/ps_native/datasets/train.parquet",
     "test_ps_model_current.py": "data/models/ps_native/datasets/validation.parquet",
 }
