@@ -413,6 +413,18 @@ def get_run_progress(
     return runs_mod.get_progress(conn, run_id)
 
 
+def _complete_run_dir(request, conn, actor, investigation_id: str, run_id: str):
+    """Resolve a run through the database (run -> dataset -> case), never the path alone."""
+    inv.require_readable(conn, actor, investigation_id)
+    run = runs_mod.get(conn, run_id)
+    dataset = datasets_mod.get(conn, run.dataset_id) if run is not None else None
+    if run is None or dataset is None or dataset.investigation_id != investigation_id:
+        raise errors.NotFound(f"no run {run_id!r} in this investigation")
+    if run.status != "COMPLETE":
+        raise errors.Conflict(f"run {run_id} is {run.status}, results exist only for COMPLETE runs")
+    return run, Path(deps.data_root_of(request)) / "runs" / run.id
+
+
 @router.get(
     "/{investigation_id}/runs/{run_id}/results",
     summary="Ranked alerts, model provenance and model trust of a completed run",
@@ -434,14 +446,7 @@ def get_run_results(
     HOLDOUT result for the model; the run's own alerts have no measured
     precision until labels arrive.
     """
-    inv.require_readable(conn, actor, investigation_id)
-    run = runs_mod.get(conn, run_id)
-    dataset = datasets_mod.get(conn, run.dataset_id) if run is not None else None
-    if run is None or dataset is None or dataset.investigation_id != investigation_id:
-        raise errors.NotFound(f"no run {run_id!r} in this investigation")
-    if run.status != "COMPLETE":
-        raise errors.Conflict(f"run {run_id} is {run.status}, results exist only for COMPLETE runs")
-    run_dir = Path(deps.data_root_of(request)) / "runs" / run.id
+    run, run_dir = _complete_run_dir(request, conn, actor, investigation_id, run_id)
     try:
         manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
         alerts = json.loads((run_dir / "alerts.json").read_text(encoding="utf-8"))
@@ -469,6 +474,44 @@ def get_run_results(
         "alerts": alerts.get("alerts", [])[:limit],
         "stages": [{k: s.get(k) for k in ("stage_number", "stage_name", "status", "duration_seconds")}
                    for s in manifest.get("stages", [])],
+    }
+
+
+@router.get(
+    "/{investigation_id}/runs/{run_id}/graph",
+    summary="The investigation graph one uploaded-dataset run wrote",
+)
+def get_run_graph(
+    request: Request,
+    investigation_id: str,
+    run_id: str,
+    max_nodes: int = Query(default=1500, ge=10, le=5000),
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.current_user),
+) -> dict:
+    """``investigation_graph.json`` as the pipeline wrote it, case-scoped like results.
+
+    Capped at ``max_nodes`` (in file order) and pruned to edges whose two
+    ends are both present, so the client never receives a dangling edge.
+    """
+    run, run_dir = _complete_run_dir(request, conn, actor, investigation_id, run_id)
+    try:
+        graph = json.loads((run_dir / "investigation_graph.json").read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise errors.NotFound(f"run {run_id} wrote no investigation graph") from exc
+    nodes = graph.get("nodes", [])
+    kept = nodes[:max_nodes]
+    ids = {n["id"] for n in kept}
+    edges = [e for e in graph.get("edges", []) if e.get("source") in ids and e.get("target") in ids]
+    return {
+        "run_id": run.id,
+        "run_fingerprint": run.run_fingerprint,
+        "graph": {"node_count": len(kept), "edge_count": len(edges), "nodes": kept, "edges": edges},
+        "truncated": len(kept) < len(nodes),
+        "nodes_total": len(nodes),
+        "result_type": "PRODUCTION RUN - performance unverified until labels arrive",
+        "meaning": ("Structure the pipeline projected from the uploaded dataset. Cluster membership is "
+                    "an entity-resolution heuristic; an announcing peer is a relay, not a sender."),
     }
 
 
