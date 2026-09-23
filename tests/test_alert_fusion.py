@@ -42,7 +42,7 @@ def test_severity_is_a_budget_over_rank_with_a_floor() -> None:
 
 
 def test_the_stacker_is_monotone_in_both_inputs() -> None:
-    stacker = load_stacker()
+    stacker = load_stacker(Path("data/models/ps_native/v5/stacker.json"))
     if stacker is None:
         pytest.skip("stacker not built")
     raw = np.array([0.05, 0.05, 0.5])
@@ -51,20 +51,40 @@ def test_the_stacker_is_monotone_in_both_inputs() -> None:
     assert p[1] > p[0] and p[2] > p[0]
 
 
-def test_propagation_is_counted_once(tmp_path) -> None:
-    """With a seed present, propagation enters through the stacker and is not
-    added again as its own fusion line."""
+def test_propagation_is_counted_once(tmp_path, tiny_registry) -> None:
+    """With a seed present and a stacker beside the champion, propagation
+    enters through the stacker and is not added again as its own line."""
     out = run_pipeline(CAPTURE, runs_dir=tmp_path, geoip_provider=geoip.TestFixtureProvider(),
-                       seed_addresses=["1PeelSource"])
+                       seed_addresses=["1PeelSource"], registry_root=tiny_registry)
+    assert out.manifest["provenance"]["ml_status"] == "SCORED"
     for a in out.alert_result.alerts:
         model = next(e for e in a.evidence if e.category == al.MODEL_SIGNAL)
-        assert model.details["combined_with_propagation"] is (load_stacker() is not None)
+        assert model.details["combined_with_propagation"] is True
         assert "corroborating_evidence_lines" in a.summary
         assert a.summary["confidence"] == pytest.approx(a.fused_risk_score, abs=1e-4)
 
 
-def test_ranking_is_deterministic_and_dense(tmp_path) -> None:
-    out = run_pipeline(CAPTURE, runs_dir=tmp_path, geoip_provider=geoip.TestFixtureProvider())
+def test_without_seeds_the_stacker_is_not_applied(tmp_path, tiny_registry) -> None:
+    out = run_pipeline(CAPTURE, runs_dir=tmp_path, geoip_provider=geoip.TestFixtureProvider(),
+                       seed_addresses=[], registry_root=tiny_registry)
+    for a in out.alert_result.alerts:
+        model = next(e for e in a.evidence if e.category == al.MODEL_SIGNAL)
+        assert model.details["combined_with_propagation"] is False
+
+
+def test_every_alert_separates_evidence_classes(tmp_path, tiny_registry) -> None:
+    out = run_pipeline(CAPTURE, runs_dir=tmp_path, geoip_provider=geoip.TestFixtureProvider(),
+                       seed_addresses=[], registry_root=tiny_registry)
+    payload = out.alert_result.alerts[0].as_dict()
+    classes = {e["category"]: e["evidence_class"] for e in payload["evidence"]}
+    assert classes["MODEL_SIGNAL"] == "MODEL" and classes["NETWORK_CONTEXT"] == "NETWORK"
+    assert classes["PATTERN_CONTEXT"] == "RULE" and classes["PROPAGATION_CONTEXT"] == "WATCHLIST"
+    assert "not causes" in payload["explanation_statement"]
+
+
+def test_ranking_is_deterministic_and_dense(tmp_path, tiny_registry) -> None:
+    out = run_pipeline(CAPTURE, runs_dir=tmp_path, geoip_provider=geoip.TestFixtureProvider(),
+                       registry_root=tiny_registry)
     ranks = [a.rank for a in out.alert_result.alerts]
     assert ranks == list(range(1, len(ranks) + 1))
     scores = [a.fused_risk_score for a in out.alert_result.alerts]

@@ -103,7 +103,7 @@ def test_the_mixing_flag_rejects_a_uniform_payout() -> None:
 def test_the_schema_version_records_the_break() -> None:
     """v1 datasets and v2 datasets are not comparable and must not share a
     version string."""
-    assert features_ps.PS_FEATURE_SCHEMA_VERSION == "ps_native_features/4"
+    assert features_ps.PS_FEATURE_SCHEMA_VERSION == "ps_native_features/5"
 
 
 #: Removed in v3 as restatements of a sibling (Spearman >= 0.995 on the

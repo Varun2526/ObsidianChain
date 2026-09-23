@@ -141,7 +141,11 @@ PS_FEATURE_GROUPS: dict[str, list[str]] = {
 #: Bumped because a v1 row and a v2 row are not the same observation. A
 #: model, a metric or an ablation carried across the two would be comparing
 #: different quantities under one name.
-PS_FEATURE_SCHEMA_VERSION = "ps_native_features/4"
+#: /5: same columns as /4, different values in two cases, so a /4 model
+#: must not be served on /5 output. (1) Events sharing (timestamp,
+#: event_order) are simultaneous and no longer see each other's updates.
+#: (2) The per-address snapshot is one whole row, not a per-column splice.
+PS_FEATURE_SCHEMA_VERSION = "ps_native_features/5"
 
 # The core feature set without optional network features
 CORE_PS_FEATURE_COLUMNS: list[str] = (
@@ -410,11 +414,21 @@ class PsTemporalFeatureEngine:
         df = df[df["_txid"] != ""].drop_duplicates(subset="_txid", keep="first")
 
         output_rows: list[dict[str, Any]] = []
+        # Events sharing one (timestamp, event_order) are SIMULTANEOUS: each is
+        # computed against the state before the group, and the group's
+        # updates are applied together after it. Otherwise a sibling
+        # processed earlier only because of its txid would be visible, which
+        # is the within-step leak the causal ordering exists to remove.
+        pending: list[tuple] = []
+        group: tuple | None = None
 
         for _, row in df.iterrows():
             t = float(row["_sort_ts"])
             when = (t, float(row["_order"]))
             txid = row["_txid"]
+            if when != group:
+                self._apply(pending)
+                pending, group = [], when
 
             raw_in_addrs = row.get("input_addresses")
             raw_in_amts = row.get("input_amounts")
@@ -485,11 +499,11 @@ class PsTemporalFeatureEngine:
             # peer_count to the literal 1.0 whenever any observation existed.
             network = network_by_tx.get(txid, _NO_NETWORK)
 
-            # --- Co-spend Union-Find Update as of t ---
-            if len(in_addrs) > 1:
-                first_in = in_addrs[0]
-                for other_in in in_addrs[1:]:
-                    self.uf.union(first_in, other_in)
+            # --- Co-spend cluster as of t: earlier events plus this
+            # transaction's own inputs. The union itself is deferred with the
+            # rest of the group's updates.
+            input_roots = {self.uf.find(a) for a in in_addrs}
+            input_cluster_size = sum(self.uf.size[r] for r in input_roots)
 
             # --- Process Address State & Extract Features as-of-t ---
             participating = sorted(set(in_addrs) | set(out_addrs))
@@ -531,7 +545,7 @@ class PsTemporalFeatureEngine:
             }
 
             for addr in participating:
-                st = self.address_states.setdefault(addr, AddressState())
+                st = self.address_states.get(addr) or AddressState()
 
                 prior_txs = st.n_txs
                 prior_sent_count = st.n_sent
@@ -546,7 +560,7 @@ class PsTemporalFeatureEngine:
                 gap_sec = max(t - last_s, 0.0)
 
                 unique_cps = len(st.counterparties)
-                cluster_size = self.uf.get_cluster_size(addr)
+                cluster_size = input_cluster_size if addr in in_set else self.uf.get_cluster_size(addr)
 
                 # --- Group F: role within this transaction ---
                 is_sender = addr in in_set
@@ -601,28 +615,56 @@ class PsTemporalFeatureEngine:
 
                 output_rows.append(feature_dict)
 
-                # Now update state with this transaction
+            pending.append((t, txid, in_addrs, out_addrs, in_amts, out_amts, tx_summary))
+
+        self._apply(pending)
+        return pd.DataFrame(output_rows)
+
+    def _apply(self, pending: list[tuple]) -> None:
+        """Apply a group of simultaneous transactions to the state.
+
+        In txid order, so the state after the group - including which of two
+        simultaneous payments an address records as its funding, and the
+        last bits of float sums - does not depend on input row order.
+        """
+        for t, txid, in_addrs, out_addrs, in_amts, out_amts, tx_summary in sorted(pending, key=lambda p: p[1]):
+            if len(in_addrs) > 1:
+                first_in = in_addrs[0]
+                for other_in in in_addrs[1:]:
+                    self.uf.union(first_in, other_in)
+            in_set, out_set = set(in_addrs), set(out_addrs)
+            for addr in sorted(in_set | out_set):
+                st = self.address_states.setdefault(addr, AddressState())
                 st.n_txs += 1
                 if st.first_seen is None:
                     st.first_seen = t
                 st.last_seen = t
-
-                if is_sender:
+                if addr in in_set:
                     st.n_sent += 1
-                    addr_idx = in_addrs.index(addr)
-                    st.btc_sent += in_amts[addr_idx]
+                    st.btc_sent += in_amts[in_addrs.index(addr)]
                     st.out_tx_ids.add(txid)
                     st.counterparties.update(out_addrs)
-
-                if is_receiver:
+                if addr in out_set:
                     st.funded_by = tx_summary
                     st.n_recv += 1
-                    addr_idx = out_addrs.index(addr)
-                    st.btc_recv += out_amts[addr_idx]
+                    st.btc_recv += out_amts[out_addrs.index(addr)]
                     st.in_tx_ids.add(txid)
                     st.counterparties.update(in_addrs)
 
-        return pd.DataFrame(output_rows)
+
+def last_snapshot_per_address(features: pd.DataFrame) -> pd.DataFrame:
+    """Each address's LAST row, whole, in the engine's causal processing order.
+
+    Not ``groupby("address").last()``: that takes the last NON-NULL value of
+    each column separately, so a nullable feature (fee, spreads, the upstream
+    group) could come from an older transaction than the rest of the row.
+    Not a re-sort by timestamp either: a default sort is unstable, and on
+    tied timestamps which row is "last" would be arbitrary. The engine
+    already emits rows in (timestamp, event_order, txid) order.
+    """
+    if features.empty:
+        return features
+    return features.drop_duplicates(subset="address", keep="last").reset_index(drop=True)
 
 
 def extract_ps_features(

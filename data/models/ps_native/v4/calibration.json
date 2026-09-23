@@ -1,0 +1,9 @@
+{
+  "coef": 0.6780642969367626,
+  "intercept": -0.06189817309026368,
+  "reference_prevalence": 0.07035393962773652,
+  "version": "ps_native_v4/platt-1",
+  "method": "Platt on logit(raw)",
+  "fitted_on": "out-of-fold raw scores of folds 9-12 (41476 rows)",
+  "per_fold_honest_evaluation": "folds 5-12 in evaluation.json, each calibrated on the 4 previous folds"
+}

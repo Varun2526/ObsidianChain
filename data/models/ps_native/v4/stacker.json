@@ -1,0 +1,101 @@
+{
+  "schema": "obsidianchain.ps_stacker/2",
+  "model_version": "ps_native_v4",
+  "inputs": [
+    "logit(lgbm_raw_score)",
+    "log1p(1000.0 * propagated_risk)"
+  ],
+  "coef": [
+    0.6532464475781378,
+    0.6452472424797915
+  ],
+  "intercept": -0.5987438625365741,
+  "reference_prevalence": 0.07035393962773652,
+  "fitted_on": "protocol-B evaluation rows of the last 4 folds (41476 rows)",
+  "out_of_sample_check": {
+    "per_fold": [
+      {
+        "fold": "t<=18 -> t19-20",
+        "nap_model": 0.790693725557538,
+        "nap_stacked": 0.8533165954969363
+      },
+      {
+        "fold": "t<=20 -> t21-22",
+        "nap_model": 0.47712433215409505,
+        "nap_stacked": 0.9277734249832512
+      },
+      {
+        "fold": "t<=22 -> t23-24",
+        "nap_model": 0.9058754631759782,
+        "nap_stacked": 0.9399547950574952
+      },
+      {
+        "fold": "t<=24 -> t25-26",
+        "nap_model": 0.9748329157060954,
+        "nap_stacked": 0.9831077907466277
+      },
+      {
+        "fold": "t<=26 -> t27-28",
+        "nap_model": 0.949500509629819,
+        "nap_stacked": 0.9253529405190298
+      },
+      {
+        "fold": "t<=28 -> t29-30",
+        "nap_model": 0.5533572489951036,
+        "nap_stacked": 0.4762409020974628
+      },
+      {
+        "fold": "t<=30 -> t31-32",
+        "nap_model": 0.8496789891775254,
+        "nap_stacked": 0.9433568321972202
+      },
+      {
+        "fold": "t<=32 -> t33-34",
+        "nap_model": 0.9794136952255573,
+        "nap_stacked": 0.97948746130431
+      },
+      {
+        "fold": "t<=34 -> t35-36",
+        "nap_model": 0.9778668879960808,
+        "nap_stacked": 0.9785310965524455
+      },
+      {
+        "fold": "t<=36 -> t37-38",
+        "nap_model": 0.825218805251883,
+        "nap_stacked": 0.8443578295981359
+      },
+      {
+        "fold": "t<=38 -> t39-40",
+        "nap_model": 0.59077685213634,
+        "nap_stacked": 0.6203197265239245
+      }
+    ],
+    "verdict": {
+      "verdict": "INDISTINGUISHABLE",
+      "favours": null,
+      "a": "stacked",
+      "b": "model",
+      "n_folds": 11,
+      "mean_difference": 0.05431454273371122,
+      "sd_difference": 0.13868325157335676,
+      "ci95": [
+        -0.03885413340021788,
+        0.14748321886764032
+      ],
+      "test": "paired_t",
+      "p_value": 0.22311615549297809,
+      "permutation_p": 0.1689453125,
+      "permutation_usable": true,
+      "folds_won_by_a": 9,
+      "folds_won_by_b": 2,
+      "underpowered_for": "|difference| 0.0543 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+      "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+      "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+      "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate."
+    },
+    "mean_nap_model": 0.8067581295460013,
+    "mean_nap_stacked": 0.8610726722797127
+  },
+  "applied_when": "at least one seed wallet is present in the capture",
+  "transfer_caveat": "on Elliptic++ the seeds are every\nlabelled illicit address known before the window (thousands). In an uploaded\ncapture the seeds are OFAC / watchlist addresses (usually few). The\npropagated score of a direct neighbour of a seed is similar in both regimes;\nthe score of a distant address is smaller with sparse seeds, so the stacker\nleans on it less. It is applied only when at least one seed is present."
+}

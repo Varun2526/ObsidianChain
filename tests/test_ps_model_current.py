@@ -1,4 +1,4 @@
-"""Contract tests for the current PS-native model (ps_native_v3, schema /4).
+"""Contract tests for the current PS-native model (ps_native_v5, schema /5).
 
 Each test pins one of the four defects v2 exists to fix: the schema gap that
 blocked inference, zero-imputed missing values, the importance-times-value
@@ -25,7 +25,7 @@ from obsidianchain.pipeline.features_ps import (
     PS_FEATURE_SCHEMA_VERSION,
 )
 
-V2_DIR = Path("data/models/ps_native/v3")
+V2_DIR = Path("data/models/ps_native/v5")
 DATASETS = Path("data/models/ps_native/datasets")
 
 pytestmark = pytest.mark.skipif(
@@ -47,7 +47,7 @@ def sample() -> pd.DataFrame:
 
 def test_v2_is_the_default_and_declares_the_live_schema(model) -> None:
     default = PsNativeRiskModel.load()
-    assert default.version == "ps_native_v3"
+    assert default.version == "ps_native_v5"
     assert model.feature_schema_version == PS_FEATURE_SCHEMA_VERSION
     assert model.features == list(CORE_PS_FEATURE_COLUMNS)
 
