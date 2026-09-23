@@ -52,14 +52,19 @@ def test_v2_is_the_default_and_declares_the_live_schema(model) -> None:
     assert model.features == list(CORE_PS_FEATURE_COLUMNS)
 
 
-def test_the_manifest_does_not_claim_a_holdout_result(model) -> None:
-    """The holdout is still /1 and sealed. A v2 test metric would be invented."""
+def test_holdout_status_lives_in_the_registry_not_the_frozen_manifest(model) -> None:
+    """The artifact was frozen before the holdout was opened, so its manifest
+    says not evaluated forever; the registry carries the locked result."""
+    from obsidianchain.ml import registry
     manifest = json.loads((V2_DIR / "manifest.json").read_text())
     assert manifest["holdout_evaluated"] is False
-    assert model.holdout_evaluated is False
     evaluation = json.loads((V2_DIR / "evaluation.json").read_text())
     assert len(evaluation["folds"]) == 12
-    assert "test" not in json.dumps(manifest["training_data"]).lower()
+    served = PsNativeRiskModel.from_registry("champion")
+    holdout = registry.Registry.open().entry(served.version)["holdout"]
+    assert served.holdout_evaluated is True and served.holdout_summary == holdout
+    body = (registry.DEFAULT_ROOT / holdout["result"]).read_bytes()
+    assert __import__("hashlib").sha256(body).hexdigest() == holdout["sha256"]
 
 
 def test_missing_values_reach_the_model_as_nan(model, sample) -> None:

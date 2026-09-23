@@ -289,6 +289,8 @@ def run_pipeline(
         "model_version": getattr(active_model, "version", None),
         "feature_schema_version": getattr(active_model, "feature_schema_version", None),
         "holdout_evaluated": getattr(active_model, "holdout_evaluated", None),
+        "holdout_summary": getattr(active_model, "holdout_summary", None),
+        "drift_relative_to_development": (monitoring_report.get("relative_to_development") or {}).get("status"),
         "drift_status": monitoring_report.get("status"),
         "score_psi": monitoring_report.get("score_psi"),
         "major_shift_features": monitoring_report.get("major_shift_features", []),
@@ -657,10 +659,20 @@ def _monitoring_alerts(model_trust, drift, capture_contract, feature_contract, m
     if capture_contract.transactions and quarantined / capture_contract.transactions > 0.05:
         alerts.append({"severity": "HIGH", "code": "CAPTURE_QUARANTINE_ABOVE_5PCT",
                        "detail": f"{quarantined}/{capture_contract.transactions}"})
-    status = (drift or {}).get("status")
-    if status == "MAJOR_SHIFT":
-        alerts.append({"severity": "HIGH", "code": "MAJOR_DRIFT",
-                       "detail": f"features {drift.get('major_shift_features', [])[:5]}, score PSI {drift.get('score_psi')}"})
+    # Absolute PSI flags every two-week window of the development data
+    # (exp23), so it is reported but never alerted on. The alert reads the run
+    # against the model's development baseline. It cannot see concept drift
+    # (exp23: t43/t45 read within baseline while precision collapsed); only
+    # delayed labels can, which the INFO alert below says on every run.
+    relative = (drift or {}).get("relative_to_development") or {}
+    if relative.get("status") == "ABNORMAL":
+        alerts.append({"severity": "HIGH", "code": "DRIFT_ABNORMAL_VS_DEVELOPMENT",
+                       "detail": f"unusual features {relative.get('unusual_features', [])[:5]}, "
+                                 f"score PSI above baseline: {relative.get('score_psi_above_baseline')}"})
+    if drift and drift.get("status") not in (None, "NOT_SCORED", "NO_ROWS_SCORED"):
+        alerts.append({"severity": "INFO", "code": "PERFORMANCE_UNVERIFIED_UNTIL_LABELS",
+                       "detail": "input monitoring cannot detect concept drift; run `obsidianchain model health` "
+                                 "when labels for this run arrive"})
     if (drift or {}).get("unseen_missingness_features"):
         alerts.append({"severity": "MEDIUM", "code": "UNSEEN_MISSINGNESS",
                        "detail": str(drift["unseen_missingness_features"])})
