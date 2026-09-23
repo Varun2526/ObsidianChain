@@ -17,6 +17,8 @@ than returning a zero that would read as a measurement.
 
 from __future__ import annotations
 
+import pandas as pd
+
 from obsidianchain.alerts import contract
 from obsidianchain.api import artifacts, provenance_gate
 
@@ -526,7 +528,7 @@ def get_related_alerts(raw_id: str, root=None, *, limit: int = 20) -> dict:
                     "rank": int(m["rank"]),
                     "severity": str(m["severity"]),
                     "risk_score": _clean(m["risk_score"]),
-                    "top_signals": list(m["top_signals"]) if hasattr(m["top_signals"], "__iter__") else [],
+                    "top_signals": _summary(m.to_dict())["top_signals"],
                     "relationship_type": "SHARED_TRANSACTION",
                     "connecting_identifier": f"txids: {', '.join(str(t) for t in shared_tx_list)}",
                     "detail": f"Cluster members participated in {len(grp['txid'].unique())} shared on-chain transaction(s).",
@@ -557,7 +559,7 @@ def get_related_alerts(raw_id: str, root=None, *, limit: int = 20) -> dict:
                     "rank": int(m["rank"]),
                     "severity": str(m["severity"]),
                     "risk_score": _clean(m["risk_score"]),
-                    "top_signals": list(m["top_signals"]) if hasattr(m["top_signals"], "__iter__") else [],
+                    "top_signals": _summary(m.to_dict())["top_signals"],
                     "relationship_type": "OBSERVED_SHARED_PEER",
                     "connecting_identifier": f"peers: {', '.join(shared_peers_list)}",
                     "detail": f"Both alerts have transactions observed via announcing peer(s) {', '.join(shared_peers_list)}.",
@@ -576,84 +578,216 @@ def get_related_alerts(raw_id: str, root=None, *, limit: int = 20) -> dict:
 
 
 def get_transaction_drilldown(txid: int, root=None) -> dict:
-    """Drilldown into a transaction: inputs, outputs, observers, peers, mixing (T2)."""
-    net_table = artifacts.load_alert_table(root, "alert_network")
-    rows = net_table[net_table["txid"] == txid]
-    if rows.empty:
-        raise contract.AlertNotFoundError(f"transaction {txid} not found in network correlation")
-        
-    inputs = []
-    outputs = []
-    peers = []
-    seen_peers = set()
-    seen_addrs = set()
+    """One transaction: observed inputs and outputs, alert links, relay peers, mixing scan.
+
+    The inputs and outputs come from the chain index, so every Elliptic++
+    transaction resolves, not only the ones that touch an alert. Announcing
+    peers exist only for alert transactions (alert_network) and are a relay
+    vantage point, never a sender.
+    """
+    from obsidianchain.api import investigation
+
+    try:
+        tx = investigation.get_transaction(txid, root)
+    except (artifacts.ArtifactMissingError, investigation.TransactionNotFoundError):
+        tx = None
+    try:
+        net_table = artifacts.load_alert_table(root, "alert_network")
+    except artifacts.ArtifactMissingError:
+        if tx is None:
+            raise investigation.TransactionNotFoundError(
+                f"transaction {txid} does not appear in the chain index") from None
+        net_table = None
+    rows = (net_table[net_table["txid"] == txid] if net_table is not None
+            else pd.DataFrame(columns=["alert_id", "address", "address_role", "peer_ip", "peer_port",
+                                       "peer_asn", "observers", "announcing_peers"]))
+    if tx is None and rows.empty:
+        raise investigation.TransactionNotFoundError(
+            f"transaction {txid} is in neither the chain index nor the alert network correlation")
+
+    alert_of: dict[str, str] = {}
     clusters = set()
-    
     for r in rows.itertuples():
-        addr = str(r.address)
-        role = str(r.address_role)
         alert_id = str(r.alert_id)
+        alert_of.setdefault(str(r.address), alert_id)
         if ":" in alert_id:
             clusters.add(alert_id.split(":")[1])
-        if addr not in seen_addrs:
-            seen_addrs.add(addr)
-            if role == "input":
-                inputs.append({"address": addr, "alert_id": alert_id})
-            else:
-                outputs.append({"address": addr, "alert_id": alert_id})
-                
+
+    if tx is not None:
+        def side(entries):
+            out = []
+            for e in entries:
+                model = e.get("model") or {}
+                alert_id = alert_of.get(e["address"]) or model.get("alert_id")
+                out.append({"address": e["address"], "alert_id": alert_id,
+                            "model": e.get("model"), "cluster": e.get("cluster"),
+                            "watchlist": e.get("watchlist", [])})
+                if alert_id and ":" in alert_id:
+                    clusters.add(alert_id.split(":")[1])
+            return out
+        inputs, outputs = side(tx["inputs"]), side(tx["outputs"])
+    else:
+        inputs, outputs, seen = [], [], set()
+        for r in rows.itertuples():
+            addr = str(r.address)
+            if addr in seen:
+                continue
+            seen.add(addr)
+            (inputs if str(r.address_role) == "input" else outputs).append(
+                {"address": addr, "alert_id": str(r.alert_id)})
+
+    peers, seen_peers = [], set()
+    for r in rows.itertuples():
         peer_key = (r.peer_ip, r.peer_port)
-        if peer_key not in seen_peers:
-            seen_peers.add(peer_key)
-            peers.append({
-                "ip": str(r.peer_ip),
-                "port": int(r.peer_port) if r.peer_port else None,
-                "asn": int(r.peer_asn) if r.peer_asn else None,
-                "observers": int(r.observers) if r.observers else 1,
-                "announcing_peers": int(r.announcing_peers) if r.announcing_peers else 1,
-            })
-            
-    # Check tx_mixing if available
+        if peer_key in seen_peers or r.peer_ip is None:
+            continue
+        seen_peers.add(peer_key)
+        peers.append({
+            "ip": str(r.peer_ip),
+            "port": int(r.peer_port) if _clean(r.peer_port) is not None else None,
+            "asn": int(r.peer_asn) if _clean(r.peer_asn) is not None else None,
+            "observers": int(r.observers) if _clean(r.observers) is not None else 1,
+            "announcing_peers": int(r.announcing_peers) if _clean(r.announcing_peers) is not None else 1,
+        })
+
     mixing_info = None
-    try:
-        from obsidianchain.api import patterns
-        tx_mixing_df, meta = patterns.load_tx_mixing(root)
-        if tx_mixing_df is not None:
-            m_row = tx_mixing_df[tx_mixing_df["txid"] == txid]
-            if not m_row.empty:
-                m = m_row.iloc[0]
-                mixing_info = {
-                    "available": True,
-                    "mixing_class": str(m.get("mixing_class", "STANDARD")),
-                    "entropy": _clean(m.get("entropy")),
-                    "n_inputs": int(m.get("n_inputs", len(inputs))),
-                    "n_outputs": int(m.get("n_outputs", len(outputs))),
-                }
-    except Exception:
-        pass
-        
+    from obsidianchain.api import patterns
+    tx_mixing_df, _meta = patterns.load_tx_mixing(root)
+    if tx_mixing_df is not None:
+        m_row = tx_mixing_df[tx_mixing_df["txId"] == txid]
+        if not m_row.empty:
+            m = m_row.iloc[0]
+            mixing_info = {
+                "available": True,
+                "mixing_class": str(m["mixing_class"]),
+                "mixing_score": _clean(m["mixing_score"]),
+                "signals": {k: _clean(m[k]) for k in (
+                    "output_uniformity", "participant_symmetry", "cardinality_signal",
+                    "input_heterogeneity", "suppressor") if k in m.index},
+                "n_inputs": int(m["n_inputs"]),
+                "n_outputs": int(m["n_outputs"]),
+                "meaning": "Structural heuristic over input/output shape. A pattern, not an attribution.",
+            }
     if mixing_info is None:
         mixing_info = {
             "available": False,
-            "meaning": "Transaction mixing classification scan is not loaded for this deployment.",
+            "meaning": ("Transaction mixing classification scan is not loaded for this deployment."
+                        if tx_mixing_df is None else
+                        "The mixing scan has no row for this transaction."),
         }
-        
-    return {
+
+    out = {
         "txid": txid,
         "input_count": len(inputs),
         "output_count": len(outputs),
         "inputs": inputs,
         "outputs": outputs,
-        "associated_clusters": sorted(list(clusters)),
+        "associated_clusters": sorted(clusters),
         "announcing_peers": peers,
         "mixing": mixing_info,
         "limitation": "A peer announcing a transaction is a network relay observer. It does not identify the sender, wallet owner, or person who created the transaction.",
     }
+    if tx is not None:
+        out.update({k: tx[k] for k in ("timestep", "fee_btc", "in_btc", "out_btc", "n_inputs", "n_outputs")
+                    if k in tx})
+        out["provenance"] = tx["provenance"]
+    return out
 
 
-def get_alert_graph(raw_id: str, root=None, hops: int = 2) -> dict:
-    """Multi-layer investigation graph for an alert (cluster, address, tx, ip)."""
-    from obsidianchain.alerts import graph as alert_graph
+MAX_GRAPH_SEEDS = 40
+MAX_GRAPH_PEERS = 60
 
-    return alert_graph.get_alert_graph(raw_id, root=root, hops=hops)
 
+def get_alert_graph(raw_id: str, root=None, hops: int = 2, *, direction: str = "both",
+                    max_nodes: int = 400) -> dict:
+    """The observed money flow around an alert's members, plus its cluster and relay peers.
+
+    Seeds are the alert's members (the highest-scored ``MAX_GRAPH_SEEDS`` for
+    very large clusters; the response says how many were left out). The flow
+    is traced over the chain index for ``hops`` address-transaction-address
+    steps. Every edge's two ends are in ``nodes``: nothing dangles.
+
+    Layers and what they are:
+      addr  --MEMBER_OF-->    cluster   entity resolution (heuristic)
+      addr  --SPENDS-->       tx        observed on-chain
+      tx    --PAYS-->         addr      observed on-chain
+      tx    --ANNOUNCED_BY--> ip        relay vantage point, never a sender
+    """
+    from obsidianchain.api import investigation
+
+    requested_run, cluster_id = contract.parse_alert_id(raw_id)
+    frame, sidecar = artifacts.load_alerts(root)
+    current = current_run_fingerprint(sidecar)
+    if requested_run != current:
+        raise contract.AlertIdStaleError(
+            f"Alert id {raw_id!r} is from run {requested_run}, current run is {current}"
+        )
+    row = frame[frame["alert_id"] == raw_id]
+    if row.empty:
+        raise contract.AlertNotFoundError(f"alert {raw_id!r} not found in run {current}")
+    summary = _summary(row.iloc[0].to_dict())
+
+    members = artifacts.load_alert_table(root, "alert_members")
+    mine = members[members["alert_id"] == raw_id].sort_values("risk_score", ascending=False)
+    seeds = [str(a) for a in mine["address"].head(MAX_GRAPH_SEEDS)]
+    result = investigation.trace(seeds, root, direction=direction, hops=hops, max_nodes=max_nodes)
+    graph = result["graph"]
+    nodes = {n["id"]: n for n in graph["nodes"]}
+    edges = {e["id"]: e for e in graph["edges"]}
+
+    cluster_key = f"cluster:{summary['cluster_id']}"
+    nodes[cluster_key] = {"id": cluster_key, "kind": "cluster", "label": f"Cluster {summary['cluster_id']}",
+                          "data": {"cluster_id": summary["cluster_id"], "alert_id": raw_id,
+                                   "severity": summary["severity"], "risk_score": summary["risk_score"],
+                                   "members_total": summary["members_total"]}}
+    member_set = set(str(a) for a in mine["address"])
+    for key, n in list(nodes.items()):
+        if n["kind"] == "address" and n["data"]["address"] in member_set:
+            n["data"]["alert_member"] = True
+            eid = f"MEMBER_OF:{key}->{cluster_key}"
+            edges[eid] = {"id": eid, "source": key, "target": cluster_key, "kind": "MEMBER_OF",
+                          "data": {"basis": "entity resolution heuristic"}}
+
+    net = artifacts.load_alert_table(root, "alert_network")
+    in_graph = {int(n["data"]["txid"]) for n in nodes.values() if n["kind"] == "transaction"}
+    peers_seen = 0
+    net = net[net["txid"].isin(in_graph) & net["peer_ip"].notna()]
+    for r in net.drop_duplicates(["txid", "peer_ip"]).itertuples():
+        ip_key = f"ip:{r.peer_ip}"
+        if ip_key not in nodes:
+            if peers_seen >= MAX_GRAPH_PEERS:
+                continue
+            peers_seen += 1
+            nodes[ip_key] = {"id": ip_key, "kind": "ip", "label": str(r.peer_ip),
+                             "data": {"ip": str(r.peer_ip),
+                                      "asn": int(r.peer_asn) if _clean(r.peer_asn) is not None else None,
+                                      "synthetic_network": _clean(getattr(r, "synthetic_network", None))}}
+        eid = f"ANNOUNCED_BY:tx:{int(r.txid)}->{ip_key}"
+        edges[eid] = {"id": eid, "source": f"tx:{int(r.txid)}", "target": ip_key, "kind": "ANNOUNCED_BY",
+                      "data": {"port": int(r.peer_port) if _clean(r.peer_port) is not None else None,
+                               "first_seen_ms": _clean(r.first_seen_ms)}}
+
+    assert all(e["source"] in nodes and e["target"] in nodes for e in edges.values())
+    return {
+        "alert_id": raw_id,
+        "summary": summary,
+        "seeds": {"used": len(seeds), "members_total": int(len(mine)),
+                  "omitted": max(0, int(len(mine)) - len(seeds)),
+                  "rule": f"highest-scored {MAX_GRAPH_SEEDS} members"},
+        "direction": result["direction"], "hops": result["hops"], "max_nodes": result["max_nodes"],
+        "graph": {"node_count": len(nodes), "edge_count": len(edges),
+                  "nodes": list(nodes.values()), "edges": list(edges.values())},
+        "truncated": result["truncated"],
+        "hub_transactions_skipped": result["hub_transactions_skipped"],
+        "hub_threshold": result["hub_threshold"],
+        "peers_omitted": peers_seen >= MAX_GRAPH_PEERS,
+        "layers": {
+            "MEMBER_OF": "Entity resolution heuristic (multi-input and change). Not proof of one owner.",
+            "SPENDS": "Observed on-chain: the address funded the transaction.",
+            "PAYS": "Observed on-chain: the transaction paid the address.",
+            "ANNOUNCED_BY": ("The peer relayed the transaction to an observer. A relay vantage point, "
+                             "never the sender. Peer data in this deployment is a synthetic network overlay."),
+        },
+        "meaning": result["meaning"],
+        "provenance": {**result["provenance"], "alert_run_fingerprint": current},
+    }

@@ -35,6 +35,13 @@ EVIDENCE_FUNNEL = Path("processed") / "evidence_funnel.parquet"
 ADDRESS_CLUSTERS = Path("processed") / "address_clusters.parquet"
 CLUSTERS = Path("processed") / "clusters.parquet"
 
+#: The observed transaction graph and the watchlist seeds, written by
+#: ``build-chain-index`` (obsidianchain/chain_index.py). Observed structure
+#: and external attributions only; no class labels.
+CHAIN_EDGES = Path("processed") / "chain_edges.parquet"
+CHAIN_TRANSACTIONS = Path("processed") / "chain_transactions.parquet"
+WATCHLIST_SEEDS = Path("processed") / "watchlist_seeds.parquet"
+
 #: Phase 7. The alert artifacts, all written by one ``phase7-alerts`` run.
 #: ``ALERTS`` carries the provenance the others are checked against; the four
 #: detail tables are joined to it by ``alert_id`` and share its fingerprint.
@@ -55,6 +62,9 @@ _BUILD_COMMAND = {
     CLUSTERS: 'make run ARGS="build-cluster-index"',
     ALERTS: 'make run ARGS="phase7-alerts"',
     **{p: 'make run ARGS="phase7-alerts"' for p in ALERT_TABLES.values()},
+    CHAIN_EDGES: 'make run ARGS="build-chain-index"',
+    CHAIN_TRANSACTIONS: 'make run ARGS="build-chain-index"',
+    WATCHLIST_SEEDS: 'make run ARGS="build-chain-index"',
 }
 
 
@@ -220,3 +230,11 @@ def load_alert_table(root=None, name: str = "alert_members", columns=None):
     index_meta = provenance_gate.require_production(alerts_path(root))
     provenance_gate.require_same_run(index_meta, meta, name)
     return pd.read_parquet(path, columns=columns)
+
+
+def chain_artifact(root=None, relative: Path = CHAIN_EDGES):
+    """Path and sidecar of one chain-index artifact, provenance-gated."""
+    from obsidianchain.api import provenance_gate
+
+    path = _require(root, relative)
+    return path, provenance_gate.require_production(path)

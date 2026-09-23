@@ -1755,6 +1755,27 @@ def build_cluster_index(
     )
 
 
+@app.command("build-chain-index")
+def build_chain_index(
+    data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
+    out_dir: Path = typer.Option(None, "--out-dir", help="[default: <data-root>/processed]"),
+) -> None:
+    """Persist the observed address-transaction graph the investigation API reads.
+
+    Writes chain_edges.parquet and chain_transactions.parquet, provenance-
+    stamped. Observed structure and per-transaction totals only: no wallet or
+    transaction class labels, no fabricated per-address amounts.
+    """
+    from obsidianchain import chain_index
+
+    started = time.perf_counter()
+    summary = chain_index.build(data_root, processed_root=out_dir)
+    for name in (chain_index.CHAIN_EDGES, chain_index.CHAIN_TRANSACTIONS, chain_index.WATCHLIST_SEEDS):
+        typer.echo(f"wrote {summary[name]['path']}  ({summary[name]['rows']:,} rows)")
+    typer.echo(f"addresses {summary['addresses']:,}   fingerprint {summary['run_fingerprint'][:16]}")
+    typer.echo(f"wall time {time.perf_counter() - started:.1f} s")
+
+
 @app.command("demo")
 def demo(
     data_root: Path = typer.Option(DATA_ROOT, "--data-root"),
