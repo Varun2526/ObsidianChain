@@ -62,6 +62,48 @@
       "previous": "ps_native_v4_fallback_no_g",
       "reason": "ps_native_v4_fallback_no_g withdrawn with v4; superseded by v5_fallback_no_g",
       "version": null
+    },
+    {
+      "at": "2026-09-23T17:43:30+00:00",
+      "event": "REGISTER",
+      "previous": null,
+      "reason": "FROZEN_PENDING_HOLDOUT",
+      "version": "ps_native_v5"
+    },
+    {
+      "at": "2026-09-23T17:43:30+00:00",
+      "event": "REGISTER",
+      "previous": null,
+      "reason": "FROZEN_PENDING_HOLDOUT",
+      "version": "ps_native_v5_fallback_no_g"
+    },
+    {
+      "at": "2026-09-23T17:43:30+00:00",
+      "event": "ATTEST_SOURCE",
+      "previous": null,
+      "reason": "code_sha256 of 6 files verified at 5431241a4d2beea200aa71ea685ef779d1f58c68",
+      "version": "ps_native_v5"
+    },
+    {
+      "at": "2026-09-23T17:43:30+00:00",
+      "event": "ATTEST_SOURCE",
+      "previous": null,
+      "reason": "code_sha256 of 6 files verified at 5431241a4d2beea200aa71ea685ef779d1f58c68",
+      "version": "ps_native_v5_fallback_no_g"
+    },
+    {
+      "at": "2026-09-23T17:43:39+00:00",
+      "event": "ASSIGN_FALLBACK",
+      "previous": null,
+      "reason": "same-schema fallback without group G (exp22), attested at 5431241",
+      "version": "ps_native_v5_fallback_no_g"
+    },
+    {
+      "at": "2026-09-23T17:43:39+00:00",
+      "event": "ASSIGN_CANDIDATE",
+      "previous": null,
+      "reason": "frozen candidate, attested at 5431241, pending production gate",
+      "version": "ps_native_v5"
     }
   ],
   "models": {
@@ -283,12 +325,188 @@
       "notes": "WITHDRAWN: lineage not attestable (training code not in any commit). Never served, never evaluated on the holdout.",
       "path": "v4_fallback_no_g",
       "registered_at": "2026-09-23T15:34:36+00:00"
+    },
+    "ps_native_v5": {
+      "artifacts": {
+        "calibration.json": "ebd7e2cb3bcfd2e6aa9082a6f0bd5a2f1b87cc52b5e5c6c9e1b617f15ed1d7c5",
+        "evaluation.json": "4a5c6adcd25eb6876a3fadd128a462d508ced601c07fe78182cb84096c687a36",
+        "feature_schema.json": "ea8073f74cae4b32deda44ca587f61afef067fd53b9211c2f533d11ef3acaf72",
+        "manifest.json": "6e26aefeb6159cf73255d7cf0d2f49332894047e2ce1d03820b67e9060e3ed82",
+        "model.joblib": "974d37f22e2f1e7df4e03cb5a13fdb35bf487e43f4d5db3ea3bb7191ebd3e607",
+        "stacker.json": "4d21288636db23d387eecff3b778b292461275ca06e476cf921290b4d8b0b24f"
+      },
+      "attested_source_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68",
+      "feature_schema_version": "ps_native_features/5",
+      "lineage": {
+        "code_sha256": {
+          "research/autoresearch_2026_09_23/scripts/exp22_window_end_protocol.py": "80563740c7ce89bcc4382b28fb2faa9017725fd894f38083048f99536bcb4a1f",
+          "research/reproduction/build_ps_dataset.py": "b4a5dbec7f5d9506024e2a589be06d252372d6e0ff2e55981c6661e1737de9ff",
+          "research/reproduction/train_ps_production_model.py": "2524212aa774a87c0a097cd85c9dff8dae416f4626394886ef0a341be6b9c4be",
+          "src/obsidianchain/contracts/features.py": "82b909bf7ab0794e9fc6b55949ea92dca85a1c0f00be60adeda71090e5f140ae",
+          "src/obsidianchain/ml/ps_model.py": "d5016ec6cd8246ff11f74604ea47f75b221e44d7ba9fb479294cbe946a07c46d",
+          "src/obsidianchain/pipeline/features_ps.py": "90d97ada3e41453e815820ecc3a40c351cf39dad4683983922c3394bb8c9506b"
+        },
+        "config": {
+          "calibration": "Platt on OOF of folds 9-12",
+          "feature_schema_version": "ps_native_features/5",
+          "features": [
+            "input_count",
+            "output_count",
+            "total_input_amount",
+            "fee",
+            "fee_ratio",
+            "input_amount_mean",
+            "output_amount_mean",
+            "input_spread",
+            "output_spread",
+            "n_txs_asof_t",
+            "n_sent_asof_t",
+            "n_recv_asof_t",
+            "btc_recv_total_asof_t",
+            "net_flow_asof_t",
+            "active_duration_seconds",
+            "gap_since_last_tx",
+            "unique_counterparties_asof_t",
+            "cluster_size_asof_t",
+            "is_peeling_candidate",
+            "is_mixing_candidate",
+            "addr_is_sender",
+            "addr_is_self_change",
+            "counterparty_max_n_txs_asof_t",
+            "counterparty_mean_n_txs_asof_t",
+            "upstream_funded_share",
+            "upstream_mean_output_count",
+            "upstream_mean_input_count",
+            "upstream_peel_share",
+            "upstream_mix_share",
+            "upstream_min_hold_seconds",
+            "upstream_chain_depth"
+          ],
+          "hyperparameters": {
+            "colsample_bytree": 0.8,
+            "learning_rate": 0.05,
+            "min_child_samples": 50,
+            "n_estimators": 300,
+            "num_leaves": 31,
+            "subsample": 0.8,
+            "subsample_freq": 1
+          },
+          "protocol": "protocol_B_new_addresses_at_window_end/1",
+          "seed": 20260919,
+          "train_window": 16
+        },
+        "config_sha256": "52d3fd962769616b18e87d867c3b08b85e35f46f8349a5aa378c366757cd2722",
+        "environment": {
+          "lightgbm": "4.7.0",
+          "numpy": "2.4.6",
+          "pandas": "3.0.5",
+          "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+          "python": "3.14.0",
+          "scikit-learn": "1.9.0"
+        },
+        "evaluation_sha256": "4a5c6adcd25eb6876a3fadd128a462d508ced601c07fe78182cb84096c687a36",
+        "raw_source_sha256": {
+          "AddrTx_edgelist.csv": "f5f903f752387f66a1bccaeff54e293b2e8470fcddf5eb56b88aa06fd23a8f3b",
+          "TxAddr_edgelist.csv": "9f5afbdde7bc3d91fb7a4655be55799d6504cd0063ae55a0753a5a41189932b8",
+          "txs_edgelist.csv": "a35053ba68a98e4382cae2ba65b9d9e36b23b6439e02dff084971b1b72a5156e",
+          "txs_features.csv": "2db326ec8ddb68f1d810c1834e1ff62e0a8300378f0984a1e3b2ca82a439821b",
+          "wallets_classes.csv": "4e5132c99f941666bf1fefd4100a1428d339c9252ec6987909e1adf8eac902f9"
+        },
+        "source_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68"
+      },
+      "notes": "FROZEN_PENDING_HOLDOUT",
+      "path": "v5",
+      "registered_at": "2026-09-23T17:43:30+00:00"
+    },
+    "ps_native_v5_fallback_no_g": {
+      "artifacts": {
+        "calibration.json": "cb950e99a21316bd3e31df605394270471dec56ed7a5c0ad1c56dfb3651841f6",
+        "evaluation.json": "e5ea255d442de07a0b893a717fefc10222ba1736a8de5d694e20141bd296b569",
+        "feature_schema.json": "318190176407e3b2562b7f73c5f714a6e628af7025cce842afa7c3d167cd885a",
+        "manifest.json": "fe6a5d4782db13c2882b0d2d4151c91bf2d689d03098b5dcdf3508f7f71c1ad3",
+        "model.joblib": "f884db9d804fe7eb00f618ef6dd8af6e3526f8e3d472700129bd4b133615e93b"
+      },
+      "attested_source_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68",
+      "feature_schema_version": "ps_native_features/5",
+      "lineage": {
+        "code_sha256": {
+          "research/autoresearch_2026_09_23/scripts/exp22_window_end_protocol.py": "80563740c7ce89bcc4382b28fb2faa9017725fd894f38083048f99536bcb4a1f",
+          "research/reproduction/build_ps_dataset.py": "b4a5dbec7f5d9506024e2a589be06d252372d6e0ff2e55981c6661e1737de9ff",
+          "research/reproduction/train_ps_production_model.py": "2524212aa774a87c0a097cd85c9dff8dae416f4626394886ef0a341be6b9c4be",
+          "src/obsidianchain/contracts/features.py": "82b909bf7ab0794e9fc6b55949ea92dca85a1c0f00be60adeda71090e5f140ae",
+          "src/obsidianchain/ml/ps_model.py": "d5016ec6cd8246ff11f74604ea47f75b221e44d7ba9fb479294cbe946a07c46d",
+          "src/obsidianchain/pipeline/features_ps.py": "90d97ada3e41453e815820ecc3a40c351cf39dad4683983922c3394bb8c9506b"
+        },
+        "config": {
+          "calibration": "Platt on OOF of folds 9-12",
+          "feature_schema_version": "ps_native_features/5",
+          "features": [
+            "input_count",
+            "output_count",
+            "total_input_amount",
+            "fee",
+            "fee_ratio",
+            "input_amount_mean",
+            "output_amount_mean",
+            "input_spread",
+            "output_spread",
+            "n_txs_asof_t",
+            "n_sent_asof_t",
+            "n_recv_asof_t",
+            "btc_recv_total_asof_t",
+            "net_flow_asof_t",
+            "active_duration_seconds",
+            "gap_since_last_tx",
+            "unique_counterparties_asof_t",
+            "cluster_size_asof_t",
+            "is_peeling_candidate",
+            "is_mixing_candidate",
+            "addr_is_sender",
+            "addr_is_self_change",
+            "counterparty_max_n_txs_asof_t",
+            "counterparty_mean_n_txs_asof_t"
+          ],
+          "hyperparameters": {
+            "colsample_bytree": 0.8,
+            "learning_rate": 0.05,
+            "min_child_samples": 50,
+            "n_estimators": 300,
+            "num_leaves": 31,
+            "subsample": 0.8,
+            "subsample_freq": 1
+          },
+          "protocol": "protocol_B_new_addresses_at_window_end/1",
+          "seed": 20260919,
+          "train_window": 16
+        },
+        "config_sha256": "17bd7a39301876241c76b8bc0eb8f76e7d2faad252e738d0f4db9b779a9ab446",
+        "environment": {
+          "lightgbm": "4.7.0",
+          "numpy": "2.4.6",
+          "pandas": "3.0.5",
+          "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+          "python": "3.14.0",
+          "scikit-learn": "1.9.0"
+        },
+        "evaluation_sha256": "e5ea255d442de07a0b893a717fefc10222ba1736a8de5d694e20141bd296b569",
+        "raw_source_sha256": {
+          "AddrTx_edgelist.csv": "f5f903f752387f66a1bccaeff54e293b2e8470fcddf5eb56b88aa06fd23a8f3b",
+          "TxAddr_edgelist.csv": "9f5afbdde7bc3d91fb7a4655be55799d6504cd0063ae55a0753a5a41189932b8",
+          "txs_edgelist.csv": "a35053ba68a98e4382cae2ba65b9d9e36b23b6439e02dff084971b1b72a5156e",
+          "txs_features.csv": "2db326ec8ddb68f1d810c1834e1ff62e0a8300378f0984a1e3b2ca82a439821b",
+          "wallets_classes.csv": "4e5132c99f941666bf1fefd4100a1428d339c9252ec6987909e1adf8eac902f9"
+        },
+        "source_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68"
+      },
+      "notes": "FROZEN_PENDING_HOLDOUT",
+      "path": "v5_fallback_no_g",
+      "registered_at": "2026-09-23T17:43:30+00:00"
     }
   },
   "roles": {
-    "candidate": null,
+    "candidate": "ps_native_v5",
     "champion": null,
-    "fallback": null
+    "fallback": "ps_native_v5_fallback_no_g"
   },
   "schema": "obsidianchain.model_registry/1"
 }
