@@ -57,3 +57,31 @@ def tiny_registry(tmp_path) -> Path:
     reg.assign("fallback", "test_b", "test fixture")
     reg.save()
     return root
+
+
+# ---- tests that need locally generated artifacts -----------------------------
+#: Test file -> the gitignored artifact it verifies. These tests fail loudly
+#: when the artifact is absent (by design: absence is not success). CI, which
+#: has no local data, deselects them explicitly with
+#: ``-m "not requires_local_artifacts"`` and prints what it deselected;
+#: ``make test`` on a machine with the data runs everything.
+REQUIRES_LOCAL_ARTIFACTS = {
+    "test_artifact_atomicity.py": "data/processed/evidence_funnel.parquet",
+    "test_funnel_golden.py": "data/processed/evidence_funnel.parquet",
+    "test_run_fingerprint.py": "data/processed/evidence_funnel.parquet",
+    "test_phase6_leakage.py": "data/processed/phase6_dataset_d5.parquet",
+    "test_phase7_alerts.py": "data/processed/alerts.parquet",
+    "test_ps_dataset_and_eval.py": "data/models/ps_native/datasets/train.parquet",
+    "test_ps_model_current.py": "data/models/ps_native/datasets/validation.parquet",
+}
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "requires_local_artifacts(path): needs a gitignored, locally built artifact")
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        needed = REQUIRES_LOCAL_ARTIFACTS.get(Path(str(item.fspath)).name)
+        if needed:
+            item.add_marker(_pytest.mark.requires_local_artifacts(needed))

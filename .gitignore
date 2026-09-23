@@ -32,6 +32,9 @@ vendor/
 
 # ---- Data file formats ----
 *.csv
+# Small synthetic test and sample fixtures ARE source: a clean checkout needs them.
+!tests/data/*.csv
+!data/samples/*.csv
 *.parquet
 *.pkl
 *.pickle
