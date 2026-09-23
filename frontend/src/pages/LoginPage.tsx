@@ -37,77 +37,63 @@ export function LoginPage() {
 
   return (
     <div className="login-page">
-      <div className="login-backdrop" />
-      <form className="login-box institutional-login" onSubmit={submit}>
-        <div className="login-brand">
-          <div className="institutional-monogram">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-              <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" />
-              <path d="M12 7v10" />
-              <path d="M8.5 10.5l7 3" />
-              <path d="M15.5 10.5l-7 3" />
-            </svg>
-          </div>
-          <h1 className="institutional-title">OBSIDIANCHAIN</h1>
-          <p className="institutional-subtitle">BITCOIN TRANSACTION TRAFFIC INVESTIGATION PLATFORM</p>
-          <div className="institutional-pills">
-            <span>Secure</span>
-            <span className="dot">•</span>
-            <span>Offline</span>
-            <span className="dot">•</span>
-            <span>Evidence-Driven</span>
-          </div>
+      <aside className="login-aside" aria-hidden="true">
+        <span className="wordmark" style={{ fontSize: 16 }}>Obsidian<b>Chain</b></span>
+        <div>
+          <h1>Trace where value came from and where it went, and keep what is known apart from what is inferred.</h1>
+          <ul className="login-principles">
+            <li><span className="ev ev-chain">On-chain</span><span>Observed transactions and flows, true independent of any model.</span></li>
+            <li><span className="ev ev-watchlist">Attribution</span><span>External watchlists, named and never restated as findings.</span></li>
+            <li><span className="ev ev-model">Model</span><span>Learned risk associations with their evaluation record. A lead, not proof.</span></li>
+          </ul>
         </div>
+        <span className="small faint">Runs offline. Every decision is written to an append-only audit log.</span>
+      </aside>
 
-        <div className="login-fields">
-          <div className="field-group">
-            <label htmlFor="inv-id">Username</label>
-            <input
-              id="inv-id"
-              type="text"
-              autoFocus
-              autoComplete="username"
-              value={username}
-              onChange={(e) => { setUsername(e.target.value); setError(null); }}
-              placeholder="e.g. investigator, reviewer, or admin"
-            />
+      <main className="login-main">
+        <form className="login-box" onSubmit={submit}>
+          <div className="login-brand">
+            <h1>Sign in</h1>
+            <p>Blockchain investigation and risk intelligence</p>
           </div>
 
-          <div className="field-group">
-            <label htmlFor="inv-pw">Password</label>
-            <input
-              id="inv-pw"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(null); }}
-              placeholder="••••••••••••"
-            />
+          <div className="login-fields">
+            <label htmlFor="inv-id">Username
+              <input
+                id="inv-id"
+                type="text"
+                autoFocus
+                autoComplete="username"
+                value={username}
+                onChange={(e) => { setUsername(e.target.value); setError(null); }}
+              />
+            </label>
+
+            <label htmlFor="inv-pw">Password
+              <input
+                id="inv-pw"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError(null); }}
+              />
+            </label>
+
+            {error && (
+              <div className="login-error-banner" role="alert">{error}</div>
+            )}
+
+            <button type="submit" className="btn btn-primary login-btn" disabled={busy || !username || !password}>
+              {busy ? "Signing in…" : "Sign in"}
+            </button>
           </div>
 
-
-          {error && (
-            <div className="login-error-banner">
-              <span className="error-icon">⚠</span>
-              <span>{error}</span>
-            </div>
-          )}
-
-          <button type="submit" className="login-btn primary-action" disabled={busy || !username || !password}>
-            {busy ? "Authenticating Session…" : "Sign in securely"}
-          </button>
-
-          <div className="login-security-footer">
-            <div className="security-badge">
-              <span className="secure-dot" />
-              <span>OFFLINE AIR-GAPPED ENVIRONMENT</span>
-            </div>
-            <p className="security-caption">
-              ObsidianChain forensic node · Immutable audit logging enabled
-            </p>
-          </div>
-        </div>
-      </form>
+          <p className="login-security-footer">
+            <span className="security-badge"><span className="secure-dot" />Offline deployment</span>
+            <span className="security-caption">Accounts are issued by an administrator. Failed attempts are rate limited and audited.</span>
+          </p>
+        </form>
+      </main>
     </div>
   );
 }

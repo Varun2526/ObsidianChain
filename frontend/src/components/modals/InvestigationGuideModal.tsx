@@ -45,7 +45,7 @@ export function InvestigationGuideModal({ open, onClose }: InvestigationGuideMod
     >
       <div
         className="modal-content"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog" aria-modal="true" aria-label="Investigation workflow guide" onClick={(e) => e.stopPropagation()}
         style={{
           background: "var(--bg-canvas, #0c0e14)",
           border: "1px solid var(--border-strong, #2a2e3d)",
@@ -99,14 +99,15 @@ export function InvestigationGuideModal({ open, onClose }: InvestigationGuideMod
               border: "none",
               color: "var(--muted, #8b949e)",
               cursor: "pointer",
-              fontSize: "1.4rem",
+              fontSize: "13px",
               lineHeight: 1,
               padding: "4px 8px",
               borderRadius: "4px",
             }}
             title="Close (Esc)"
+            aria-label="Close"
           >
-            ✕
+            Close
           </button>
         </div>
 

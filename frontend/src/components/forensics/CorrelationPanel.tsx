@@ -119,8 +119,9 @@ export function CorrelationPanel({
           <tbody>
             {correlation.transactions.map((tx) => (
               <Fragment key={tx.txid}>
-                <tr className="clickable"
-                  onClick={() => setExpanded(expanded === tx.txid ? null : tx.txid)}>
+                <tr className="clickable" tabIndex={0} aria-expanded={expanded === tx.txid}
+                  onClick={() => setExpanded(expanded === tx.txid ? null : tx.txid)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(expanded === tx.txid ? null : tx.txid); } }}>
                   <td className="mono">{tx.txid}</td>
                   <td className="num">
                     {tx.announcing_peers_total}

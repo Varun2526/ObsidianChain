@@ -467,7 +467,7 @@ export function GlobalAlertQueue() {
               ))}
             </select>
             {selectedSavedFilterId && (
-              <button className="btn btn-sm btn-ghost" onClick={handleDeleteFilter} title="Delete saved view">✕</button>
+              <button className="btn btn-sm btn-ghost" onClick={handleDeleteFilter} title="Delete saved view" aria-label="Delete saved view">Delete</button>
             )}
             <button className="btn btn-sm" onClick={handleSaveFilter}>Save view</button>
           </div>

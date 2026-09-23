@@ -288,10 +288,8 @@ export function InvestigationOverview() {
             {/* 1. Case Health */}
             <div style={{ padding: "12px 14px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                <span className="small muted">Case Health</span>
-                <span className="mono" style={{ color: "var(--model)", fontSize: 13 }}>
-                  {inv.status === "CLOSED" ? "RESOLVED" : "HEALTHY"}
-                </span>
+                <span className="small muted">Case status</span>
+                <span className={`status-badge status-${inv.status.toLowerCase()}`}>{inv.status}</span>
               </div>
               <strong style={{ display: "block", fontSize: 13 }}>
                 {inv.status === "REVIEW" ? "Under Independent Review" : inv.status === "CLOSED" ? "Findings Approved" : "Active Casework"}
@@ -306,11 +304,11 @@ export function InvestigationOverview() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                 <span className="small muted">Analysis Status</span>
                 <span className="mono" style={{ color: "var(--blockchain)", fontSize: 13 }}>
-                  {dataset?.analysis_run?.status ?? "CURRENT"}
+                  {dataset?.analysis_run?.status ?? "NOT RUN"}
                 </span>
               </div>
-              <strong style={{ display: "block", fontSize: 13 }}>17-Stage Pipeline</strong>
-              <span className="small faint">Deterministic Offline Execution</span>
+              <strong style={{ display: "block", fontSize: 13 }}>{dataset?.analysis_run ? "Uploaded-dataset pipeline" : "No run yet"}</strong>
+              <span className="small faint">{dataset?.analysis_run ? "Scored by the registry champion" : "Upload and run a dataset to score it"}</span>
             </div>
 
             {/* 3. Dataset */}
@@ -318,7 +316,7 @@ export function InvestigationOverview() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                 <span className="small muted">Dataset</span>
                 <span className="mono" style={{ color: dataset ? "var(--model)" : "var(--high)", fontSize: 13 }}>
-                  {dataset ? "VALIDATED" : "NONE"}
+                  {dataset ? dataset.status : "NONE"}
                 </span>
               </div>
               <strong style={{ display: "block", fontSize: 13, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={dataset?.filename}>
@@ -407,47 +405,6 @@ export function InvestigationOverview() {
             </table>
           </div>
         )}
-      </section>
-
-      {/* 3. KEY FINDINGS */}
-      <section className="panel" style={{ marginBottom: 20 }}>
-        <div className="panel-head">
-          <h2>Key Findings</h2>
-          <span className="small muted">Synthesized Forensic Signals</span>
-        </div>
-        <div className="panel-body">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-            <div style={{ padding: "14px 16px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={{ color: "var(--high)", fontWeight: 700 }}>●</span>
-                <strong>Entity / Cluster Boundaries</strong>
-              </div>
-              <p className="small muted" style={{ margin: 0, lineHeight: 1.6 }}>
-                Common-input-ownership clustering resolved on-chain counterparties. High-scoring clusters isolate co-spending components across related addresses.
-              </p>
-            </div>
-
-            <div style={{ padding: "14px 16px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={{ color: "var(--critical)", fontWeight: 700 }}>●</span>
-                <strong>Structural Peeling Patterns</strong>
-              </div>
-              <p className="small muted" style={{ margin: 0, lineHeight: 1.6 }}>
-                Sequential splitting, rapid fanout, and peeling chain patterns identified across address transaction graphs, indicating automated asset movement.
-              </p>
-            </div>
-
-            <div style={{ padding: "14px 16px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={{ color: "var(--network)", fontWeight: 700 }}>●</span>
-                <strong>P2P Network Observation Context</strong>
-              </div>
-              <p className="small muted" style={{ margin: 0, lineHeight: 1.6 }}>
-                Passive monitor vantage points correlated propagation timestamps, ASN distribution, and peer announcement diversity without claiming sender ownership.
-              </p>
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* 4. INVESTIGATION ACTIVITY */}
@@ -620,7 +577,7 @@ export function InvestigationOverview() {
                       </span>
                     </td>
                     <td className="mono small">
-                      {d.analysis_run?.status ?? "CURRENT"}
+                      {d.analysis_run?.status ?? "NOT RUN"}
                     </td>
                   </tr>
                 ))}

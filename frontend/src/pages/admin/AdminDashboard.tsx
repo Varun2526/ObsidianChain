@@ -11,6 +11,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import * as api from "../../api/console";
+import { fetchAlerts } from "../../api/client";
+import { listModels } from "../../api/intel";
+import { useApi } from "../../lib/useApi";
 import type { AuditEvent, Investigation, UserAccount } from "../../api/types";
 
 export function AdminDashboard() {
@@ -46,7 +49,6 @@ export function AdminDashboard() {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
             <h1 style={{ margin: 0 }}>System Administration</h1>
-            <span className="status-badge status-active">OFFLINE AIR-GAPPED</span>
           </div>
           <p className="muted" style={{ margin: 0 }}>
             Workstation health, user authorization management, dataset registry, and append-only audit trail
@@ -54,56 +56,8 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      {/* System Status Indicators */}
-      <div className="panel" style={{ 
-        marginBottom: 24, 
-        background: "linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-raised) 100%)",
-        borderColor: "var(--border-strong)"
-      }}>
-        <div className="panel-head">
-          <h2>Air-Gapped Security & Runtime Status</h2>
-          <span className="small muted mono">Linux / Darwin Isolated Environment</span>
-        </div>
-        <div className="panel-body">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
-            <div style={{ padding: "14px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span className="small muted">Network Interface</span>
-                <span className="mono" style={{ color: "var(--model)", fontSize: 13 }}>AIR-GAPPED</span>
-              </div>
-              <strong style={{ fontSize: 14 }}>Loopback Only (127.0.0.1)</strong>
-              <span className="small faint" style={{ display: "block", marginTop: 4 }}>Zero outbound socket connections</span>
-            </div>
-
-            <div style={{ padding: "14px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span className="small muted">Analytical Engine</span>
-                <span className="mono" style={{ color: "var(--model)", fontSize: 13 }}>READY</span>
-              </div>
-              <strong style={{ fontSize: 14 }}>PS-Native 17-Stage Pipeline</strong>
-              <span className="small faint" style={{ display: "block", marginTop: 4 }}>LightGBM + Isolation Forest + UnionFind</span>
-            </div>
-
-            <div style={{ padding: "14px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span className="small muted">Audit Log State</span>
-                <span className="mono" style={{ color: "var(--blockchain)", fontSize: 13 }}>APPEND-ONLY</span>
-              </div>
-              <strong style={{ fontSize: 14 }}>SQLite WAL Mode</strong>
-              <span className="small faint" style={{ display: "block", marginTop: 4 }}>Cryptographic audit persistence</span>
-            </div>
-
-            <div style={{ padding: "14px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span className="small muted">Dataset Storage</span>
-                <span className="mono" style={{ color: "var(--model)", fontSize: 13 }}>IMMUTABLE</span>
-              </div>
-              <strong style={{ fontSize: 14 }}>Content-Addressed (SHA-256)</strong>
-              <span className="small faint" style={{ display: "block", marginTop: 4 }}>Zero in-place modifications</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Deployment facts: each one read from the API, none asserted */}
+      <DeploymentFacts />
 
       {/* Admin Modules Grid */}
       <div className="card-grid-4" style={{ marginBottom: 24 }}>
@@ -219,5 +173,27 @@ export function AdminDashboard() {
         </div>
       </section>
     </>
+  );
+}
+
+function DeploymentFacts() {
+  const registry = useApi((sig) => listModels(sig), []);
+  const run = useApi((sig) => fetchAlerts({ limit: 1 }, sig), []);
+  return (
+    <section className="panel">
+      <div className="panel-head"><h2>Deployment</h2><span className="small faint">read from the registry and the alert artifact</span></div>
+      <div className="panel-body">
+        <dl className="kv">
+          <dt>Champion model</dt><dd className="mono">{registry.data?.roles.champion ?? (registry.error ? "registry unavailable" : "…")}</dd>
+          <dt>Fallback model</dt><dd className="mono">{registry.data?.roles.fallback ?? (registry.data ? "none" : "…")}</dd>
+          <dt>Candidate (shadow)</dt><dd className="mono">{registry.data?.roles.candidate ?? (registry.data ? "none" : "…")}</dd>
+          <dt>Reference alert run</dt><dd className="mono">{run.data ? `${run.data.run_fingerprint.slice(0, 16)} · ${run.data.alert_count_total.toLocaleString()} alerts` : run.error ? "not available" : "…"}</dd>
+          <dt>Alert artifact provenance</dt><dd>{run.data?.provenance.provenance_type ?? "…"}{run.data?.provenance.synthetic_network ? " · network layer synthetic" : ""}</dd>
+        </dl>
+        <p className="note" style={{ marginTop: 8 }}>
+          Network isolation is a property of how the container is run (<code>make serve</code> drops every interface but the published port); this page cannot observe it, so it does not claim it.
+        </p>
+      </div>
+    </section>
   );
 }

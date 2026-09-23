@@ -16,14 +16,18 @@ import { Skeleton } from "../../components/ui/primitives";
 export function AdminAuditLogPage() {
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filterAction, setFilterAction] = useState("");
   const [filterActor, setFilterActor] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
-    api.recentActivity(200, controller.signal)
+    // The endpoint serves at most 100 events (routes_investigations.recent_activity).
+    // Asking for more was a 422 that this page used to swallow and render as
+    // "no audit events" - an empty audit trail shown for a full one.
+    api.recentActivity(100, controller.signal)
       .then((r) => setEvents(r.events))
-      .catch(() => {})
+      .catch((e: unknown) => { if ((e as Error)?.name !== "AbortError") setLoadError((e as Error)?.message ?? "Could not load the audit log"); })
       .finally(() => setLoading(false));
 
     return () => controller.abort();
@@ -54,16 +58,16 @@ export function AdminAuditLogPage() {
       <div className="page-header" style={{ marginBottom: 20 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <h1 style={{ margin: 0 }}>Append-Only Forensic Audit Trail</h1>
-            <span className="status-badge status-draft">EVIDENTIARY INTEGRITY</span>
+            <h1 style={{ margin: 0 }}>Audit log</h1>
+            <span className="status-badge status-draft">Append-only</span>
           </div>
           <p className="muted" style={{ margin: 0 }}>
-            Cryptographically sealed timeline of all logins, dataset uploads, analytical runs, alert dispositions, and findings approvals
+            The latest 100 events: logins, uploads, analytical runs, dispositions and approvals. Rows are never updated or deleted.
           </p>
         </div>
         <div>
           <button className="btn btn-primary" onClick={exportJSON}>
-            Export Audit JSON ↓
+            Export JSON
           </button>
         </div>
       </div>
@@ -119,7 +123,9 @@ export function AdminAuditLogPage() {
           {loading ? (
             <div style={{ padding: 16 }}><Skeleton rows={6} /></div>
           ) : filtered.length === 0 ? (
-            <p className="muted" style={{ padding: 16 }}>No audit events matching filters.</p>
+            loadError
+              ? <div className="banner banner-error" style={{ margin: 16 }}><h4>The audit log could not be loaded</h4><p>{loadError}</p></div>
+              : <p className="muted" style={{ padding: 16 }}>No audit events matching filters.</p>
           ) : (
             <table>
               <thead>

@@ -15,7 +15,7 @@ export * from "./forensics/InvestigationGraph";
 export * from "./forensics/AnalysisLayerToggle";
 
 // Modals
-export * from "./modals/OmniSearchModal";
+export * from "./modals/CommandPalette";
 export * from "./modals/InvestigationGuideModal";
 export * from "./modals/InvestigationModals";
 

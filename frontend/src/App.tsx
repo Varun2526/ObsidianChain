@@ -1,3 +1,4 @@
+import { lazy } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import { useAuth } from "./store/auth";
 import { CaseGate } from "./store/investigation";
@@ -8,34 +9,38 @@ import { AppShell } from "./components/layout/AppShell";
 // Global Pages
 import { LoginPage } from "./pages/LoginPage";
 import { HomePage } from "./pages/HomePage";
-import { SettingsPage } from "./pages/SettingsPage";
-import { EvaluationPage } from "./pages/EvaluationPage";
+const SettingsPage = lazy(() => import("./pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const EvaluationPage = lazy(() => import("./pages/EvaluationPage").then((m) => ({ default: m.EvaluationPage })));
+
+// Intelligence pages (chain index, trace, models)
+const EntityPage = lazy(() => import("./pages/intel/EntityPage").then((m) => ({ default: m.EntityPage })));
+const TransactionPage = lazy(() => import("./pages/intel/TransactionPage").then((m) => ({ default: m.TransactionPage })));
+const GraphExplorer = lazy(() => import("./pages/intel/GraphExplorer").then((m) => ({ default: m.GraphExplorer })));
+const ModelsPage = lazy(() => import("./pages/intel/ModelsPage").then((m) => ({ default: m.ModelsPage })));
 
 // Investigation Pages
-import { InvestigationsPage } from "./pages/investigation/InvestigationsPage";
-import { NewInvestigation } from "./pages/investigation/NewInvestigation";
-import { InvestigationOverview } from "./pages/investigation/InvestigationOverview";
-import { AlertQueue } from "./pages/investigation/AlertQueue";
-import { AlertDetailPage } from "./pages/investigation/AlertDetail";
-import {
-  GraphSubPage,
-  TimelineSubPage,
-  NetworkSubPage,
-  EvidenceSubPage,
-  NotesSubPage,
-} from "./pages/investigation/InvestigationSubPages";
-import { ReportPage } from "./pages/investigation/ReportPage";
-import { HistoryPage } from "./pages/investigation/HistoryPage";
-import { InvestigationReview } from "./pages/investigation/InvestigationReview";
+const InvestigationsPage = lazy(() => import("./pages/investigation/InvestigationsPage").then((m) => ({ default: m.InvestigationsPage })));
+const NewInvestigation = lazy(() => import("./pages/investigation/NewInvestigation").then((m) => ({ default: m.NewInvestigation })));
+const InvestigationOverview = lazy(() => import("./pages/investigation/InvestigationOverview").then((m) => ({ default: m.InvestigationOverview })));
+const AlertQueue = lazy(() => import("./pages/investigation/AlertQueue").then((m) => ({ default: m.AlertQueue })));
+const AlertDetailPage = lazy(() => import("./pages/investigation/AlertDetail").then((m) => ({ default: m.AlertDetailPage })));
+const GraphSubPage = lazy(() => import("./pages/investigation/InvestigationSubPages").then((m) => ({ default: m.GraphSubPage })));
+const TimelineSubPage = lazy(() => import("./pages/investigation/InvestigationSubPages").then((m) => ({ default: m.TimelineSubPage })));
+const NetworkSubPage = lazy(() => import("./pages/investigation/InvestigationSubPages").then((m) => ({ default: m.NetworkSubPage })));
+const EvidenceSubPage = lazy(() => import("./pages/investigation/InvestigationSubPages").then((m) => ({ default: m.EvidenceSubPage })));
+const NotesSubPage = lazy(() => import("./pages/investigation/InvestigationSubPages").then((m) => ({ default: m.NotesSubPage })));
+const ReportPage = lazy(() => import("./pages/investigation/ReportPage").then((m) => ({ default: m.ReportPage })));
+const HistoryPage = lazy(() => import("./pages/investigation/HistoryPage").then((m) => ({ default: m.HistoryPage })));
+const InvestigationReview = lazy(() => import("./pages/investigation/InvestigationReview").then((m) => ({ default: m.InvestigationReview })));
 
 // Reviewer Pages
-import { ReviewerQueue } from "./pages/reviewer/ReviewerQueue";
+const ReviewerQueue = lazy(() => import("./pages/reviewer/ReviewerQueue").then((m) => ({ default: m.ReviewerQueue })));
 
 // Admin Pages
-import { AdminDashboard } from "./pages/admin/AdminDashboard";
-import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
-import { AdminDatasetsPage } from "./pages/admin/AdminDatasetsPage";
-import { AdminAuditLogPage } from "./pages/admin/AdminAuditLogPage";
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard").then((m) => ({ default: m.AdminDashboard })));
+const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage").then((m) => ({ default: m.AdminUsersPage })));
+const AdminDatasetsPage = lazy(() => import("./pages/admin/AdminDatasetsPage").then((m) => ({ default: m.AdminDatasetsPage })));
+const AdminAuditLogPage = lazy(() => import("./pages/admin/AdminAuditLogPage").then((m) => ({ default: m.AdminAuditLogPage })));
 
 /**
  * Gate on the SERVER's answer, not on a value the browser wrote itself.
@@ -53,9 +58,9 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 function BootSplash() {
   return (
-    <div className="boot-splash">
-      <span className="login-logo" />
-      <p className="muted">Restoring session…</p>
+    <div className="boot-splash" role="status">
+      <span className="wordmark">Obsidian<b>Chain</b></span>
+      <p className="muted small">Restoring session…</p>
     </div>
   );
 }
@@ -100,6 +105,10 @@ export function App() {
         <Route path="investigations/new" element={<NewInvestigation />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="evaluation" element={<EvaluationPage />} />
+        <Route path="models" element={<ModelsPage />} />
+        <Route path="graph" element={<GraphExplorer />} />
+        <Route path="entity/:address" element={<EntityPage />} />
+        <Route path="tx/:txid" element={<TransactionPage />} />
 
         {/* Reviewer Workspace & Queue */}
         <Route path="reviewer" element={<ReviewerQueue />} />

@@ -118,21 +118,35 @@ def test_the_html_entry_point_loads_no_remote_stylesheet() -> None:
 
 
 def test_the_font_stacks_resolve_locally() -> None:
-    """A named family is fine; it must simply have a system fallback."""
-    styles = FRONTEND / "src" / "styles.css"
-    assert styles.is_file()
-    text = styles.read_text(encoding="utf-8")
-    assert "@import" not in text, (
-        "styles.css uses @import, which can fetch a remote stylesheet."
-    )
-    for variable in ("--sans", "--mono", "--display"):
-        match = re.search(rf"{variable}:\s*([^;]+);", text, re.S)
+    """Fonts are bundled or system faces, never fetched.
+
+    The stylesheet moved to src/design/ (tokens.css + app.css) in the
+    redesign. @import is allowed there only for files that ship in the
+    build: a relative path, or an @fontsource package that is a pinned
+    dependency and is bundled by Vite. Every family keeps a generic fallback.
+    """
+    import json
+
+    design = FRONTEND / "src" / "design"
+    tokens = (design / "tokens.css").read_text(encoding="utf-8")
+    app = (design / "app.css").read_text(encoding="utf-8")
+    deps = json.loads((FRONTEND / "package.json").read_text(encoding="utf-8"))["dependencies"]
+    for text in (tokens, app):
+        for target in re.findall(r'@import\s+(?:url\()?["\']([^"\']+)', text):
+            assert target.startswith("./") or target.startswith("@fontsource/"), (
+                f"stylesheet imports {target!r}, which is neither local nor a bundled font package"
+            )
+            if target.startswith("@fontsource/"):
+                package = "/".join(target.split("/")[:2])
+                assert package in deps, f"{package} is imported but not a pinned dependency"
+                assert not deps[package].startswith(("^", "~")), f"{package} is not pinned exactly"
+    for variable in ("--oc-font", "--oc-mono"):
+        match = re.search(rf"{variable}:\s*([^;]+);", tokens, re.S)
         assert match, f"{variable} is not defined"
         stack = match.group(1)
-        assert any(
-            generic in stack
-            for generic in ("sans-serif", "monospace", "serif", "system-ui")
-        ), f"{variable} has no generic fallback: {stack.strip()}"
+        assert any(generic in stack for generic in ("sans-serif", "monospace", "serif", "system-ui")), (
+            f"{variable} has no generic fallback: {stack.strip()}"
+        )
 
 
 # ---- browser storage is not a security boundary -------------------------
