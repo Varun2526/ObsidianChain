@@ -54,6 +54,10 @@ from obsidianchain.pipeline.patterns import (
 )
 
 
+class CaptureContractError(ValueError):
+    """The capture violates its contract badly enough to be refused whole."""
+
+
 @dataclass
 class StageExecutionRecord:
     stage_number: int
@@ -98,6 +102,7 @@ def run_pipeline(
     declared_format: str | None = None,
     stage_callback: Any | None = None,
     seed_addresses: Any | None = None,
+    registry_root: str | Path | None = None,
 ) -> PipelineRunOutcome:
     """Execute the full 17-stage analytical pipeline on a canonical capture file."""
     input_file = Path(input_path)
@@ -129,6 +134,8 @@ def run_pipeline(
     # 1. Ingest & 2. Validate + Deduplicate
     t0 = datetime.datetime.now(datetime.timezone.utc)
     frame, report = ingest.ingest(input_file, declared_format=declared_format)
+    from obsidianchain.contracts.capture import enforce_capture_contract
+    frame, capture_contract = enforce_capture_contract(frame)
     dt1 = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     _add_stage(StageExecutionRecord(
         stage_number=1, stage_name="Ingest",
@@ -144,8 +151,15 @@ def run_pipeline(
             "network_observations_preserved": report.network_observations_preserved,
             "errors": report.errors[:5],
             "warnings": report.warnings[:5],
+            "capture_contract": capture_contract.as_dict(),
         },
     ))
+    if not capture_contract.ok:
+        raise CaptureContractError(
+            f"capture refused by {capture_contract.version}: "
+            f"{len(capture_contract.quarantined)} of {capture_contract.transactions} "
+            f"transactions violate the contract ({capture_contract.as_dict()['quarantine_kinds']})"
+        )
 
     # 3. GeoIP / ASN Provider
     t0 = datetime.datetime.now(datetime.timezone.utc)
@@ -216,14 +230,9 @@ def run_pipeline(
     # 9. Features
     t0 = datetime.datetime.now(datetime.timezone.utc)
     address_features = derive_canonical_address_features(frame)
-    from obsidianchain.pipeline.features_ps import extract_ps_features
+    from obsidianchain.pipeline.features_ps import extract_ps_features, last_snapshot_per_address
     ps_features = extract_ps_features(frame)
-    ps_addr_features = (
-        ps_features.sort_values(by=["timestamp"], ascending=True)
-        .groupby("address")
-        .last()
-        .reset_index()
-    ) if not ps_features.empty else pd.DataFrame()
+    ps_addr_features = last_snapshot_per_address(ps_features) if not ps_features.empty else pd.DataFrame()
 
     dt_feats = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     _add_stage(StageExecutionRecord(
@@ -241,26 +250,35 @@ def run_pipeline(
     active_model = model
     feats_to_use = address_features
 
+    model_load_report: dict[str, Any] = {"source": "caller" if active_model is not None else "registry"}
     if active_model is None:
-        # Newest artifact first. v2 is trained on the live feature schema; v1
-        # is kept frozen and, on the live schema, is refused by the
-        # compatibility manifest rather than scored on misaligned columns.
-        from obsidianchain.ml.ps_model import DEFAULT_MODEL_DIR, PsNativeRiskModel
-        root = Path("data") / "models" / "ps_native"
-        for model_dir in (DEFAULT_MODEL_DIR, root / "v2", root / "v1"):
-            if not (model_dir / "model.joblib").is_file():
-                continue
-            try:
-                active_model = PsNativeRiskModel.load(model_dir)
-                feats_to_use = ps_addr_features
-                break
-            except Exception:
-                active_model = None
+        # Serving goes through the registry only: champion, then fallback,
+        # each verified against its registered hashes and required to declare
+        # the engine's live feature schema. Never a directory scan, which
+        # would serve any artifact whose column NAMES happen to match.
+        active_model, model_load_report = _load_serving_model(registry_root)
+        if active_model is not None:
+            feats_to_use = ps_addr_features
     elif hasattr(active_model, "features") and not ps_addr_features.empty:
         if all(f in ps_addr_features.columns for f in active_model.features):
             feats_to_use = ps_addr_features
 
+    t_score = datetime.datetime.now(datetime.timezone.utc)
     ml_result = execute_supervised_stage(active_model, feats_to_use)
+    score_seconds = (datetime.datetime.now(datetime.timezone.utc) - t_score).total_seconds()
+    if not ml_result.is_available and model_load_report.get("failures"):
+        ml_result.reason = f"{ml_result.reason} | model load: {model_load_report['failures']}"
+    # Feature contract: values outside the catalog never reach a score.
+    feature_contract = None
+    if ml_result.is_available and hasattr(active_model, "features"):
+        from obsidianchain.contracts.features import validate_feature_frame
+        feature_contract = validate_feature_frame(feats_to_use, list(active_model.features))
+        if not feature_contract.ok:
+            ml_result = MlStageResult(
+                status="FEATURE_CONTRACT_VIOLATION", manifest=ml_result.manifest, scores=None,
+                reason=f"{len(feature_contract.violations)} feature contract violation(s): "
+                       f"{feature_contract.violations[:3]}",
+            )
     # Model trust for THIS run: how far the scored rows sit from the data
     # the model was trained on. Reported, never used to change a score.
     if ml_result.is_available and hasattr(active_model, "drift_report"):
@@ -288,6 +306,9 @@ def run_pipeline(
             "is_compatible": ml_result.manifest.is_compatible,
             "reason": ml_result.reason,
             "missing_features_count": len(ml_result.manifest.missing_features),
+            "feature_contract": feature_contract.as_dict() if feature_contract else None,
+            "model_load": model_load_report,
+            "rows_per_second": round(len(feats_to_use) / score_seconds, 1) if score_seconds > 0 and ml_result.is_available else None,
             "model_trust": model_trust,
         },
     ))
@@ -418,9 +439,37 @@ def run_pipeline(
     val_file.write_bytes(val_bytes)
     val_sha = hashlib.sha256(val_bytes).hexdigest()
 
+    # Prediction audit log: one record per scored address, enough to trace
+    # and recompute every score (model, schema, input hash, feature-row hash).
+    extra_artifacts: dict[str, str] = {}
+    if ml_result.is_available:
+        audit = _prediction_audit(ml_result, feats_to_use, active_model, run_id, input_sha256)
+        pred_file = run_dir / "predictions.parquet"
+        audit.to_parquet(pred_file, index=False)
+        extra_artifacts["predictions.parquet"] = hashlib.sha256(pred_file.read_bytes()).hexdigest()
+
+    # Shadow: a registered candidate scores the same rows; nothing it
+    # produces reaches an alert.
+    shadow_report = _shadow(registry_root, active_model, ml_result, feats_to_use)
+    if shadow_report is not None:
+        shadow_file = run_dir / "shadow.json"
+        shadow_bytes = json.dumps(shadow_report, indent=2, default=str).encode("utf-8")
+        shadow_file.write_bytes(shadow_bytes)
+        extra_artifacts["shadow.json"] = hashlib.sha256(shadow_bytes).hexdigest()
+
     # Serialize the model-trust report
     mon_file = run_dir / "monitoring.json"
-    mon_bytes = json.dumps({"model_trust": model_trust, "drift": monitoring_report},
+    monitoring_alerts = _monitoring_alerts(model_trust, monitoring_report, capture_contract,
+                                           feature_contract, model_load_report)
+    import resource
+    system = {
+        "stage_seconds": {s.stage_name: round(s.duration_seconds, 4) for s in stages},
+        "scoring_rows_per_second": round(len(feats_to_use) / score_seconds, 1)
+        if score_seconds > 0 and ml_result.is_available else None,
+        "max_rss_mb": round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1 << 20 if __import__("sys").platform == "darwin" else 1 << 10), 1),
+    }
+    mon_bytes = json.dumps({"model_trust": model_trust, "drift": monitoring_report,
+                            "alerts": monitoring_alerts, "system": system},
                            indent=2, default=str).encode("utf-8")
     mon_file.write_bytes(mon_bytes)
     mon_sha = hashlib.sha256(mon_bytes).hexdigest()
@@ -456,12 +505,14 @@ def run_pipeline(
             "ml_status": ml_result.status,
             "ml_incompatibility_reason": ml_result.reason,
             "model_trust": model_trust,
+            "monitoring_alerts": monitoring_alerts,
         },
         "artifacts": {
             "alerts.json": alerts_sha,
             "investigation_graph.json": graph_sha,
             "validation_report.json": val_sha,
             "monitoring.json": mon_sha,
+            **extra_artifacts,
         },
         "stages": [
             {
@@ -500,8 +551,120 @@ def run_pipeline(
 
 
 def _load_stacker(model: Any) -> dict[str, Any] | None:
-    """The stacker frozen beside the default model, only for that model."""
-    if getattr(model, "version", None) != "ps_native_v3":
+    """The stacker frozen in the serving model's own directory, if any.
+
+    It was fitted on that model's out-of-fold scores, so it is never applied
+    to a different model. Its hash is covered by the registry entry because
+    it lives in the registered directory.
+    """
+    model_dir = getattr(model, "model_dir", None)
+    if model_dir is None:
         return None
     from obsidianchain.ml.stacking import load_stacker
-    return load_stacker()
+    return load_stacker(Path(model_dir) / "stacker.json")
+
+
+def _load_serving_model(registry_root: str | Path | None) -> tuple[Any, dict[str, Any]]:
+    """Champion, else fallback, from the registry. Every failure is kept."""
+    from obsidianchain.ml.ps_model import PsNativeRiskModel
+    report: dict[str, Any] = {"source": "registry", "failures": []}
+    for role in ("champion", "fallback"):
+        try:
+            model = PsNativeRiskModel.from_registry(role, registry_root)
+        except Exception as exc:  # recorded, then the next role is tried
+            report["failures"].append({"role": role, "error": f"{type(exc).__name__}: {exc}"})
+            continue
+        report.update(role=role, version=model.version, model_sha256=model._sha256)
+        return model, report
+    return None, report
+
+
+def _prediction_audit(ml_result, features: pd.DataFrame, model: Any, run_id: str,
+                      input_sha256: str) -> pd.DataFrame:
+    import numpy as np
+    scores = ml_result.scores.reset_index(drop=True)
+    feats = features.reset_index(drop=True)
+    matrix = feats[list(model.features)].to_numpy(dtype="float64")
+    row_hash = [hashlib.sha256(r.tobytes()).hexdigest()[:16] for r in matrix]
+    raw = scores["ml_raw_score"] if "ml_raw_score" in scores else scores["ml_risk_score"]
+    out = pd.DataFrame({
+        "run_id": run_id,
+        "address": scores["address"],
+        "snapshot_txid": feats.get("txid"),
+        "snapshot_timestamp": feats.get("timestamp"),
+        "raw_score": raw.astype(float),
+        "calibrated_probability": scores["ml_risk_score"].astype(float),
+        "severity": scores.get("ml_severity"),
+        "model_version": getattr(model, "version", None),
+        "model_sha256": getattr(model, "_sha256", None),
+        "feature_schema_version": getattr(model, "feature_schema_version", None),
+        "input_sha256": input_sha256,
+        "feature_row_sha256": row_hash,
+    })
+    out["rank"] = out["raw_score"].rank(ascending=False, method="first").astype(int)
+    return out
+
+
+def _shadow(registry_root, champion: Any, ml_result, features: pd.DataFrame) -> dict[str, Any] | None:
+    """Candidate vs champion on the same rows, or None when no candidate is assigned."""
+    if champion is None or not ml_result.is_available:
+        return None
+    from obsidianchain.ml import registry
+    try:
+        if registry.Registry.open(registry_root or registry.DEFAULT_ROOT).role("candidate") is None:
+            return None
+        from obsidianchain.ml.ps_model import PsNativeRiskModel
+        candidate = PsNativeRiskModel.from_registry("candidate", registry_root)
+    except Exception as exc:
+        return {"status": "CANDIDATE_UNAVAILABLE", "error": f"{type(exc).__name__}: {exc}"}
+    if candidate.version == getattr(champion, "version", None):
+        return None
+    import time
+
+    import numpy as np
+    from scipy.stats import spearmanr
+    t0 = time.perf_counter()
+    cand = np.asarray(candidate.raw_scores(features), dtype=float)
+    seconds = time.perf_counter() - t0
+    champ = np.asarray(champion.raw_scores(features), dtype=float)
+    k = min(100, len(champ))
+    top_c, top_p = set(np.argsort(-champ)[:k]), set(np.argsort(-cand)[:k])
+    return {
+        "status": "SHADOW_ONLY",
+        "champion": champion.version, "candidate": candidate.version,
+        "rows": int(len(cand)),
+        "spearman": float(spearmanr(champ, cand).statistic) if len(cand) > 2 else None,
+        "top100_overlap": len(top_c & top_p) / k if k else None,
+        "mean_abs_score_difference": float(np.mean(np.abs(cand - champ))),
+        "candidate_rows_per_second": round(len(cand) / seconds, 1) if seconds > 0 else None,
+        "candidate_score_quantiles": np.quantile(cand, [0.5, 0.9, 0.99]).round(4).tolist() if len(cand) else [],
+        "note": "Shadow scores never reach an alert. Promotion requires the gates in docs/runbook.md.",
+    }
+
+
+def _monitoring_alerts(model_trust, drift, capture_contract, feature_contract, model_load) -> list[dict[str, str]]:
+    """Conditions an operator must see. Each names its severity and cause."""
+    alerts: list[dict[str, str]] = []
+    if model_load.get("role") == "fallback":
+        alerts.append({"severity": "HIGH", "code": "SERVED_BY_FALLBACK",
+                       "detail": str(model_load.get("failures"))})
+    if model_load.get("source") == "registry" and model_load.get("role") is None:
+        alerts.append({"severity": "CRITICAL", "code": "NO_MODEL_SERVED", "detail": str(model_load.get("failures"))})
+    if feature_contract is not None and not feature_contract.ok:
+        alerts.append({"severity": "CRITICAL", "code": "FEATURE_CONTRACT_VIOLATION",
+                       "detail": str(feature_contract.violations[:3])})
+    quarantined = len(capture_contract.quarantined)
+    if capture_contract.transactions and quarantined / capture_contract.transactions > 0.05:
+        alerts.append({"severity": "HIGH", "code": "CAPTURE_QUARANTINE_ABOVE_5PCT",
+                       "detail": f"{quarantined}/{capture_contract.transactions}"})
+    status = (drift or {}).get("status")
+    if status == "MAJOR_SHIFT":
+        alerts.append({"severity": "HIGH", "code": "MAJOR_DRIFT",
+                       "detail": f"features {drift.get('major_shift_features', [])[:5]}, score PSI {drift.get('score_psi')}"})
+    if (drift or {}).get("unseen_missingness_features"):
+        alerts.append({"severity": "MEDIUM", "code": "UNSEEN_MISSINGNESS",
+                       "detail": str(drift["unseen_missingness_features"])})
+    if model_trust.get("holdout_evaluated") is False:
+        alerts.append({"severity": "INFO", "code": "HOLDOUT_NOT_EVALUATED",
+                       "detail": "scores come from a model without a sealed-holdout result"})
+    return alerts

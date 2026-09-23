@@ -41,6 +41,7 @@ from obsidianchain.pipeline.features_ps import (
     CORE_PS_FEATURE_COLUMNS,
     GROUP_G_UPSTREAM,
     PS_FEATURE_SCHEMA_VERSION,
+    last_snapshot_per_address,
     PsTemporalFeatureEngine,
 )
 
@@ -87,38 +88,19 @@ def _compute_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def build_ps_dataset(
-    data_root: Path | None = None,
-    output_dir: Path | None = None,
-) -> dict:
-    t_start = time.time()
-    root = Path(data_root) if data_root is not None else Path(os.environ.get("OBSIDIANCHAIN_DATA", "data"))
-    out = Path(output_dir) if output_dir is not None else root / "models" / "ps_native" / "datasets"
-    out.mkdir(parents=True, exist_ok=True)
+def build_canonical_frame(raw_dir: Path, max_step: int | None = None) -> pd.DataFrame:
+    """Elliptic++ as a canonical PS capture, one row per transaction, in
+    causal order, with ``event_order`` = spend-DAG level. Label-free: the
+    wallet class file is not read here.
 
-    raw_dir = root / "raw"
-    addr_tx_path = raw_dir / "AddrTx_edgelist.csv"
-    tx_addr_path = raw_dir / "TxAddr_edgelist.csv"
-    tx_feat_path = raw_dir / "txs_features.csv"
-    wallets_classes_path = raw_dir / "wallets_classes.csv"
-
-    for p in [addr_tx_path, tx_addr_path, tx_feat_path, wallets_classes_path]:
-        if not p.is_file():
-            raise FileNotFoundError(f"Required raw dataset not found: {p}")
-
-    print("Hashing source raw datasets...")
-    source_hashes = {
-        "AddrTx_edgelist.csv": _compute_sha256(addr_tx_path),
-        "TxAddr_edgelist.csv": _compute_sha256(tx_addr_path),
-        "txs_features.csv": _compute_sha256(tx_feat_path),
-        "wallets_classes.csv": _compute_sha256(wallets_classes_path),
-    }
-
+    ``max_step`` truncates to timesteps <= max_step (used by the leakage
+    tests to replay a prefix of history).
+    """
     print("Loading raw files...")
-    at = pd.read_csv(addr_tx_path)
-    ta = pd.read_csv(tx_addr_path)
+    at = pd.read_csv(raw_dir / "AddrTx_edgelist.csv")
+    ta = pd.read_csv(raw_dir / "TxAddr_edgelist.csv")
     txs = pd.read_csv(
-        tx_feat_path,
+        raw_dir / "txs_features.csv",
         usecols=["txId", "Time step", "fees", "in_BTC_total", "out_BTC_total",
                  "total_BTC",
                  # v2. The REAL per-transaction value summary. Without these
@@ -127,7 +109,6 @@ def build_ps_dataset(
                  "in_BTC_min", "in_BTC_max", "in_BTC_mean",
                  "out_BTC_min", "out_BTC_max", "out_BTC_mean"],
     )
-    labels = pd.read_csv(wallets_classes_path)
 
     print("Grouping input/output addresses per txId...")
     in_map = at.groupby("txId")["input_address"].apply(list).to_dict()
@@ -143,6 +124,8 @@ def build_ps_dataset(
     # it ORDERS events causally and never becomes a feature value. (A first
     # version wrote it into the timestamp as one minute per level; that
     # leaked chain depth into every "seconds" feature and was withdrawn.)
+    if max_step is not None:
+        txs = txs[txs["Time step"] <= max_step]
     level = _spend_levels(raw_dir / "txs_edgelist.csv", txs[["txId", "Time step"]])
     txs["_level"] = txs["txId"].map(level).fillna(0).astype(int)
     txs = txs.sort_values(by=["Time step", "_level", "txId"], ascending=True).reset_index(drop=True)
@@ -197,6 +180,38 @@ def build_ps_dataset(
         })
 
     frame = pd.DataFrame(records)
+    return frame
+
+
+def build_ps_dataset(
+    data_root: Path | None = None,
+    output_dir: Path | None = None,
+) -> dict:
+    t_start = time.time()
+    root = Path(data_root) if data_root is not None else Path(os.environ.get("OBSIDIANCHAIN_DATA", "data"))
+    out = Path(output_dir) if output_dir is not None else root / "models" / "ps_native" / "datasets"
+    out.mkdir(parents=True, exist_ok=True)
+
+    raw_dir = root / "raw"
+    addr_tx_path = raw_dir / "AddrTx_edgelist.csv"
+    tx_addr_path = raw_dir / "TxAddr_edgelist.csv"
+    tx_feat_path = raw_dir / "txs_features.csv"
+    wallets_classes_path = raw_dir / "wallets_classes.csv"
+
+    for p in [addr_tx_path, tx_addr_path, tx_feat_path, wallets_classes_path]:
+        if not p.is_file():
+            raise FileNotFoundError(f"Required raw dataset not found: {p}")
+
+    print("Hashing source raw datasets...")
+    source_hashes = {
+        "AddrTx_edgelist.csv": _compute_sha256(addr_tx_path),
+        "TxAddr_edgelist.csv": _compute_sha256(tx_addr_path),
+        "txs_features.csv": _compute_sha256(tx_feat_path),
+        "wallets_classes.csv": _compute_sha256(wallets_classes_path),
+    }
+
+    labels = pd.read_csv(wallets_classes_path)
+    frame = build_canonical_frame(raw_dir)
     print(f"Executing PsTemporalFeatureEngine on {len(frame)} canonical records...")
     engine = PsTemporalFeatureEngine()
     features = engine.process_records(frame, include_network=False)
@@ -223,7 +238,7 @@ def build_ps_dataset(
     split_series[spans_train_val | spans_val_test] = pd.NA
 
     # Keep only the last observation per address (observation point as-of last_t)
-    features_last = features.sort_values(by=["timestamp"], ascending=True).groupby("address").last().reset_index()
+    features_last = last_snapshot_per_address(features)
     features_last["split"] = features_last["address"].map(split_series)
 
     # Merge labels (joined last, label-blind)

@@ -123,6 +123,8 @@ def create_app(data_root=None) -> FastAPI:
         description=DESCRIPTION,
     )
     app.state.data_root = data_root
+    from obsidianchain.console.routes_auth import LoginThrottle
+    app.state.login_throttle = LoginThrottle()
 
     @app.exception_handler(artifacts.ArtifactMissingError)
     async def _missing(request: Request, exc: artifacts.ArtifactMissingError):

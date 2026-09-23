@@ -34,6 +34,24 @@ MODEL_SIGNAL = "MODEL_SIGNAL"
 PROPAGATION_CONTEXT = "PROPAGATION_CONTEXT"
 
 
+#: What KIND of claim each evidence category is, so model output, rules,
+#: network observation and third-party lists are never read as one thing.
+EVIDENCE_CLASS = {
+    MODEL_SIGNAL: "MODEL",              # a learned association; not a cause
+    ANOMALY_CONTEXT: "RULE",            # statistical deviation rule (MAD)
+    PATTERN_CONTEXT: "RULE",            # structural pattern rule (peel, CoinJoin shape)
+    NETWORK_CONTEXT: "NETWORK",         # what observers saw on the P2P layer
+    PROPAGATION_CONTEXT: "WATCHLIST",   # graph distance to externally listed wallets
+    BLOCKCHAIN_CONTEXT: "CONTEXT",      # descriptive; not risk evidence
+}
+
+EXPLANATION_STATEMENT = (
+    "Model contributions (TreeSHAP) describe how this model's score was formed; "
+    "they are associations learned from labelled history, not causes. Rule, "
+    "network and watchlist evidence are separate claims with their own sources."
+)
+
+
 @dataclass
 class EvidenceItem:
     """A discrete forensic evidence item from an analytical stage."""
@@ -49,6 +67,7 @@ class EvidenceItem:
     def as_dict(self) -> dict[str, Any]:
         return {
             "category": self.category,
+            "evidence_class": EVIDENCE_CLASS.get(self.category, "CONTEXT"),
             "signal_name": self.signal_name,
             "status": self.status,
             "score": round(self.score, 4),
@@ -81,6 +100,7 @@ class AlertItem:
             "severity": self.severity,
             "rank": self.rank,
             "summary": self.summary,
+            "explanation_statement": EXPLANATION_STATEMENT,
             "evidence": [e.as_dict() for e in self.evidence],
         }
 

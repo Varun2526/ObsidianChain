@@ -2625,5 +2625,100 @@ def synthetic_world_overlap(
     typer.echo("measured. Missing evidence is not negative evidence.")
 
 
+# ---- model registry: list / verify / register / promote / rollback / health ----
+
+model_app = typer.Typer(no_args_is_help=True, help="Model registry and model health.")
+app.add_typer(model_app, name="model")
+
+
+def _registry(root: Path | None):
+    from obsidianchain.ml import registry
+    return registry.Registry.open(root or registry.DEFAULT_ROOT)
+
+
+@model_app.command("list")
+def model_list(root: Path = typer.Option(None, help="registry directory")) -> None:
+    """Registered versions and the role each holds."""
+    reg = _registry(root)
+    roles = {v: r for r, v in reg.data["roles"].items() if v}
+    for version, entry in sorted(reg.data["models"].items()):
+        typer.echo(f"{version:<18} {roles.get(version, '-'):<10} {entry['feature_schema_version']:<22} "
+                   f"{entry['lineage'].get('source_commit', '?')}")
+
+
+@model_app.command("verify")
+def model_verify(version: str, root: Path = typer.Option(None)) -> None:
+    """Check every artifact file against its registered hash."""
+    _registry(root).verify(version)
+    typer.echo(f"{version}: all artifacts match the registry")
+
+
+@model_app.command("register")
+def model_register(version: str, path: str, root: Path = typer.Option(None)) -> None:
+    """Freeze a trained model directory as an immutable registered version."""
+    import json as _json
+    reg = _registry(root)
+    manifest = _json.loads((reg.root / path / "manifest.json").read_text())
+    if manifest.get("model_version") != version:
+        raise typer.BadParameter(f"manifest says {manifest.get('model_version')}, not {version}")
+    reg.register(version, path, feature_schema_version=manifest["feature_schema_version"],
+                 lineage=manifest.get("lineage", {}), notes=manifest.get("status", ""))
+    reg.save()
+    typer.echo(f"registered {version}")
+
+
+@model_app.command("promote")
+def model_promote(version: str, role: str = typer.Option("champion"),
+                  reason: str = typer.Option(..., help="why; recorded permanently"),
+                  gate_report: Path = typer.Option(None, help="production gate report required for champion"),
+                  root: Path = typer.Option(None)) -> None:
+    """Assign a role. Champion requires a passing production gate report for this version."""
+    import json as _json
+    reg = _registry(root)
+    if role == "champion":
+        if gate_report is None or not gate_report.is_file():
+            raise typer.BadParameter("promotion to champion needs --gate-report")
+        gate = _json.loads(gate_report.read_text())
+        if gate.get("model_version") != version or gate.get("decision") != "PASS":
+            raise typer.BadParameter(f"gate report does not PASS {version}: {gate.get('decision')}")
+        reason = f"{reason} [gate {gate_report.name}: PASS]"
+    reg.assign(role, version, reason)
+    reg.save()
+    typer.echo(f"{version} -> {role}")
+
+
+@model_app.command("rollback")
+def model_rollback(reason: str = typer.Option(...), root: Path = typer.Option(None)) -> None:
+    """Swap champion and fallback, after verifying the fallback."""
+    from obsidianchain.pipeline.features_ps import PS_FEATURE_SCHEMA_VERSION
+    reg = _registry(root)
+    served = reg.rollback(reason, PS_FEATURE_SCHEMA_VERSION)
+    reg.save()
+    typer.echo(f"champion is now {served}")
+
+
+@model_app.command("attest")
+def model_attest(version: str, commit: str = typer.Option("HEAD"), root: Path = typer.Option(None)) -> None:
+    """Verify that the training code recorded in the manifest is exactly the code at COMMIT."""
+    import subprocess
+    sha = subprocess.run(["git", "rev-parse", commit], capture_output=True, text=True, check=True).stdout.strip()
+
+    def read_blob(c: str, path: str) -> bytes:
+        return subprocess.run(["git", "show", f"{c}:{path}"], capture_output=True, check=True).stdout
+
+    reg = _registry(root)
+    reg.attest(version, sha, read_blob)
+    reg.save()
+    typer.echo(f"{version}: training code verified at {sha}")
+
+
+@model_app.command("health")
+def model_health_cmd(run_dir: Path, labels: Path) -> None:
+    """Score a past run against labels that arrived later (model_health.json)."""
+    from obsidianchain.ml.delayed_labels import write_model_health
+    out = write_model_health(run_dir, labels)
+    typer.echo(f"wrote {out}")
+
+
 if __name__ == "__main__":
     sys.exit(app())

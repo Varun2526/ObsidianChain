@@ -1,7 +1,8 @@
 """PS-Native Supervised Risk Model Loader, Calibrator, and Explainer.
 
-Loads a frozen model artifact (``data/models/ps_native/v3/`` by default;
-v2 and v1 still loadable), validates cryptographic integrity and feature schemas,
+Loads a frozen model artifact. Serving resolves it through the model registry
+(``ml/registry.py``); direct loads default to ``data/models/ps_native/v5/``,
+and older frozen versions remain loadable for inspection, validates cryptographic integrity and feature schemas,
 executes calibrated inference, and emits explainable MODEL_SIGNAL outputs.
 
 v2 differs from v1 in four ways, each fixing a measured defect:
@@ -34,9 +35,9 @@ import pandas as pd
 from obsidianchain.ml import monitoring
 from obsidianchain.pipeline.features_ps import CORE_PS_FEATURE_COLUMNS
 
-#: Default artifact directory: v3, trained on the live feature schema (/4).
-#: v2 (/3) and v1 (/1) are kept, frozen, for reproducibility.
-DEFAULT_MODEL_DIR = Path("data") / "models" / "ps_native" / "v3"
+#: Default directory for DIRECT loads (tests, inspection). Serving never
+#: uses it: the orchestrator resolves the champion through ml/registry.py.
+DEFAULT_MODEL_DIR = Path("data") / "models" / "ps_native" / "v5"
 
 #: Share of a run's scored rows placed in each band, most severe first. A
 #: row above the top budgets is LOW. Budgets rather than probability
@@ -115,10 +116,19 @@ class PsNativeRiskModel:
         # estimator with ``predict`` (v1 isotonic).
         self._platt = self.calibrator if isinstance(self.calibrator, dict) else None
         self._native_missing = self._platt is not None and hasattr(self.model, "booster_")
+        self.model_dir: Path | None = None
+        self.role: str | None = None
 
     @classmethod
-    def load(cls, model_dir: str | Path | None = None) -> PsNativeRiskModel:
-        """Load model from disk and verify cryptographic hash against manifest."""
+    def load(cls, model_dir: str | Path | None = None, *,
+             require_live_schema: bool = False) -> PsNativeRiskModel:
+        """Load model from disk and verify cryptographic hash against manifest.
+
+        ``require_live_schema`` - the SERVING path sets it: a model whose
+        declared feature schema is not the engine's current one is refused
+        outright, instead of relying on column names happening to match.
+        Inspection of frozen historical artifacts leaves it False.
+        """
         base_dir = Path(model_dir) if model_dir is not None else DEFAULT_MODEL_DIR
         joblib_path = base_dir / "model.joblib"
         manifest_path = base_dir / "manifest.json"
@@ -139,8 +149,32 @@ class PsNativeRiskModel:
                 f"Expected SHA-256 {expected_sha256}, got {actual_sha256}"
             )
 
+        if require_live_schema:
+            from obsidianchain.pipeline.features_ps import PS_FEATURE_SCHEMA_VERSION
+            declared = manifest.get("feature_schema_version")
+            if declared != PS_FEATURE_SCHEMA_VERSION:
+                raise ValueError(f"model at {base_dir} declares feature schema {declared!r}; "
+                                 f"the engine emits {PS_FEATURE_SCHEMA_VERSION!r}")
+        # joblib unpickles; only after the checksum above (and, on the serving
+        # path, the registry's own check) has matched.
         artifact = joblib.load(joblib_path)
-        return cls(model_artifact=artifact, manifest=manifest, model_sha256=actual_sha256)
+        model = cls(model_artifact=artifact, manifest=manifest, model_sha256=actual_sha256)
+        if list(manifest.get("features", model.features)) != model.features:
+            raise ValueError(f"model at {base_dir}: manifest feature order differs from the artifact's")
+        model.model_dir = base_dir
+        return model
+
+    @classmethod
+    def from_registry(cls, role: str = "champion", root: str | Path | None = None) -> PsNativeRiskModel:
+        """The registry's verified, schema-compatible model for ``role``."""
+        from obsidianchain.ml import registry
+        from obsidianchain.pipeline.features_ps import PS_FEATURE_SCHEMA_VERSION
+        version, model_dir = registry.resolve(role, root or registry.DEFAULT_ROOT, PS_FEATURE_SCHEMA_VERSION)
+        model = cls.load(model_dir, require_live_schema=True)
+        if model.version != version:
+            raise ValueError(f"registry names {version} but the manifest says {model.version}")
+        model.role = role
+        return model
 
     def assign_severity(self, calibrated_score: float) -> str:
         """v1 static bands. v2 has none and uses :meth:`severity` instead."""
@@ -150,7 +184,9 @@ class PsNativeRiskModel:
         return "LOW"
 
     def _matrix(self, frame: pd.DataFrame) -> np.ndarray:
-        X = frame[self.features].to_numpy(dtype=np.float32)
+        # An explicit copy: under pandas copy-on-write to_numpy() may return a
+        # read-only view, and the in-place edit below would raise.
+        X = np.array(frame[self.features].to_numpy(dtype=np.float32), copy=True)
         if self._native_missing:
             # Infinities are not a value; NaN is the model's missing marker.
             X[~np.isfinite(X)] = np.nan

@@ -197,7 +197,7 @@ class TestPipelineAcceptance:
         # Check manifest contents
         manifest = outcome.manifest
         assert manifest["input_dataset"]["format"] == fmt
-        # v3 (schema ps_native_features/4) is trained on the live schema,
+        # The registry champion is trained on the live schema,
         # so the model scores. The v1 refusal path is still covered by the
         # MockLightGBM / MockEllipticModel tests in this file.
         assert manifest["provenance"]["ml_status"] == "SCORED"
@@ -209,7 +209,9 @@ class TestPipelineAcceptance:
         s10 = next(s for s in outcome.stages if s.stage_number == 10)
         assert s10.status == "SUCCESS"
         assert s10.summary["status"] == "SCORED"
-        assert s10.summary["model_version"] == "ps_native_v3"
+        # Whatever the registry names champion serves; today ps_native_v4.
+        from obsidianchain.ml import registry
+        assert s10.summary["model_version"] == registry.Registry.open().role("champion")
 
         # Check alerts contain a scored MODEL_SIGNAL
         alerts = outcome.alert_result.alerts
@@ -256,7 +258,7 @@ class TestPipelineAcceptance:
         outcome = run_pipeline(pure_bc_path, runs_dir=tmp_path / "runs", geoip_provider=geoip.TestFixtureProvider())
         assert outcome.is_success
         manifest = outcome.manifest
-        # v3 (schema ps_native_features/4) is trained on the live schema,
+        # The registry champion is trained on the live schema,
         # so the model scores. The v1 refusal path is still covered by the
         # MockLightGBM / MockEllipticModel tests in this file.
         assert manifest["provenance"]["ml_status"] == "SCORED"
@@ -403,7 +405,8 @@ def test_every_run_reports_model_trust(tmp_path) -> None:
     outcome = run_pipeline("tests/data/synthetic_acceptance_capture.json",
                            runs_dir=tmp_path, geoip_provider=geoip.TestFixtureProvider())
     trust = outcome.manifest["provenance"]["model_trust"]
-    assert trust["model_version"] == "ps_native_v3"
+    from obsidianchain.ml import registry
+    assert trust["model_version"] == registry.Registry.open().role("champion")
     assert trust["holdout_evaluated"] is False
     assert trust["drift_status"] in {"STABLE", "SHIFTED", "MAJOR_SHIFT"}
     report = json.loads((outcome.run_dir / "monitoring.json").read_text())

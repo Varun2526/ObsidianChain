@@ -43,7 +43,7 @@ sys.path.insert(0, str(ROOT / "research" / "reproduction"))
 from obsidianchain.io import ingest  # noqa: E402
 from obsidianchain.ml import diagnostics, protocol  # noqa: E402
 from obsidianchain.pipeline.features_ps import (  # noqa: E402
-    CORE_PS_FEATURE_COLUMNS, GROUP_E_NETWORK, extract_ps_features,
+    CORE_PS_FEATURE_COLUMNS, GROUP_E_NETWORK, extract_ps_features, last_snapshot_per_address,
 )
 from obsidianchain.world.noisy import (  # noqa: E402
     BASE_TIMESTAMP, RELAY_LAUNDERING, TIMESTEP_SECONDS, NoisyWorldConfig, write_noisy_world,
@@ -58,7 +58,7 @@ def dataset(root: Path) -> pd.DataFrame:
     frame, report = ingest.ingest(root / "capture.csv")
     assert report.ok, report.errors[:3]
     feats = extract_ps_features(frame, include_network=True)
-    last = feats.sort_values("timestamp", kind="stable").groupby("address").last().reset_index()
+    last = last_snapshot_per_address(feats)
     truth = pd.read_csv(root / "world_truth" / "labels.csv")
     behaviour = pd.read_csv(root / "world_truth" / "entities.csv").set_index("entity")["behaviour"]
     last = last.merge(truth[["address", "y", "entity"]], on="address", how="left")

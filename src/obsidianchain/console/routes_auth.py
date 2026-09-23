@@ -19,6 +19,49 @@ from obsidianchain.console.users import User
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
+import os  # noqa: E402
+import threading  # noqa: E402
+import time  # noqa: E402
+
+#: Failed logins allowed per (username, client) inside the window, and how
+#: long further attempts are refused once that is exceeded. scrypt already
+#: makes each guess slow; this bounds how many a single client can make.
+LOGIN_MAX_FAILURES = 5
+LOGIN_WINDOW_SECONDS = 15 * 60
+
+
+class LoginThrottle:
+    """In-process failure counter. It resets on restart, which is acceptable
+    for a single-host offline deployment and is recorded in the security
+    model (docs/security.md); every failure is also in the audit log."""
+
+    def __init__(self) -> None:
+        self._failures: dict[tuple[str, str], list[float]] = {}
+        self._lock = threading.Lock()
+
+    def _recent(self, key, now: float) -> list[float]:
+        kept = [t for t in self._failures.get(key, []) if now - t < LOGIN_WINDOW_SECONDS]
+        self._failures[key] = kept
+        return kept
+
+    def check(self, key) -> None:
+        with self._lock:
+            if len(self._recent(key, time.monotonic())) >= LOGIN_MAX_FAILURES:
+                raise errors.TooManyAttempts(
+                    f"too many failed logins; retry after {LOGIN_WINDOW_SECONDS // 60} minutes")
+
+    def failed(self, key) -> None:
+        with self._lock:
+            now = time.monotonic()
+            self._recent(key, now).append(now)
+
+    def succeeded(self, key) -> None:
+        with self._lock:
+            self._failures.pop(key, None)
+
+
+THROTTLE = LoginThrottle()
+
 
 def _set_cookie(response: Response, token: str) -> None:
     response.set_cookie(
@@ -27,11 +70,11 @@ def _set_cookie(response: Response, token: str) -> None:
         max_age=sessions.TTL_SECONDS,
         httponly=True,
         samesite="lax",
-        # Not `secure`: this application is served over plain HTTP on
-        # loopback in an offline deployment, and a Secure cookie would never
-        # be sent. Recorded in console/sessions.py rather than left to be
-        # rediscovered.
-        secure=False,
+        # Not `secure` by default: this application is served over plain
+        # HTTP on loopback in an offline deployment, and a Secure cookie
+        # would never be sent. A deployment behind TLS sets
+        # OBSIDIANCHAIN_COOKIE_SECURE=1. Recorded in console/sessions.py.
+        secure=os.environ.get("OBSIDIANCHAIN_COOKIE_SECURE") == "1",
         path="/",
     )
 
@@ -64,6 +107,7 @@ def _identity(user: User, *, conn: sqlite3.Connection | None = None) -> dict:
 
 @router.post("/auth/login", summary="Exchange credentials for a session")
 def login(
+    request: Request,
     response: Response,
     payload: dict = Body(...),
     conn: sqlite3.Connection = Depends(deps.get_connection),
@@ -76,9 +120,13 @@ def login(
     """
     username = str(payload.get("username") or "").strip()
     password = str(payload.get("password") or "")
+    key = (username.lower()[:64], request.client.host if request.client else "unknown")
+    throttle = getattr(request.app.state, "login_throttle", THROTTLE)
+    throttle.check(key)
     try:
         user = users.authenticate(conn, username, password)
     except errors.InvalidCredentials:
+        throttle.failed(key)
         audit.record_standalone(
             conn, actor_id=None, action=audit.LOGIN_FAILED,
             object_type="session", object_id=None,
@@ -86,6 +134,7 @@ def login(
         )
         raise
 
+    throttle.succeeded(key)
     token = sessions.create(conn, user)
     audit.record_standalone(
         conn, actor_id=user.id, action=audit.LOGIN,
