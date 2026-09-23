@@ -184,6 +184,21 @@ class Registry:
         entry["attested_source_commit"] = commit
         self._log("ATTEST_SOURCE", version, f"code_sha256 of {len(code)} files verified at {commit}")
 
+    def record_holdout(self, version: str, result_path: Path) -> None:
+        """Attach the locked holdout result to a version (metadata, append-only)."""
+        entry = self.entry(version)
+        if entry.get("holdout"):
+            raise RegistryError(f"{version} already has a holdout result; the holdout is not reopened")
+        lock = result_path.with_suffix(".lock")
+        body = result_path.read_bytes()
+        if not lock.is_file() or lock.read_text().strip() != hashlib.sha256(body).hexdigest():
+            raise RegistryError(f"{result_path} does not match its lock file")
+        card = json.loads(body)["models"][version]["scorecard"]
+        entry["holdout"] = {"result": str(result_path.relative_to(self.root)), "sha256": lock.read_text().strip(),
+                            "nap": card["address"]["nap"], "P@100": card["address"]["P@100"],
+                            "ece": card["calibration"]["ece"]}
+        self._log("RECORD_HOLDOUT", version, f"holdout result {entry['holdout']['sha256'][:12]}")
+
     def _log(self, event: str, version: str | None, reason: str, previous: str | None = None) -> None:
         self.data["history"].append({"at": _now(), "event": event, "version": version,
                                      "previous": previous, "reason": reason})

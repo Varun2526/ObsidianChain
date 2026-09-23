@@ -101,6 +101,28 @@ def _reading(value: float) -> str:
     return "STABLE"
 
 
+#: A feature is unusual when its PSI exceeds its own development p95; this
+#: many unusual features (about 1.6 of 31 are expected by chance) make a run
+#: ABNORMAL relative to ordinary windows.
+BASELINE_MIN_UNUSUAL_FEATURES = 4
+
+
+def relative_reading(report: dict[str, Any], baseline: dict[str, Any] | None) -> dict[str, Any]:
+    """Read a drift report against the development baseline (exp23).
+
+    Absolute PSI thresholds flag every window of this data; the baseline
+    says what an ordinary window looks like for THIS model.
+    """
+    if not baseline or "features" not in report:
+        return {"status": "NO_BASELINE"}
+    unusual = sorted(f for f, v in report["features"].items()
+                     if f in baseline["feature_psi"] and v["psi"] > baseline["feature_psi"][f])
+    score_high = report["score_psi"] > baseline["score_psi"]
+    status = "ABNORMAL" if (score_high or len(unusual) >= BASELINE_MIN_UNUSUAL_FEATURES) else "WITHIN_BASELINE"
+    return {"status": status, "score_psi_above_baseline": score_high, "unusual_features": unusual,
+            "baseline_quantile": baseline.get("quantile"), "baseline_model": baseline.get("model_version")}
+
+
 def compare_to_reference(reference: dict[str, Any] | None, frame: pd.DataFrame,
                          raw_scores: np.ndarray) -> dict[str, Any]:
     """Drift report for one run. ``reference`` None means the model has none."""

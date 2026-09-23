@@ -118,6 +118,8 @@ class PsNativeRiskModel:
         self._native_missing = self._platt is not None and hasattr(self.model, "booster_")
         self.model_dir: Path | None = None
         self.role: str | None = None
+        self.holdout_summary: dict[str, Any] | None = None
+        self.drift_baseline: dict[str, Any] | None = None
 
     @classmethod
     def load(cls, model_dir: str | Path | None = None, *,
@@ -174,6 +176,14 @@ class PsNativeRiskModel:
         if model.version != version:
             raise ValueError(f"registry names {version} but the manifest says {model.version}")
         model.role = role
+        # The frozen manifest can only ever say "not evaluated"; the registry
+        # carries the locked holdout result once it exists.
+        holdout = registry.Registry.open(root or registry.DEFAULT_ROOT).entry(version).get("holdout")
+        model.holdout_evaluated = holdout is not None
+        model.holdout_summary = holdout
+        drift_baseline = Path(root or registry.DEFAULT_ROOT) / "monitoring" / f"{version}_baseline.json"
+        if drift_baseline.is_file():
+            model.drift_baseline = json.loads(drift_baseline.read_text())
         return model
 
     def assign_severity(self, calibrated_score: float) -> str:
@@ -250,8 +260,9 @@ class PsNativeRiskModel:
         """Training-reference comparison for the rows being scored."""
         if frame.empty or any(f not in frame.columns for f in self.features):
             return {"status": "NO_ROWS_SCORED"}
-        return monitoring.compare_to_reference(
-            self.reference_profile, frame, self.raw_scores(frame))
+        report = monitoring.compare_to_reference(self.reference_profile, frame, self.raw_scores(frame))
+        report["relative_to_development"] = monitoring.relative_reading(report, self.drift_baseline)
+        return report
 
     def _contributions(self, X: np.ndarray) -> np.ndarray | None:
         """Per-row TreeSHAP in log-odds, bias column dropped. None if unsupported."""

@@ -104,6 +104,27 @@
       "previous": null,
       "reason": "frozen candidate, attested at 5431241, pending production gate",
       "version": "ps_native_v5"
+    },
+    {
+      "at": "2026-09-23T17:48:13+00:00",
+      "event": "RECORD_HOLDOUT",
+      "previous": null,
+      "reason": "holdout result 3e9e2f4b18a7",
+      "version": "ps_native_v5"
+    },
+    {
+      "at": "2026-09-23T17:48:13+00:00",
+      "event": "RECORD_HOLDOUT",
+      "previous": null,
+      "reason": "holdout result a5e8e6b6eff4",
+      "version": "ps_native_v5_fallback_no_g"
+    },
+    {
+      "at": "2026-09-23T17:49:09+00:00",
+      "event": "ASSIGN_CHAMPION",
+      "previous": null,
+      "reason": "Production gate 18/18 PASS (docs/production_gate_spec.json, thresholds committed before the holdout). Holdout t42-49 nAP 0.548, P@100 1.00, ECE 0.010. KNOWN RISK: per-window collapse at t43/t45/t47 (P@100 0.02-0.28) from concept drift that input monitoring cannot detect; deployment requires the delayed-label review loop (docs/runbook.md). [gate ps_native_v5.json: PASS]",
+      "version": "ps_native_v5"
     }
   ],
   "models": {
@@ -337,6 +358,13 @@
       },
       "attested_source_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68",
       "feature_schema_version": "ps_native_features/5",
+      "holdout": {
+        "P@100": 1.0,
+        "ece": 0.009584306662005796,
+        "nap": 0.5475262986138172,
+        "result": "holdout/ps_native_v5.json",
+        "sha256": "3e9e2f4b18a7a7adc03b7aef17e0d3e46d52a0f10593be8549f19984b028df93"
+      },
       "lineage": {
         "code_sha256": {
           "research/autoresearch_2026_09_23/scripts/exp22_window_end_protocol.py": "80563740c7ce89bcc4382b28fb2faa9017725fd894f38083048f99536bcb4a1f",
@@ -428,6 +456,13 @@
       },
       "attested_source_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68",
       "feature_schema_version": "ps_native_features/5",
+      "holdout": {
+        "P@100": 1.0,
+        "ece": 0.008297569501895181,
+        "nap": 0.5214155261558738,
+        "result": "holdout/ps_native_v5_fallback_no_g.json",
+        "sha256": "a5e8e6b6eff4fe62a8716d78af9d9e91095c6ee5fe7b92c3cdce8f1d16d3e527"
+      },
       "lineage": {
         "code_sha256": {
           "research/autoresearch_2026_09_23/scripts/exp22_window_end_protocol.py": "80563740c7ce89bcc4382b28fb2faa9017725fd894f38083048f99536bcb4a1f",
@@ -505,7 +540,7 @@
   },
   "roles": {
     "candidate": "ps_native_v5",
-    "champion": null,
+    "champion": "ps_native_v5",
     "fallback": "ps_native_v5_fallback_no_g"
   },
   "schema": "obsidianchain.model_registry/1"

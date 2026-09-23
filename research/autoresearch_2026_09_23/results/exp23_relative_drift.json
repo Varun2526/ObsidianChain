@@ -1,0 +1,162 @@
+{
+  "holdout": [
+    {
+      "step": 42,
+      "relative": "WITHIN_BASELINE",
+      "n_unusual": 3,
+      "nap": 0.7042221014461851,
+      "P@100": 0.98
+    },
+    {
+      "step": 43,
+      "relative": "WITHIN_BASELINE",
+      "n_unusual": 0,
+      "nap": 0.13474073333414022,
+      "P@100": 0.18
+    },
+    {
+      "step": 44,
+      "relative": "WITHIN_BASELINE",
+      "n_unusual": 3,
+      "nap": 0.6873189222035019,
+      "P@100": 1.0
+    },
+    {
+      "step": 45,
+      "relative": "WITHIN_BASELINE",
+      "n_unusual": 3,
+      "nap": 0.017120210293144374,
+      "P@100": 0.02
+    },
+    {
+      "step": 46,
+      "relative": "WITHIN_BASELINE",
+      "n_unusual": 2,
+      "nap": 0.981015471501969,
+      "P@100": 0.98
+    },
+    {
+      "step": 47,
+      "relative": "WITHIN_BASELINE",
+      "n_unusual": 1,
+      "nap": 0.323809999417677,
+      "P@100": 0.28
+    },
+    {
+      "step": 48,
+      "relative": "WITHIN_BASELINE",
+      "n_unusual": 0,
+      "nap": 0.48407937893949593,
+      "P@100": 0.44
+    },
+    {
+      "step": 49,
+      "relative": "WITHIN_BASELINE",
+      "n_unusual": 0,
+      "nap": 0.716974142048474,
+      "P@100": 1.0
+    }
+  ],
+  "dev_flags": [
+    [
+      17,
+      false
+    ],
+    [
+      18,
+      false
+    ],
+    [
+      19,
+      false
+    ],
+    [
+      20,
+      false
+    ],
+    [
+      21,
+      true
+    ],
+    [
+      22,
+      false
+    ],
+    [
+      23,
+      false
+    ],
+    [
+      24,
+      false
+    ],
+    [
+      25,
+      true
+    ],
+    [
+      26,
+      false
+    ],
+    [
+      27,
+      false
+    ],
+    [
+      28,
+      false
+    ],
+    [
+      29,
+      false
+    ],
+    [
+      30,
+      false
+    ],
+    [
+      31,
+      true
+    ],
+    [
+      32,
+      false
+    ],
+    [
+      33,
+      true
+    ],
+    [
+      34,
+      true
+    ],
+    [
+      35,
+      false
+    ],
+    [
+      36,
+      false
+    ],
+    [
+      37,
+      false
+    ],
+    [
+      38,
+      false
+    ],
+    [
+      39,
+      false
+    ],
+    [
+      40,
+      false
+    ],
+    [
+      41,
+      false
+    ]
+  ]
+}
