@@ -1,5 +1,12 @@
 # ADR 0002 — PS-native v2: schema /3, LightGBM, propagation, fusion, monitoring
 
+> **STATUS (2026-09-23, final): historical.** Absolute metric values in this
+> document were computed before the leakage fixes L1-L6
+> (`research/autoresearch_2026_09_23/19_leakage_audit.md`) and are
+> **INVALID or WITHDRAWN**. Current valid numbers: `docs/results_register.md`.
+> Current model: `docs/model_card.md`.
+
+
 Date: 2026-09-23. Status: accepted, holdout evaluation pending.
 Scope: the PS-native path only (ADR 0001). Phase 6 artifacts are unchanged.
 

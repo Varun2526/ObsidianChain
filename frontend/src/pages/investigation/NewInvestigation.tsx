@@ -4,7 +4,7 @@
  * 1. Details: Name, description, priority
  * 2. Data Source: Dual dropzones (Blockchain Ledger & P2P Network observations) or unified file
  * 3. Forensic Validation: Structural validation checklist & field coverage
- * 4. Analysis Configuration: Standard Investigation profile with toggles + Collapsible Advanced Config
+ * 4. Analysis: what every run does (fixed and versioned; no toggles that would not be honoured)
  * 5. Live Backend-Driven 17-Stage Execution: Real polling from /progress with stage tracker
  */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -19,6 +19,7 @@ import type {
   UploadedDataset,
 } from "../../api/types";
 import { ErrorState } from "../../components/ui/ErrorState";
+import { RunResultsPanel } from "../../components/forensics/RunResultsPanel";
 
 type Step = "create" | "upload" | "validation" | "config" | "execution";
 
@@ -62,12 +63,12 @@ const STEP_META: Record<Step, { num: string; title: string; doing: string; next:
     num: "03",
     title: "VALIDATE",
     doing: "Review data quality, canonical field coverage, and network observation readiness",
-    next: "Next: Choose analysis profile and analytical detection modules",
+    next: "Next: Review what the analysis does, then run it",
   },
   config: {
     num: "04",
     title: "CONFIGURE",
-    doing: "Choose analysis profile and analytical detection modules",
+    doing: "Review the fixed analysis every run performs",
     next: "Next: Execute the 17-stage analytical pipeline offline",
   },
   execution: {
@@ -96,15 +97,6 @@ export function NewInvestigation() {
   const [error, setError] = useState<Error | null>(null);
 
   // Configuration state
-  const [profile, setProfile] = useState<string>("standard");
-  const [modBlockchain, setModBlockchain] = useState(true);
-  const [modNetwork, setModNetwork] = useState(true);
-  const [modMLRisk, setModMLRisk] = useState(true);
-  const [modAnomaly, setModAnomaly] = useState(true);
-  const [modPatterns, setModPatterns] = useState(true);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [sensitivity, setSensitivity] = useState("0.75");
-  const [modelFamily, setModelFamily] = useState("PS_NATIVE_LIGHTGBM");
 
   // Execution & Progress state
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
@@ -152,20 +144,10 @@ export function NewInvestigation() {
     setStep("execution");
 
     try {
-      const resp = await api.runDatasetAnalysis(investigation.id, dataset.id, {
-        profile,
-        modules: {
-          blockchain: modBlockchain,
-          network: modNetwork,
-          ml_risk: modMLRisk,
-          anomaly: modAnomaly,
-          patterns: modPatterns,
-        },
-        advanced: {
-          sensitivity: parseFloat(sensitivity),
-          model_family: modelFamily,
-        },
-      });
+      // No options are sent: the pipeline always runs every stage and the
+      // registry's champion model. Controls that looked as if they changed
+      // the analysis, but did not, were removed.
+      const resp = await api.runDatasetAnalysis(investigation.id, dataset.id);
 
       setActiveRunId(resp.run_id);
     } catch (cause) {
@@ -545,25 +527,9 @@ export function NewInvestigation() {
                 'make run ARGS="phase6-dataset" && make run ARGS="phase7-alerts"'}</pre>
             </div>
 
-            <div className="form-group" style={{ maxWidth: 500, margin: "18px 0" }}>
-              <label htmlFor="analysis-profile" style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Analysis Profile
-              </label>
-              <select
-                id="analysis-profile"
-                value={profile}
-                onChange={(e) => setProfile(e.target.value)}
-                style={{ fontSize: 14, padding: "8px 12px" }}
-              >
-                <option value="standard">STANDARD INVESTIGATION (Recommended)</option>
-                <option value="deep_forensic">DEEP FORENSIC & PATTERN TRACING</option>
-                <option value="triage_rapid">RAPID TRIAGE & PRIORITY ALERTS</option>
-              </select>
-            </div>
-
             <div style={{ padding: "14px 16px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6, marginBottom: 20 }}>
               <strong style={{ display: "block", color: "var(--cyan)", marginBottom: 4 }}>
-                STANDARD INVESTIGATION
+                ONE FIXED, VERSIONED ANALYSIS
               </strong>
               <p className="small muted" style={{ margin: 0, lineHeight: 1.5 }}>
                 Runs the standard ObsidianChain detection, anomaly, pattern and evidence pipeline. Executes all 17 offline stages to derive entity clusters, feature vectors, supervised LightGBM risk scores, and multi-layer fused alerts.
@@ -572,107 +538,20 @@ export function NewInvestigation() {
 
             <div>
               <h3 className="small muted" style={{ marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Analytical Detection Modules
+                What every run does
               </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={modBlockchain}
-                    onChange={(e) => setModBlockchain(e.target.checked)}
-                  />
-                  <span>
-                    <strong>Blockchain Graph & Clustering:</strong> Address-Tx bipartite graph, Union-Find common-input clustering, change address heuristics.
-                  </span>
-                </label>
-
-                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={modNetwork}
-                    onChange={(e) => setModNetwork(e.target.checked)}
-                  />
-                  <span>
-                    <strong>Network Correlation:</strong> P2P propagation mapping, multi-observer diversity, GeoIP and ASN attribution.
-                  </span>
-                </label>
-
-                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={modMLRisk}
-                    onChange={(e) => setModMLRisk(e.target.checked)}
-                  />
-                  <span>
-                    <strong>PS-Native ML Risk Scoring:</strong> Calibrated LightGBM classifier derived from canonical PS feature space.
-                  </span>
-                </label>
-
-                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={modAnomaly}
-                    onChange={(e) => setModAnomaly(e.target.checked)}
-                  />
-                  <span>
-                    <strong>Unsupervised Anomaly Detection:</strong> Isolation Forest structural anomaly scoring for out-of-distribution entities.
-                  </span>
-                </label>
-
-                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={modPatterns}
-                    onChange={(e) => setModPatterns(e.target.checked)}
-                  />
-                  <span>
-                    <strong>Pattern Detection:</strong> Peeling chain heuristics, rapid fan-out, and coin mixing/CoinJoin fingerprinting.
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Advanced Collapsible Accordion (Senior Analysts) */}
-            <div style={{ marginTop: 24, borderTop: "1px solid var(--hairline)", paddingTop: 16 }}>
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                style={{ background: "transparent", border: "none", color: "var(--text-dim)", padding: 0 }}
-              >
-                {showAdvanced ? "▼ Hide Advanced Configuration" : "▶ Advanced Configuration (Senior Analysts)"}
-              </button>
-
-              {showAdvanced && (
-                <div style={{ marginTop: 14, padding: "14px 18px", background: "var(--bg-raised)", borderRadius: 6, border: "1px solid var(--hairline)" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <div className="form-group">
-                      <label htmlFor="model-family">Supervised Risk Model Family</label>
-                      <select
-                        id="model-family"
-                        value={modelFamily}
-                        onChange={(e) => setModelFamily(e.target.value)}
-                      >
-                        <option value="PS_NATIVE_LIGHTGBM">PS-Native LightGBM (Canonical Schema)</option>
-                        <option value="ENSEMBLE_HYBRID">Ensemble (LightGBM + Structural Heuristics)</option>
-                      </select>
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="sensitivity">Anomaly Prioritization Threshold</label>
-                      <select
-                        id="sensitivity"
-                        value={sensitivity}
-                        onChange={(e) => setSensitivity(e.target.value)}
-                      >
-                        <option value="0.90">Strict (Top 10% High Risk)</option>
-                        <option value="0.75">Standard (Top 25% Elevated Risk)</option>
-                        <option value="0.50">Broad (Top 50% Explanatory Scope)</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <ul className="small" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+                <li><strong>Capture contract:</strong> transactions with conflicting, negative or impossible values are quarantined and listed, never repaired.</li>
+                <li><strong>Blockchain graph and clustering:</strong> address-transaction graph and common-input (co-spend) clusters.</li>
+                <li><strong>Network correlation:</strong> exact-TXID match of P2P observations, GeoIP and ASN attribution.</li>
+                <li><strong>Supervised risk model:</strong> the model the registry names champion, with TreeSHAP explanations.</li>
+                <li><strong>Anomaly rule:</strong> robust median-absolute-deviation scores per address.</li>
+                <li><strong>Pattern rules:</strong> peeling chains and CoinJoin-like collaborative spends.</li>
+                <li><strong>Watchlist propagation:</strong> distance to OFAC / watchlist seed wallets, when any are present.</li>
+              </ul>
+              <p className="small faint" style={{ marginTop: 10 }}>
+                The configuration is fixed and versioned so that every run of the same file gives the same result.
+              </p>
             </div>
 
             {error ? <ErrorState error={error} /> : null}
@@ -795,11 +674,15 @@ export function NewInvestigation() {
                   </div>
 
                   <p className="muted small" style={{ marginTop: 14, marginBottom: 0 }}>
-                    All analytical artifacts have been cryptographically signed and bound to this investigation.
-                    Casework decisions, graph exploration, and priority alert triage are now available.
+                    Every artifact of this run is recorded with its SHA-256 hash in the run manifest and bound to
+                    this investigation. Casework decisions, graph exploration and alert triage are now available.
                   </p>
                 </div>
               </div>
+            )}
+
+            {progress?.status === "COMPLETE" && investigation && activeRunId && (
+              <RunResultsPanel investigationId={investigation.id} runId={activeRunId} />
             )}
 
             {progress?.status === "FAILED" && (

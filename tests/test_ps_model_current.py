@@ -63,7 +63,7 @@ def test_holdout_status_lives_in_the_registry_not_the_frozen_manifest(model) -> 
     served = PsNativeRiskModel.from_registry("champion")
     holdout = registry.Registry.open().entry(served.version)["holdout"]
     assert served.holdout_evaluated is True and served.holdout_summary == holdout
-    body = (registry.DEFAULT_ROOT / holdout["result"]).read_bytes()
+    body = (registry.default_root() / holdout["result"]).read_bytes()
     assert __import__("hashlib").sha256(body).hexdigest() == holdout["sha256"]
 
 

@@ -1,5 +1,12 @@
 # 17 — Dataset and Metrics Audit (exp13, 2026-09-23)
 
+> **STATUS (2026-09-23, final): historical.** Absolute metric values in this
+> document were computed before the leakage fixes L1-L6
+> (`research/autoresearch_2026_09_23/19_leakage_audit.md`) and are
+> **INVALID or WITHDRAWN**. Current valid numbers: `docs/results_register.md`.
+> Current model: `docs/model_card.md`.
+
+
 Scope: PS-native development data (`train.parquet` + `validation.parquet`,
 t1-41) and the raw Elliptic++ files it is built from. The sealed holdout
 (`test.parquet`) was **not** opened. Scripts: `scripts/exp13_*.py`.

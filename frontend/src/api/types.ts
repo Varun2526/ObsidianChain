@@ -794,3 +794,54 @@ export interface ReviewDecisionPayload {
   rationale: string;
 }
 
+
+/** GET /investigations/{id}/runs/{run_id}/results - an uploaded-dataset run. */
+export type RunSeverity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL";
+export type EvidenceClass = "MODEL" | "RULE" | "NETWORK" | "WATCHLIST" | "CONTEXT";
+
+export interface RunEvidence {
+  category: string;
+  evidence_class: EvidenceClass;
+  signal_name: string;
+  status: "PRESENT" | "NO_EVIDENCE" | "UNAVAILABLE";
+  score: number;
+  explanation: string;
+}
+
+export interface RunAlert {
+  alert_id: string;
+  cluster_id: string;
+  primary_address: string;
+  member_count: number;
+  fused_risk_score: number;
+  severity: RunSeverity;
+  rank: number;
+  summary: { confidence?: number; corroborating_evidence_lines?: number } & Record<string, unknown>;
+  explanation_statement?: string;
+  evidence: RunEvidence[];
+}
+
+export interface RunMonitoringAlert {
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "INFO";
+  code: string;
+  detail: string;
+}
+
+export interface RunResults {
+  run_id: string;
+  run_fingerprint: string | null;
+  created_at: string | null;
+  input_sha256: string | null;
+  ml_status: string;
+  model: {
+    version: string | null;
+    feature_schema_version: string | null;
+    holdout_result: { nap: number; "P@100": number; ece: number; sha256: string } | null;
+    holdout_result_type: string;
+  };
+  run_result_type: string;
+  monitoring_alerts: RunMonitoringAlert[];
+  drift_relative_to_development: string | null;
+  total_alerts: number;
+  alerts: RunAlert[];
+}

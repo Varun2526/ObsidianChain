@@ -1,5 +1,12 @@
 # 18 — Architecture Upgrade: Results Record (2026-09-23)
 
+> **STATUS (2026-09-23, final): historical.** Absolute metric values in this
+> document were computed before the leakage fixes L1-L6
+> (`research/autoresearch_2026_09_23/19_leakage_audit.md`) and are
+> **INVALID or WITHDRAWN**. Current valid numbers: `docs/results_register.md`.
+> Current model: `docs/model_card.md`.
+
+
 Six steps, in order, each measured under `ml/protocol.py` (12 rolling folds,
 paired verdicts, MDE 0.164 nAP). Sealed holdout not opened; MD5 unchanged
 (`a15500c94b9808cd42d584ad4b5c3017`). Decision record: ADR 0002.
