@@ -1,0 +1,113 @@
+{
+  "experiment_id": "exp16_embedding_entity_links",
+  "provenance_type": "PRODUCTION",
+  "design": "EXPERIMENT exp16_embedding_entity_links.  PRODUCTION data (Elliptic++).\n\nQuestion: among labelled Elliptic++ addresses, does counterparty-profile\nembedding similarity (``ml/embeddings.py``) identify same-entity pairs that\ncommon-input clustering leaves in different clusters?\n\nDesign (fixed before running):\n* Embedding over the full Elliptic++ money-flow graph (AddrAddr_edgelist:\n  payer -> payee). Labels are never an input.\n* Evaluation set: the 361 addresses in ``entity_labels.csv`` with\n  in_elliptic = True (117 entities), all pairs among them.\n* Pairs already in one co-spend cluster (Phase 1 ``address_clusters``) are\n  REMOVED: the question is what the embedding adds beyond co-spend.\n* Metrics on the remaining cross-cluster pairs: ROC-AUC of cosine for\n  same-entity vs different-entity, precision at K (K = 25, 50, 100, 200)\n  against the base rate, and precision/recall at similarity thresholds, used\n  to set the production suggestion threshold.\n* Support rule (added after the first run, which is kept in the log below):\n  pairs where either address has fewer than ``MIN_SUPPORT`` distinct non-hub\n  counterparties are reported separately, because such profiles are\n  near-identical by construction (every payee of one payer).\n* Transaction rule (added after world v2 showed payees of one transaction\n  all reading as one owner): an address must appear in at least\n  ``MIN_TRANSACTIONS`` transactions to be eligible; pairs failing it are\n  counted with the unsupported ones.\n* Two dimensions (16, 32) and one control: the same evaluation with entity\n  labels permuted across addresses (expected AUC ~0.5).\n",
+  "results": {
+    "dim16": {
+      "unsupported_pairs_excluded": 51349,
+      "unsupported_same_entity": 1779,
+      "same_entity_at_0.99_by_entity": {
+        "eligius": 2
+      },
+      "labelled_in_graph": 361,
+      "cross_cluster_pairs": 12955,
+      "same_entity_cross_cluster_pairs": 195,
+      "base_rate": 0.01505,
+      "auc": 0.6318,
+      "auc_permuted_control": 0.517,
+      "precision_at_k": {
+        "25": 0.0,
+        "50": 0.02,
+        "100": 0.06,
+        "200": 0.06
+      },
+      "thresholds": {
+        "0.5": {
+          "suggested": 1425,
+          "precision": 0.0351,
+          "recall": 0.2564
+        },
+        "0.7": {
+          "suggested": 815,
+          "precision": 0.0454,
+          "recall": 0.1897
+        },
+        "0.8": {
+          "suggested": 552,
+          "precision": 0.038,
+          "recall": 0.1077
+        },
+        "0.9": {
+          "suggested": 347,
+          "precision": 0.0519,
+          "recall": 0.0923
+        },
+        "0.95": {
+          "suggested": 197,
+          "precision": 0.0609,
+          "recall": 0.0615
+        },
+        "0.99": {
+          "suggested": 65,
+          "precision": 0.0308,
+          "recall": 0.0103
+        }
+      },
+      "explained_variance": 0.0564,
+      "dropped_hub_counterparties": 204,
+      "seconds": 12.4
+    },
+    "dim32": {
+      "unsupported_pairs_excluded": 51349,
+      "unsupported_same_entity": 1779,
+      "same_entity_at_0.99_by_entity": {},
+      "labelled_in_graph": 361,
+      "cross_cluster_pairs": 12955,
+      "same_entity_cross_cluster_pairs": 195,
+      "base_rate": 0.01505,
+      "auc": 0.6076,
+      "auc_permuted_control": 0.5137,
+      "precision_at_k": {
+        "25": 0.08,
+        "50": 0.1,
+        "100": 0.12,
+        "200": 0.1
+      },
+      "thresholds": {
+        "0.5": {
+          "suggested": 738,
+          "precision": 0.0596,
+          "recall": 0.2256
+        },
+        "0.7": {
+          "suggested": 355,
+          "precision": 0.0789,
+          "recall": 0.1436
+        },
+        "0.8": {
+          "suggested": 252,
+          "precision": 0.0873,
+          "recall": 0.1128
+        },
+        "0.9": {
+          "suggested": 132,
+          "precision": 0.1212,
+          "recall": 0.0821
+        },
+        "0.95": {
+          "suggested": 73,
+          "precision": 0.1096,
+          "recall": 0.041
+        },
+        "0.99": {
+          "suggested": 12,
+          "precision": 0.0,
+          "recall": 0.0
+        }
+      },
+      "explained_variance": 0.0835,
+      "dropped_hub_counterparties": 204,
+      "seconds": 16.7
+    }
+  }
+}

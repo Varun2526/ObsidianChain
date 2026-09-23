@@ -1,0 +1,206 @@
+# Research State — Central Project Tracking
+# ObsidianChain SIH2026 investigative-ranking research program.
+# Updated by the agent after each experiment and reflection.
+
+project:
+  title: "Investigative ranking pipeline research (ObsidianChain PS-native scope)"
+  question: >
+    Find the strongest defensible pipeline for ranking suspicious Bitcoin
+    activity / investigative leads under realistic time-ordered evaluation,
+    while preserving leakage prevention, reproducibility, explainability,
+    and operational usefulness.
+  status: active
+  started: "2026-09-23"
+  domain: "applied ML for financial-crime investigation (imbalanced ranking)"
+  deliverables_dir: "research/autoresearch_2026_09_23/"
+  scope_note: >
+    SCOPE_PS_NATIVE only (ml/protocol.py). Phase 6 LightGBM/Elliptic++ scope
+    is a separate frozen reference path; never compared numerically to
+    PS-native candidates (ScopeMismatchError is enforced in code).
+  git_discipline: >
+    Project working agreement (HANDOFF.md sec 11): "Nothing is committed by
+    Claude without being asked." This OVERRIDES the generic autoresearch
+    skill's auto-commit-per-milestone default. No git commits are made
+    autonomously in this program.
+
+literature:
+  key_papers: []
+  open_problems:
+    - "No literature search performed — this is an applied/proprietary data
+       problem (real Elliptic++ + synthetic network world), not a
+       literature-gap-driven research question. Deprioritized vs. Bootstrap's
+       literature step; may revisit for calibration/explanation-method
+       references in Phase 8/9 if useful."
+  evidence_gaps: []
+
+hypotheses:
+  - id: H0
+    statement: >
+      RandomForest and LightGBM are statistically indistinguishable on
+      PS-native v2 features under the 12-fold rolling protocol (the
+      single-window comparison that selected RF for v1 is noise).
+    status: supported
+    motivation: >
+      HANDOFF.md Trap table already states this; protocol.py's own
+      docstring predicts it. exp01 independently reproduces it.
+    parent: null
+    priority: high
+  - id: H1
+    statement: >
+      No single model family among {LogReg-L2, LogReg-L1, RandomForest,
+      ExtraTrees, HistGradientBoosting, LightGBM} is a priori superior on
+      v2 PS-native features; measure all six as one Holm-corrected family.
+    status: supported
+    motivation: "User's explicit Phase 5 requirement — no preselected winner."
+    parent: null
+    priority: high
+    result: >
+      RF/HistGradientBoosting/LightGBM statistically tied (exp01). ExtraTrees
+      and both LogReg variants decisively worse (p_holm<0.03).
+  - id: H2
+    statement: >
+      Group-E (network) and cross-layer ablations cannot currently be run
+      against the PS-native development dataset because include_network was
+      False when it was built.
+    status: supported
+    motivation: "Confirmed by direct column inspection of train/validation parquet."
+    parent: null
+    priority: medium
+  - id: H3
+    statement: >
+      Given H1's tied model tier, feature GROUP (not model family) is the
+      likely lever for further ranking-quality gains; Group A (instantaneous
+      transaction shape) carries most of the signal.
+    status: supported
+    motivation: "Direct consequence of H1's result — reframes the bottleneck search."
+    parent: H1
+    priority: high
+    result: >
+      exp02: minus_A collapses nAP 0.591->0.245 (p_holm=0.000); only_A alone
+      reaches 0.472 (80% of full). Groups C/D not defensible as marginal
+      contributors atop A+B under the corrected test, though each beats
+      nothing alone — representation caveat noted (current C/D are only 2
+      columns each; untested whether richer engineering would change this).
+      CONFIRMED on a second model family (exp07, RandomForest): same
+      qualitative pattern, not a LightGBM artifact.
+  - id: H4
+    statement: >
+      No justified variant of the tied tree tier (class-weighting, higher
+      capacity, a native ranking objective, more ExtraTrees estimators)
+      produces a defensible improvement over exp01's original tied tier.
+    status: supported
+    motivation: "Explicit round-2 model-search mandate; tests whether the tie is a modeling-choice ceiling or a genuine data ceiling."
+    parent: H1
+    priority: high
+    result: >
+      exp06: all 6 variants INDISTINGUISHABLE from the tied tier across 45
+      Holm-corrected comparisons. ExtraTrees@500trees does not close the gap
+      to RandomForest (closes an open question from 05_model_comparison.md).
+      XGBoost still NOT_TESTED (environment constraint, unchanged).
+  - id: H5
+    statement: >
+      Counterparty-side transaction history recovers ranking quality on
+      cold-start addresses even when the subject address has no history of
+      its own.
+    status: inconclusive
+    motivation: "Directly motivated by exp03's cold-start false-negative finding."
+    parent: H3
+    priority: high
+    result: >
+      exp08: +0.024 nAP, consistent direction (full family + cold-start
+      subset), but INDISTINGUISHABLE (p=0.199, sub-MDE). Surfaced that 90.9%
+      of all rows are cold-start (not a rare subpopulation) — raises the
+      stakes of resolving this. Promising, not confirmed.
+  - id: H7
+    statement: >
+      The project's existing coherent chain+network synthetic world
+      (src/obsidianchain/world/, instance at data/synthetic_world/) is
+      suitable, as currently configured, to serve as a controlled benchmark
+      for the Group F/G (network-layer) questions this program cannot
+      answer on real Elliptic++ data.
+    status: refuted
+    motivation: >
+      Directly requested by the user: investigate whether the current
+      dataset limits research conclusions and whether a purpose-built
+      synthetic dataset should become a separate benchmark.
+    parent: H2
+    priority: high
+    result: >
+      exp11+exp12: REFUTED for two independent, compounding reasons. (1)
+      Ceiling effect — the full CORE feature set achieves EXACT nAP=1.0 in
+      every usable fold regardless of whether network features are added,
+      including against the world's own deliberately-hardest adversarial
+      case (MERCHANT_SWEEP, ~7x score margin from true positives) — no room
+      for any feature group to show incremental value. (2) Only 3 of 12
+      standard protocol folds are usable at this instance's current size —
+      insufficient power even if the ceiling were fixed. Also confirmed (not
+      hypothesized): production features_ps.py's Group E code is a stub,
+      hardcoding observer_diversity/peer_count to 1.0 regardless of real
+      variation (verified: real peer_count ranges 1-8, mean 5.67).
+      NEEDS_MORE_ENGINEERING (scoped, not built): a next-generation instance
+      would need noisy/overlapping behavior parameters, a genuinely
+      chain-ambiguous/network-resolvable behavior class, and larger scale.
+      data/synthetic_world/ and src/obsidianchain/world/ were NOT modified —
+      read-only investigation. exp01-exp10 UNCHANGED.
+  - id: H6
+    statement: >
+      A properly-derived (non-same-sample) severity-band threshold still
+      fails to generalize across time windows, i.e. the alert-policy problem
+      is deeper than the sampling bug already identified.
+    status: supported
+    motivation: "Direct prototype test of this program's own proposed fix for the severity-band problem."
+    parent: null
+    priority: high
+    result: >
+      exp09: corrected procedure generalizes near-perfectly WITHIN the same
+      time period (0.900->0.902 etc.) but collapses OUT-OF-TIME on the
+      actual fold eval window (0.900->0.593, 0.750->0.482, 0.500->0.177).
+      Reinforces protocol.py's own window-variance thesis, applied to alert
+      thresholds specifically. Single-fold (worst-case) magnitude caveat
+      stated explicitly.
+
+experiments:
+  proxy_metric: "normalised AP (nAP), mean across 12 rolling-origin folds, dev-only"
+  baseline_value: 0.5723   # RandomForest, protocol_2026_09_22 prior work
+  best_value: 0.6155       # CORE+counterparty (exp08), INCONCLUSIVE not confirmed; 0.5914 is the confirmed tied-tier best
+  total_runs: 12           # exp01, exp02, exp02b, exp03, exp04, exp05, exp06, exp07, exp08, exp09, exp11, exp12 (exp10 = artifact, not a metric run)
+  trajectory: []
+  # full records in experiments.jsonl; summarized in findings.md Optimization Trajectory
+
+outer_loop:
+  cycle: 4
+  last_direction: broaden
+  last_reflection: >
+    Cycle 3 (this update) pivoted to a NEW axis per explicit user request:
+    whether the dataset itself limits conclusions, and whether a
+    purpose-built synthetic chain+network benchmark should exist. Found
+    the infrastructure ALREADY EXISTS (src/obsidianchain/world/) but,
+    investigated rigorously (exp11+exp12), is unsuitable AS CONFIGURED:
+    a ceiling effect (exact nAP=1.0 regardless of feature set, including
+    against its own hardest adversarial case) compounded by insufficient
+    scale (3/12 usable folds). This is a BROADEN move, not a deepen of the
+    PS-native model/feature axis - it answers a structural question about
+    what this program CAN and CANNOT learn from available data, rather than
+    extracting one more increment from the existing dataset. Also produced
+    a genuine, concrete new pipeline-gap finding (Group E feature code is a
+    stub) independent of the benchmark-suitability question. Direction for
+    next cycle: either (a) return to DEEPEN on the PS-native axis (resolve
+    H5 counterparty feature, H6 alert policy implication, wire TreeSHAP,
+    train the real v2 artifact - all still open from cycle 2), or (b) if
+    the user wants the network-layer question pursued further, the scoped
+    next-generation-benchmark engineering task in
+    16_synthetic_world_investigation.md is the well-evidenced starting
+    point - NOT yet started, deliberately, given its scope and the lack of
+    a forcing need. Holdout still untouched throughout.
+
+workspace:
+  findings: "findings.md"
+  log: "research-log.md"
+  deliverables: "research/autoresearch_2026_09_23/"
+  scripts: "research/autoresearch_2026_09_23/scripts/"
+  results: "research/autoresearch_2026_09_23/results/"
+  ledger: "research/autoresearch_2026_09_23/experiments.jsonl"
+  v2_dev_candidate: >
+    research/autoresearch_2026_09_23/v2_dev_candidate/ — DEVELOPMENT_CANDIDATE_NOT_PROMOTED,
+    deliberately outside data/models/ps_native/ so no production code path
+    (api/provenance_gate.py, ps_model.py) can mistake it for a promoted artifact.

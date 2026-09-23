@@ -1,0 +1,465 @@
+{
+  "experiment_id": "exp20_upstream_features",
+  "design": "EXPERIMENT exp20_upstream_features.  Pre-registered before running.\n\nQuestion: does candidate group G (upstream flow - a summary of the\ntransactions that funded this transaction's inputs, pipeline/features_ps.py)\nimprove ranking over CORE?\n\nDesign:\n* Model configuration: the one exp19 adopted (read from its results file;\n  production v2 if exp19 adopted nothing). Same seed, same 12 folds.\n* Candidates: CORE vs CORE + G.\n* Decision rule, same shape as exp19: G is adopted iff on TUNING folds 1-6\n  mean nAP improves, AND on CONFIRMATION folds 7-12 mean nAP >= CORE's and\n  worst-fold nAP >= CORE's. The full 12-fold paired verdict is reported, not\n  used as a gate (with MDE 0.164 it would reject almost any real feature).\n* Same metrics as exp19 (nAP, tx-weighted nAP, P@50/100/500, R-precision,\n  ceiling-normalised R@500).\n",
+  "config": {
+    "train_window": 16,
+    "num_leaves": 31,
+    "min_child_samples": 200
+  },
+  "per_fold": {
+    "CORE": [
+      {
+        "fold": "t<=16 -> t17-18",
+        "nap": 0.5294289744479423,
+        "txw": 0.7132042039968901,
+        "r_precision": 0.47738693467336685,
+        "P@50": 0.92,
+        "P@100": 0.63,
+        "P@500": 0.322,
+        "nR@500": 0.8090452261306532
+      },
+      {
+        "fold": "t<=18 -> t19-20",
+        "nap": 0.7215270692486436,
+        "txw": 0.8486949516475707,
+        "r_precision": 0.6522556390977443,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.682,
+        "nR@500": 0.6819999999999999
+      },
+      {
+        "fold": "t<=20 -> t21-22",
+        "nap": 0.482396499796862,
+        "txw": 0.7948962739932708,
+        "r_precision": 0.43735763097949887,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.774,
+        "nR@500": 0.7739999999999999
+      },
+      {
+        "fold": "t<=22 -> t23-24",
+        "nap": 0.6317391111021349,
+        "txw": 0.3805384638631332,
+        "r_precision": 0.5598705501618123,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.816,
+        "nR@500": 0.816
+      },
+      {
+        "fold": "t<=24 -> t25-26",
+        "nap": 0.8819464679401434,
+        "txw": 0.8395034920140297,
+        "r_precision": 0.8400441257584115,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 1.0,
+        "nR@500": 1.0
+      },
+      {
+        "fold": "t<=26 -> t27-28",
+        "nap": 0.8816009901454709,
+        "txw": 0.9283502697456301,
+        "r_precision": 0.8014184397163121,
+        "P@50": 1.0,
+        "P@100": 0.9,
+        "P@500": 0.278,
+        "nR@500": 0.9858156028368794
+      },
+      {
+        "fold": "t<=28 -> t29-30",
+        "nap": 0.4700906049372695,
+        "txw": 0.4868660311873322,
+        "r_precision": 0.4333958724202627,
+        "P@50": 1.0,
+        "P@100": 0.95,
+        "P@500": 0.458,
+        "nR@500": 0.458
+      },
+      {
+        "fold": "t<=30 -> t31-32",
+        "nap": 0.6408569732729529,
+        "txw": 0.6370904130353363,
+        "r_precision": 0.6108695652173913,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.912,
+        "nR@500": 0.9120000000000001
+      },
+      {
+        "fold": "t<=32 -> t33-34",
+        "nap": 0.8160819327531184,
+        "txw": 0.4438078978207368,
+        "r_precision": 0.736986301369863,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.932,
+        "nR@500": 0.9320000000000002
+      },
+      {
+        "fold": "t<=34 -> t35-36",
+        "nap": 0.7213922244608156,
+        "txw": 0.7142086768942653,
+        "r_precision": 0.6532019704433497,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.972,
+        "nR@500": 0.972
+      },
+      {
+        "fold": "t<=36 -> t37-38",
+        "nap": 0.7162249833583144,
+        "txw": 0.8448912629044765,
+        "r_precision": 0.6436781609195402,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.748,
+        "nR@500": 0.748
+      },
+      {
+        "fold": "t<=38 -> t39-40",
+        "nap": 0.40182969770032817,
+        "txw": 0.5266126866451373,
+        "r_precision": 0.4353982300884956,
+        "P@50": 1.0,
+        "P@100": 0.83,
+        "P@500": 0.488,
+        "nR@500": 0.488
+      }
+    ],
+    "CORE_G": [
+      {
+        "fold": "t<=16 -> t17-18",
+        "nap": 0.743162915387065,
+        "txw": 0.8370647413434783,
+        "r_precision": 0.7286432160804021,
+        "P@50": 0.94,
+        "P@100": 0.9,
+        "P@500": 0.348,
+        "nR@500": 0.8743718592964824
+      },
+      {
+        "fold": "t<=18 -> t19-20",
+        "nap": 0.7753155390077566,
+        "txw": 0.8819965926512859,
+        "r_precision": 0.706766917293233,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.734,
+        "nR@500": 0.734
+      },
+      {
+        "fold": "t<=20 -> t21-22",
+        "nap": 0.6273814183592303,
+        "txw": 0.8105410604269901,
+        "r_precision": 0.548215641609719,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.734,
+        "nR@500": 0.7339999999999999
+      },
+      {
+        "fold": "t<=22 -> t23-24",
+        "nap": 0.7502300197498799,
+        "txw": 0.5051722560957423,
+        "r_precision": 0.7022653721682848,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.884,
+        "nR@500": 0.884
+      },
+      {
+        "fold": "t<=24 -> t25-26",
+        "nap": 0.9744909431156494,
+        "txw": 0.9169704613116133,
+        "r_precision": 0.9349145063430778,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 1.0,
+        "nR@500": 1.0
+      },
+      {
+        "fold": "t<=26 -> t27-28",
+        "nap": 0.9258447153604135,
+        "txw": 0.9634321499758827,
+        "r_precision": 0.8652482269503546,
+        "P@50": 1.0,
+        "P@100": 0.97,
+        "P@500": 0.278,
+        "nR@500": 0.9858156028368794
+      },
+      {
+        "fold": "t<=28 -> t29-30",
+        "nap": 0.5579272248600868,
+        "txw": 0.555952475572487,
+        "r_precision": 0.4896810506566604,
+        "P@50": 1.0,
+        "P@100": 0.94,
+        "P@500": 0.51,
+        "nR@500": 0.51
+      },
+      {
+        "fold": "t<=30 -> t31-32",
+        "nap": 0.7254417146816621,
+        "txw": 0.7207740490983622,
+        "r_precision": 0.6858695652173913,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.988,
+        "nR@500": 0.9880000000000001
+      },
+      {
+        "fold": "t<=32 -> t33-34",
+        "nap": 0.9470674181961076,
+        "txw": 0.8076654407361633,
+        "r_precision": 0.8671232876712329,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.994,
+        "nR@500": 0.9940000000000001
+      },
+      {
+        "fold": "t<=34 -> t35-36",
+        "nap": 0.8672771392553498,
+        "txw": 0.7892569852068583,
+        "r_precision": 0.8019704433497536,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.946,
+        "nR@500": 0.9460000000000001
+      },
+      {
+        "fold": "t<=36 -> t37-38",
+        "nap": 0.806642919120881,
+        "txw": 0.8823114753842195,
+        "r_precision": 0.7011494252873564,
+        "P@50": 1.0,
+        "P@100": 1.0,
+        "P@500": 0.82,
+        "nR@500": 0.82
+      },
+      {
+        "fold": "t<=38 -> t39-40",
+        "nap": 0.5466379659256676,
+        "txw": 0.5463824522863319,
+        "r_precision": 0.5309734513274337,
+        "P@50": 1.0,
+        "P@100": 0.99,
+        "P@500": 0.558,
+        "nR@500": 0.5579999999999999
+      }
+    ]
+  },
+  "split": {
+    "CORE": {
+      "tune": {
+        "nap": {
+          "mean": 0.6881,
+          "min": 0.4824
+        },
+        "txw": {
+          "mean": 0.7509,
+          "min": 0.3805
+        },
+        "r_precision": {
+          "mean": 0.6281,
+          "min": 0.4374
+        },
+        "P@50": {
+          "mean": 0.9867,
+          "min": 0.92
+        },
+        "P@100": {
+          "mean": 0.9217,
+          "min": 0.63
+        },
+        "P@500": {
+          "mean": 0.6453,
+          "min": 0.278
+        },
+        "nR@500": {
+          "mean": 0.8445,
+          "min": 0.682
+        }
+      },
+      "confirm": {
+        "nap": {
+          "mean": 0.6277,
+          "min": 0.4018
+        },
+        "txw": {
+          "mean": 0.6089,
+          "min": 0.4438
+        },
+        "r_precision": {
+          "mean": 0.5856,
+          "min": 0.4334
+        },
+        "P@50": {
+          "mean": 1.0,
+          "min": 1.0
+        },
+        "P@100": {
+          "mean": 0.9633,
+          "min": 0.83
+        },
+        "P@500": {
+          "mean": 0.7517,
+          "min": 0.458
+        },
+        "nR@500": {
+          "mean": 0.7517,
+          "min": 0.458
+        }
+      },
+      "all": {
+        "nap": {
+          "mean": 0.6579,
+          "min": 0.4018
+        },
+        "txw": {
+          "mean": 0.6799,
+          "min": 0.3805
+        },
+        "r_precision": {
+          "mean": 0.6068,
+          "min": 0.4334
+        },
+        "P@50": {
+          "mean": 0.9933,
+          "min": 0.92
+        },
+        "P@100": {
+          "mean": 0.9425,
+          "min": 0.63
+        },
+        "P@500": {
+          "mean": 0.6985,
+          "min": 0.278
+        },
+        "nR@500": {
+          "mean": 0.7981,
+          "min": 0.458
+        }
+      }
+    },
+    "CORE_G": {
+      "tune": {
+        "nap": {
+          "mean": 0.7994,
+          "min": 0.6274
+        },
+        "txw": {
+          "mean": 0.8192,
+          "min": 0.5052
+        },
+        "r_precision": {
+          "mean": 0.7477,
+          "min": 0.5482
+        },
+        "P@50": {
+          "mean": 0.99,
+          "min": 0.94
+        },
+        "P@100": {
+          "mean": 0.9783,
+          "min": 0.9
+        },
+        "P@500": {
+          "mean": 0.663,
+          "min": 0.278
+        },
+        "nR@500": {
+          "mean": 0.8687,
+          "min": 0.734
+        }
+      },
+      "confirm": {
+        "nap": {
+          "mean": 0.7418,
+          "min": 0.5466
+        },
+        "txw": {
+          "mean": 0.7171,
+          "min": 0.5464
+        },
+        "r_precision": {
+          "mean": 0.6795,
+          "min": 0.4897
+        },
+        "P@50": {
+          "mean": 1.0,
+          "min": 1.0
+        },
+        "P@100": {
+          "mean": 0.9883,
+          "min": 0.94
+        },
+        "P@500": {
+          "mean": 0.8027,
+          "min": 0.51
+        },
+        "nR@500": {
+          "mean": 0.8027,
+          "min": 0.51
+        }
+      },
+      "all": {
+        "nap": {
+          "mean": 0.7706,
+          "min": 0.5466
+        },
+        "txw": {
+          "mean": 0.7681,
+          "min": 0.5052
+        },
+        "r_precision": {
+          "mean": 0.7136,
+          "min": 0.4897
+        },
+        "P@50": {
+          "mean": 0.995,
+          "min": 0.94
+        },
+        "P@100": {
+          "mean": 0.9833,
+          "min": 0.9
+        },
+        "P@500": {
+          "mean": 0.7328,
+          "min": 0.278
+        },
+        "nR@500": {
+          "mean": 0.8357,
+          "min": 0.51
+        }
+      }
+    }
+  },
+  "adopt": true,
+  "verdict": {
+    "verdict": "FAVOURS",
+    "favours": "CORE_G",
+    "a": "CORE_G",
+    "b": "CORE",
+    "n_folds": 12,
+    "mean_difference": 0.11269203365464615,
+    "sd_difference": 0.04692204990565818,
+    "ci95": [
+      0.08287918547717546,
+      0.14250488183211685
+    ],
+    "test": "paired_t",
+    "p_value": 4.4918476798462865e-06,
+    "permutation_p": 0.00048828125,
+    "permutation_usable": true,
+    "folds_won_by_a": 12,
+    "folds_won_by_b": 0,
+    "underpowered_for": "|difference| 0.1127 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "obsidianchain.ps_stacker/1",
+  "inputs": [
+    "logit(lgbm_raw_score)",
+    "log1p(1000.0 * propagated_risk)"
+  ],
+  "coef": [
+    0.7450933025212342,
+    0.6650796610039744
+  ],
+  "intercept": -0.8347936296512752,
+  "reference_prevalence": 0.06782851167654234,
+  "fitted_on": "out-of-fold rows of the last 4 rolling folds",
+  "n_rows": 43035,
+  "evidence": "research/autoresearch_2026_09_23/results/exp14_risk_propagation.json",
+  "applied_when": "at least one seed wallet is present in the capture",
+  "transfer_caveat": "on Elliptic++ the seeds are every\nlabelled illicit address before the window (thousands). In an uploaded\ncapture the seeds are OFAC / watchlist addresses (usually few). The\npropagated score of a direct neighbour of a seed is similar in both regimes;\nthe score of a distant address is smaller with sparse seeds, so the stacker\nleans on it less. It is applied only when at least one seed is present."
+}

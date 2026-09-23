@@ -39,6 +39,8 @@ import pandas as pd
 
 from obsidianchain.pipeline.features_ps import (
     CORE_PS_FEATURE_COLUMNS,
+    GROUP_G_UPSTREAM,
+    PS_FEATURE_SCHEMA_VERSION,
     PsTemporalFeatureEngine,
 )
 
@@ -48,6 +50,33 @@ TIMESTEP_SECONDS = 1209600  # 14 days in seconds
 TRAIN_END = 34
 VALIDATION_END = 41
 TEST_END = 49
+
+
+def _spend_levels(edges_path: Path, steps: pd.DataFrame) -> dict:
+    """Longest-path depth of every transaction in its step's spend DAG."""
+    edges = pd.read_csv(edges_path)
+    edges.columns = ["src", "dst"]
+    known = set(steps["txId"])
+    edges = edges[edges.src.isin(known) & edges.dst.isin(known)]
+    parents: dict = {}
+    for src, dst in zip(edges.src, edges.dst):
+        parents.setdefault(dst, []).append(src)
+    level: dict = {}
+    for tx in steps["txId"]:
+        if tx in level:
+            continue
+        stack = [(tx, False)]
+        while stack:
+            node, done = stack.pop()
+            if node in level:
+                continue
+            ps = parents.get(node, [])
+            if done or all(p in level for p in ps):
+                level[node] = 1 + max((level[p] for p in ps), default=-1)
+                continue
+            stack.append((node, True))
+            stack.extend((p, False) for p in ps if p not in level)
+    return level
 
 
 def _compute_sha256(path: Path) -> str:
@@ -105,7 +134,18 @@ def build_ps_dataset(
     out_map = ta.groupby("txId")["output_address"].apply(list).to_dict()
 
     print("Sorting transactions chronologically by (Time step, txId)...")
-    txs = txs.sort_values(by=["Time step", "txId"], ascending=True).reset_index(drop=True)
+    # v3. Causal order INSIDE a timestep. Elliptic++ gives every transaction
+    # of a step one timestamp, and every tx->tx spend edge lies inside one
+    # step, so "(step, txId)" order is not time order: 1.4% of same-step
+    # funding pairs the engine read were a transaction that actually SPENT
+    # FROM the one being described. Each transaction gets the level of the
+    # longest spend path reaching it in its step, passed as ``event_order``:
+    # it ORDERS events causally and never becomes a feature value. (A first
+    # version wrote it into the timestamp as one minute per level; that
+    # leaked chain depth into every "seconds" feature and was withdrawn.)
+    level = _spend_levels(raw_dir / "txs_edgelist.csv", txs[["txId", "Time step"]])
+    txs["_level"] = txs["txId"].map(level).fillna(0).astype(int)
+    txs = txs.sort_values(by=["Time step", "_level", "txId"], ascending=True).reset_index(drop=True)
 
     # Build canonical records
     records: list[dict] = []
@@ -119,7 +159,10 @@ def build_ps_dataset(
 
         tot_in = float(row["in_BTC_total"]) if pd.notna(row["in_BTC_total"]) else float(row["total_BTC"])
         tot_out = float(row["out_BTC_total"]) if pd.notna(row["out_BTC_total"]) else float(row["total_BTC"])
-        fee = float(row["fees"]) if pd.notna(row["fees"]) else 0.0
+        # v3. A missing fee stays missing. 0.0 here marked 25 very large,
+        # almost entirely licit transactions as fee-free and handed the model
+        # a shortcut that was a property of the gap, not of fee behaviour.
+        fee = float(row["fees"]) if pd.notna(row["fees"]) else float("nan")
 
         # v1 fabricated per-input and per-output amounts here by dividing the
         # total evenly. The source has no per-output values, so that was not a
@@ -139,6 +182,7 @@ def build_ps_dataset(
         records.append({
             "txid": str(txid),
             "timestamp": ts,
+            "event_order": int(row["_level"]),
             "_step": step,
             "input_addresses": ins,
             "input_amounts": in_amts,
@@ -196,7 +240,10 @@ def build_ps_dataset(
     usable = features_last[features_last["split"].notna() & features_last["y"].notna()].copy()
     usable["y"] = usable["y"].astype(np.int8)
 
-    save_cols = ["address", "txid", "timestamp", "y"] + CORE_PS_FEATURE_COLUMNS
+    # Candidate group G is saved beside CORE so it can be evaluated under the
+    # protocol; a model only reads the columns its manifest declares.
+    save_cols = ["address", "txid", "timestamp", "y"] + CORE_PS_FEATURE_COLUMNS + [
+        c for c in GROUP_G_UPSTREAM if c not in CORE_PS_FEATURE_COLUMNS]
 
     # The sealed holdout is NOT regenerated. Rebuilding it would replace the
     # one dataset that has never informed a development decision, which is
@@ -243,7 +290,7 @@ def build_ps_dataset(
         "generator": "research/reproduction/build_ps_dataset.py",
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "source_dataset_hashes": source_hashes,
-        "feature_schema_version": "ps_native_features/1",
+        "feature_schema_version": PS_FEATURE_SCHEMA_VERSION,
         "feature_list": CORE_PS_FEATURE_COLUMNS,
         "label_schema": {
             "0": "licit (class 2)",
@@ -258,11 +305,12 @@ def build_ps_dataset(
             "test": f"step {VALIDATION_END+1}-{TEST_END}",
         },
         "schema_note": (
-            "train and validation are ps_native_features/2. The sealed "
+            f"train and validation are {PS_FEATURE_SCHEMA_VERSION}. The sealed "
             "holdout was NOT regenerated and remains ps_native_features/1. "
-            "A model must not be fitted on /2 and scored on /1."
+            "A model must not be fitted on the development schema and scored "
+            "on /1."
         ),
-        "development_schema_version": "ps_native_features/2",
+        "development_schema_version": PS_FEATURE_SCHEMA_VERSION,
         "holdout_schema_version": "ps_native_features/1",
         "row_counts": row_counts,
         "positive_counts": pos_counts,

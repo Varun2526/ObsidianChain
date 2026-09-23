@@ -1,0 +1,1770 @@
+{
+ "experiment_id": "exp01_model_family",
+ "protocol_version": "obsidianchain.eval_protocol/2",
+ "scope": "ps_native",
+ "feature_schema_version": "ps_native_features/2",
+ "seed": 20260919,
+ "candidates": {
+  "LogisticRegression_L2": {
+   "candidate": "LogisticRegression_L2",
+   "scope": "undeclared",
+   "seed": 20260919,
+   "folds": 12,
+   "nap_mean": 0.2915465313486186,
+   "nap_sd": 0.25330561342611074,
+   "nap_min": 0.04936057382804327,
+   "nap_max": 0.8139305222901886,
+   "per_fold": [
+    {
+     "fold": "t<=16 -> t17-18",
+     "train_end": 16,
+     "n_train": 96519,
+     "n_eval": 4018,
+     "prevalence": 0.04952712792434047,
+     "nap": 0.07224927779384677,
+     "precision_at_k_worst": {
+      "P@100": 0.01,
+      "P@200": 0.005,
+      "P@500": 0.152
+     },
+     "precision_at_k_best": {
+      "P@100": 0.01,
+      "P@200": 0.005,
+      "P@500": 0.152
+     }
+    },
+    {
+     "fold": "t<=18 -> t19-20",
+     "train_end": 18,
+     "n_train": 100537,
+     "n_eval": 7125,
+     "prevalence": 0.07466666666666667,
+     "nap": 0.42680111114990005,
+     "precision_at_k_worst": {
+      "P@100": 0.65,
+      "P@200": 0.64,
+      "P@500": 0.422
+     },
+     "precision_at_k_best": {
+      "P@100": 0.65,
+      "P@200": 0.64,
+      "P@500": 0.422
+     }
+    },
+    {
+     "fold": "t<=20 -> t21-22",
+     "train_end": 20,
+     "n_train": 107662,
+     "n_eval": 21200,
+     "prevalence": 0.06212264150943396,
+     "nap": 0.40867635841530947,
+     "precision_at_k_worst": {
+      "P@100": 0.66,
+      "P@200": 0.645,
+      "P@500": 0.72
+     },
+     "precision_at_k_best": {
+      "P@100": 0.66,
+      "P@200": 0.645,
+      "P@500": 0.72
+     }
+    },
+    {
+     "fold": "t<=22 -> t23-24",
+     "train_end": 22,
+     "n_train": 128862,
+     "n_eval": 6777,
+     "prevalence": 0.13678618857901725,
+     "nap": 0.2725805551808355,
+     "precision_at_k_worst": {
+      "P@100": 0.52,
+      "P@200": 0.715,
+      "P@500": 0.518
+     },
+     "precision_at_k_best": {
+      "P@100": 0.52,
+      "P@200": 0.715,
+      "P@500": 0.518
+     }
+    },
+    {
+     "fold": "t<=24 -> t25-26",
+     "train_end": 24,
+     "n_train": 135639,
+     "n_eval": 7946,
+     "prevalence": 0.22816511452303045,
+     "nap": 0.8139305222901886,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 1.0
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 1.0
+     }
+    },
+    {
+     "fold": "t<=26 -> t27-28",
+     "train_end": 26,
+     "n_train": 143585,
+     "n_eval": 1379,
+     "prevalence": 0.10224800580130529,
+     "nap": 0.16330778603854557,
+     "precision_at_k_worst": {
+      "P@100": 0.21,
+      "P@200": 0.13,
+      "P@500": 0.212
+     },
+     "precision_at_k_best": {
+      "P@100": 0.21,
+      "P@200": 0.13,
+      "P@500": 0.212
+     }
+    },
+    {
+     "fold": "t<=28 -> t29-30",
+     "train_end": 28,
+     "n_train": 144964,
+     "n_eval": 5572,
+     "prevalence": 0.09565685570710697,
+     "nap": 0.053850174708283446,
+     "precision_at_k_worst": {
+      "P@100": 0.1,
+      "P@200": 0.05,
+      "P@500": 0.02
+     },
+     "precision_at_k_best": {
+      "P@100": 0.1,
+      "P@200": 0.05,
+      "P@500": 0.02
+     }
+    },
+    {
+     "fold": "t<=30 -> t31-32",
+     "train_end": 30,
+     "n_train": 150536,
+     "n_eval": 8912,
+     "prevalence": 0.10323159784560143,
+     "nap": 0.04936057382804327,
+     "precision_at_k_worst": {
+      "P@100": 0.03,
+      "P@200": 0.015,
+      "P@500": 0.006
+     },
+     "precision_at_k_best": {
+      "P@100": 0.03,
+      "P@200": 0.015,
+      "P@500": 0.006
+     }
+    },
+    {
+     "fold": "t<=32 -> t33-34",
+     "train_end": 32,
+     "n_train": 159448,
+     "n_eval": 10956,
+     "prevalence": 0.06663015699160277,
+     "nap": 0.7055224056042242,
+     "precision_at_k_worst": {
+      "P@100": 0.96,
+      "P@200": 0.98,
+      "P@500": 0.89
+     },
+     "precision_at_k_best": {
+      "P@100": 0.96,
+      "P@200": 0.98,
+      "P@500": 0.89
+     }
+    },
+    {
+     "fold": "t<=34 -> t35-36",
+     "train_end": 34,
+     "n_train": 170404,
+     "n_eval": 13712,
+     "prevalence": 0.07402275379229872,
+     "nap": 0.26062872722504876,
+     "precision_at_k_worst": {
+      "P@100": 0.76,
+      "P@200": 0.855,
+      "P@500": 0.564
+     },
+     "precision_at_k_best": {
+      "P@100": 0.76,
+      "P@200": 0.855,
+      "P@500": 0.564
+     }
+    },
+    {
+     "fold": "t<=36 -> t37-38",
+     "train_end": 36,
+     "n_train": 184116,
+     "n_eval": 6603,
+     "prevalence": 0.09223080417991822,
+     "nap": 0.1324325000186517,
+     "precision_at_k_worst": {
+      "P@100": 0.27,
+      "P@200": 0.135,
+      "P@500": 0.178
+     },
+     "precision_at_k_best": {
+      "P@100": 0.27,
+      "P@200": 0.135,
+      "P@500": 0.178
+     }
+    },
+    {
+     "fold": "t<=38 -> t39-40",
+     "train_end": 38,
+     "n_train": 190719,
+     "n_eval": 11764,
+     "prevalence": 0.048027881672900376,
+     "nap": 0.13921838393054534,
+     "precision_at_k_worst": {
+      "P@100": 0.25,
+      "P@200": 0.28,
+      "P@500": 0.32
+     },
+     "precision_at_k_best": {
+      "P@100": 0.25,
+      "P@200": 0.28,
+      "P@500": 0.32
+     }
+    }
+   ]
+  },
+  "LogisticRegression_L1": {
+   "candidate": "LogisticRegression_L1",
+   "scope": "undeclared",
+   "seed": 20260919,
+   "folds": 12,
+   "nap_mean": 0.30198400674995934,
+   "nap_sd": 0.2538501967498137,
+   "nap_min": 0.05081418652223841,
+   "nap_max": 0.8223679700865497,
+   "per_fold": [
+    {
+     "fold": "t<=16 -> t17-18",
+     "train_end": 16,
+     "n_train": 96519,
+     "n_eval": 4018,
+     "prevalence": 0.04952712792434047,
+     "nap": 0.07075318178345306,
+     "precision_at_k_worst": {
+      "P@100": 0.01,
+      "P@200": 0.005,
+      "P@500": 0.166
+     },
+     "precision_at_k_best": {
+      "P@100": 0.01,
+      "P@200": 0.005,
+      "P@500": 0.166
+     }
+    },
+    {
+     "fold": "t<=18 -> t19-20",
+     "train_end": 18,
+     "n_train": 100537,
+     "n_eval": 7125,
+     "prevalence": 0.07466666666666667,
+     "nap": 0.41315658872510186,
+     "precision_at_k_worst": {
+      "P@100": 0.43,
+      "P@200": 0.565,
+      "P@500": 0.544
+     },
+     "precision_at_k_best": {
+      "P@100": 0.43,
+      "P@200": 0.565,
+      "P@500": 0.544
+     }
+    },
+    {
+     "fold": "t<=20 -> t21-22",
+     "train_end": 20,
+     "n_train": 107662,
+     "n_eval": 21200,
+     "prevalence": 0.06212264150943396,
+     "nap": 0.43992395385193767,
+     "precision_at_k_worst": {
+      "P@100": 0.79,
+      "P@200": 0.665,
+      "P@500": 0.772
+     },
+     "precision_at_k_best": {
+      "P@100": 0.79,
+      "P@200": 0.665,
+      "P@500": 0.772
+     }
+    },
+    {
+     "fold": "t<=22 -> t23-24",
+     "train_end": 22,
+     "n_train": 128862,
+     "n_eval": 6777,
+     "prevalence": 0.13678618857901725,
+     "nap": 0.3189712072928892,
+     "precision_at_k_worst": {
+      "P@100": 0.81,
+      "P@200": 0.84,
+      "P@500": 0.55
+     },
+     "precision_at_k_best": {
+      "P@100": 0.81,
+      "P@200": 0.84,
+      "P@500": 0.55
+     }
+    },
+    {
+     "fold": "t<=24 -> t25-26",
+     "train_end": 24,
+     "n_train": 135639,
+     "n_eval": 7946,
+     "prevalence": 0.22816511452303045,
+     "nap": 0.8223679700865497,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 1.0
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 1.0
+     }
+    },
+    {
+     "fold": "t<=26 -> t27-28",
+     "train_end": 26,
+     "n_train": 143585,
+     "n_eval": 1379,
+     "prevalence": 0.10224800580130529,
+     "nap": 0.1644381370341402,
+     "precision_at_k_worst": {
+      "P@100": 0.21,
+      "P@200": 0.14,
+      "P@500": 0.212
+     },
+     "precision_at_k_best": {
+      "P@100": 0.21,
+      "P@200": 0.14,
+      "P@500": 0.212
+     }
+    },
+    {
+     "fold": "t<=28 -> t29-30",
+     "train_end": 28,
+     "n_train": 144964,
+     "n_eval": 5572,
+     "prevalence": 0.09565685570710697,
+     "nap": 0.09435343984738757,
+     "precision_at_k_worst": {
+      "P@100": 0.09,
+      "P@200": 0.045,
+      "P@500": 0.018
+     },
+     "precision_at_k_best": {
+      "P@100": 0.09,
+      "P@200": 0.045,
+      "P@500": 0.018
+     }
+    },
+    {
+     "fold": "t<=30 -> t31-32",
+     "train_end": 30,
+     "n_train": 150536,
+     "n_eval": 8912,
+     "prevalence": 0.10323159784560143,
+     "nap": 0.05081418652223841,
+     "precision_at_k_worst": {
+      "P@100": 0.03,
+      "P@200": 0.015,
+      "P@500": 0.006
+     },
+     "precision_at_k_best": {
+      "P@100": 0.03,
+      "P@200": 0.015,
+      "P@500": 0.006
+     }
+    },
+    {
+     "fold": "t<=32 -> t33-34",
+     "train_end": 32,
+     "n_train": 159448,
+     "n_eval": 10956,
+     "prevalence": 0.06663015699160277,
+     "nap": 0.713333090741973,
+     "precision_at_k_worst": {
+      "P@100": 0.96,
+      "P@200": 0.98,
+      "P@500": 0.89
+     },
+     "precision_at_k_best": {
+      "P@100": 0.96,
+      "P@200": 0.98,
+      "P@500": 0.89
+     }
+    },
+    {
+     "fold": "t<=34 -> t35-36",
+     "train_end": 34,
+     "n_train": 170404,
+     "n_eval": 13712,
+     "prevalence": 0.07402275379229872,
+     "nap": 0.2711491040986474,
+     "precision_at_k_worst": {
+      "P@100": 0.81,
+      "P@200": 0.875,
+      "P@500": 0.564
+     },
+     "precision_at_k_best": {
+      "P@100": 0.81,
+      "P@200": 0.875,
+      "P@500": 0.564
+     }
+    },
+    {
+     "fold": "t<=36 -> t37-38",
+     "train_end": 36,
+     "n_train": 184116,
+     "n_eval": 6603,
+     "prevalence": 0.09223080417991822,
+     "nap": 0.13535184987981208,
+     "precision_at_k_worst": {
+      "P@100": 0.28,
+      "P@200": 0.14,
+      "P@500": 0.166
+     },
+     "precision_at_k_best": {
+      "P@100": 0.28,
+      "P@200": 0.14,
+      "P@500": 0.166
+     }
+    },
+    {
+     "fold": "t<=38 -> t39-40",
+     "train_end": 38,
+     "n_train": 190719,
+     "n_eval": 11764,
+     "prevalence": 0.048027881672900376,
+     "nap": 0.12919537113538182,
+     "precision_at_k_worst": {
+      "P@100": 0.28,
+      "P@200": 0.285,
+      "P@500": 0.312
+     },
+     "precision_at_k_best": {
+      "P@100": 0.28,
+      "P@200": 0.285,
+      "P@500": 0.312
+     }
+    }
+   ]
+  },
+  "RandomForest": {
+   "candidate": "RandomForest",
+   "scope": "undeclared",
+   "seed": 20260919,
+   "folds": 12,
+   "nap_mean": 0.5723086104154046,
+   "nap_sd": 0.18260924050435667,
+   "nap_min": 0.29554114227600103,
+   "nap_max": 0.8414390433951737,
+   "per_fold": [
+    {
+     "fold": "t<=16 -> t17-18",
+     "train_end": 16,
+     "n_train": 96519,
+     "n_eval": 4018,
+     "prevalence": 0.04952712792434047,
+     "nap": 0.548702208837999,
+     "precision_at_k_worst": {
+      "P@100": 0.8,
+      "P@200": 0.49,
+      "P@500": 0.278
+     },
+     "precision_at_k_best": {
+      "P@100": 0.8,
+      "P@200": 0.49,
+      "P@500": 0.278
+     }
+    },
+    {
+     "fold": "t<=18 -> t19-20",
+     "train_end": 18,
+     "n_train": 100537,
+     "n_eval": 7125,
+     "prevalence": 0.07466666666666667,
+     "nap": 0.6327448602969292,
+     "precision_at_k_worst": {
+      "P@100": 0.99,
+      "P@200": 0.95,
+      "P@500": 0.646
+     },
+     "precision_at_k_best": {
+      "P@100": 0.99,
+      "P@200": 0.95,
+      "P@500": 0.646
+     }
+    },
+    {
+     "fold": "t<=20 -> t21-22",
+     "train_end": 20,
+     "n_train": 107662,
+     "n_eval": 21200,
+     "prevalence": 0.06212264150943396,
+     "nap": 0.3021353892702108,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 0.865,
+      "P@500": 0.494
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 0.865,
+      "P@500": 0.494
+     }
+    },
+    {
+     "fold": "t<=22 -> t23-24",
+     "train_end": 22,
+     "n_train": 128862,
+     "n_eval": 6777,
+     "prevalence": 0.13678618857901725,
+     "nap": 0.46370537161861414,
+     "precision_at_k_worst": {
+      "P@100": 0.92,
+      "P@200": 0.89,
+      "P@500": 0.71
+     },
+     "precision_at_k_best": {
+      "P@100": 0.92,
+      "P@200": 0.89,
+      "P@500": 0.71
+     }
+    },
+    {
+     "fold": "t<=24 -> t25-26",
+     "train_end": 24,
+     "n_train": 135639,
+     "n_eval": 7946,
+     "prevalence": 0.22816511452303045,
+     "nap": 0.8414390433951737,
+     "precision_at_k_worst": {
+      "P@100": 0.99,
+      "P@200": 0.995,
+      "P@500": 0.98
+     },
+     "precision_at_k_best": {
+      "P@100": 0.99,
+      "P@200": 0.995,
+      "P@500": 0.98
+     }
+    },
+    {
+     "fold": "t<=26 -> t27-28",
+     "train_end": 26,
+     "n_train": 143585,
+     "n_eval": 1379,
+     "prevalence": 0.10224800580130529,
+     "nap": 0.8299725336816,
+     "precision_at_k_worst": {
+      "P@100": 0.94,
+      "P@200": 0.57,
+      "P@500": 0.266
+     },
+     "precision_at_k_best": {
+      "P@100": 0.94,
+      "P@200": 0.57,
+      "P@500": 0.266
+     }
+    },
+    {
+     "fold": "t<=28 -> t29-30",
+     "train_end": 28,
+     "n_train": 144964,
+     "n_eval": 5572,
+     "prevalence": 0.09565685570710697,
+     "nap": 0.37869645361938054,
+     "precision_at_k_worst": {
+      "P@100": 0.99,
+      "P@200": 0.775,
+      "P@500": 0.348
+     },
+     "precision_at_k_best": {
+      "P@100": 0.99,
+      "P@200": 0.775,
+      "P@500": 0.348
+     }
+    },
+    {
+     "fold": "t<=30 -> t31-32",
+     "train_end": 30,
+     "n_train": 150536,
+     "n_eval": 8912,
+     "prevalence": 0.10323159784560143,
+     "nap": 0.5862579397316875,
+     "precision_at_k_worst": {
+      "P@100": 0.98,
+      "P@200": 0.965,
+      "P@500": 0.776
+     },
+     "precision_at_k_best": {
+      "P@100": 0.98,
+      "P@200": 0.965,
+      "P@500": 0.776
+     }
+    },
+    {
+     "fold": "t<=32 -> t33-34",
+     "train_end": 32,
+     "n_train": 159448,
+     "n_eval": 10956,
+     "prevalence": 0.06663015699160277,
+     "nap": 0.6678161063031818,
+     "precision_at_k_worst": {
+      "P@100": 0.7,
+      "P@200": 0.765,
+      "P@500": 0.818
+     },
+     "precision_at_k_best": {
+      "P@100": 0.7,
+      "P@200": 0.765,
+      "P@500": 0.818
+     }
+    },
+    {
+     "fold": "t<=34 -> t35-36",
+     "train_end": 34,
+     "n_train": 170404,
+     "n_eval": 13712,
+     "prevalence": 0.07402275379229872,
+     "nap": 0.6538583636556409,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 0.874
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 0.874
+     }
+    },
+    {
+     "fold": "t<=36 -> t37-38",
+     "train_end": 36,
+     "n_train": 184116,
+     "n_eval": 6603,
+     "prevalence": 0.09223080417991822,
+     "nap": 0.6668339122984369,
+     "precision_at_k_worst": {
+      "P@100": 0.99,
+      "P@200": 0.99,
+      "P@500": 0.708
+     },
+     "precision_at_k_best": {
+      "P@100": 0.99,
+      "P@200": 0.99,
+      "P@500": 0.708
+     }
+    },
+    {
+     "fold": "t<=38 -> t39-40",
+     "train_end": 38,
+     "n_train": 190719,
+     "n_eval": 11764,
+     "prevalence": 0.048027881672900376,
+     "nap": 0.29554114227600103,
+     "precision_at_k_worst": {
+      "P@100": 0.58,
+      "P@200": 0.515,
+      "P@500": 0.472
+     },
+     "precision_at_k_best": {
+      "P@100": 0.58,
+      "P@200": 0.515,
+      "P@500": 0.472
+     }
+    }
+   ]
+  },
+  "ExtraTrees": {
+   "candidate": "ExtraTrees",
+   "scope": "undeclared",
+   "seed": 20260919,
+   "folds": 12,
+   "nap_mean": 0.31030662528498637,
+   "nap_sd": 0.2220704258908345,
+   "nap_min": 0.03978095249992072,
+   "nap_max": 0.8082635747540473,
+   "per_fold": [
+    {
+     "fold": "t<=16 -> t17-18",
+     "train_end": 16,
+     "n_train": 96519,
+     "n_eval": 4018,
+     "prevalence": 0.04952712792434047,
+     "nap": 0.28195885899620077,
+     "precision_at_k_worst": {
+      "P@100": 0.43,
+      "P@200": 0.37,
+      "P@500": 0.252
+     },
+     "precision_at_k_best": {
+      "P@100": 0.43,
+      "P@200": 0.37,
+      "P@500": 0.252
+     }
+    },
+    {
+     "fold": "t<=18 -> t19-20",
+     "train_end": 18,
+     "n_train": 100537,
+     "n_eval": 7125,
+     "prevalence": 0.07466666666666667,
+     "nap": 0.3820916760906112,
+     "precision_at_k_worst": {
+      "P@100": 0.59,
+      "P@200": 0.535,
+      "P@500": 0.398
+     },
+     "precision_at_k_best": {
+      "P@100": 0.59,
+      "P@200": 0.535,
+      "P@500": 0.398
+     }
+    },
+    {
+     "fold": "t<=20 -> t21-22",
+     "train_end": 20,
+     "n_train": 107662,
+     "n_eval": 21200,
+     "prevalence": 0.06212264150943396,
+     "nap": 0.1999064255648555,
+     "precision_at_k_worst": {
+      "P@100": 0.66,
+      "P@200": 0.505,
+      "P@500": 0.384
+     },
+     "precision_at_k_best": {
+      "P@100": 0.66,
+      "P@200": 0.505,
+      "P@500": 0.384
+     }
+    },
+    {
+     "fold": "t<=22 -> t23-24",
+     "train_end": 22,
+     "n_train": 128862,
+     "n_eval": 6777,
+     "prevalence": 0.13678618857901725,
+     "nap": 0.4280687917247593,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 0.975,
+      "P@500": 0.652
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 0.975,
+      "P@500": 0.652
+     }
+    },
+    {
+     "fold": "t<=24 -> t25-26",
+     "train_end": 24,
+     "n_train": 135639,
+     "n_eval": 7946,
+     "prevalence": 0.22816511452303045,
+     "nap": 0.8082635747540473,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 1.0
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 1.0
+     }
+    },
+    {
+     "fold": "t<=26 -> t27-28",
+     "train_end": 26,
+     "n_train": 143585,
+     "n_eval": 1379,
+     "prevalence": 0.10224800580130529,
+     "nap": 0.19980864437852736,
+     "precision_at_k_worst": {
+      "P@100": 0.26,
+      "P@200": 0.175,
+      "P@500": 0.256
+     },
+     "precision_at_k_best": {
+      "P@100": 0.26,
+      "P@200": 0.175,
+      "P@500": 0.256
+     }
+    },
+    {
+     "fold": "t<=28 -> t29-30",
+     "train_end": 28,
+     "n_train": 144964,
+     "n_eval": 5572,
+     "prevalence": 0.09565685570710697,
+     "nap": 0.03978095249992072,
+     "precision_at_k_worst": {
+      "P@100": 0.03,
+      "P@200": 0.015,
+      "P@500": 0.006
+     },
+     "precision_at_k_best": {
+      "P@100": 0.03,
+      "P@200": 0.015,
+      "P@500": 0.006
+     }
+    },
+    {
+     "fold": "t<=30 -> t31-32",
+     "train_end": 30,
+     "n_train": 150536,
+     "n_eval": 8912,
+     "prevalence": 0.10323159784560143,
+     "nap": 0.15347273652407054,
+     "precision_at_k_worst": {
+      "P@100": 0.45,
+      "P@200": 0.225,
+      "P@500": 0.366
+     },
+     "precision_at_k_best": {
+      "P@100": 0.45,
+      "P@200": 0.225,
+      "P@500": 0.366
+     }
+    },
+    {
+     "fold": "t<=32 -> t33-34",
+     "train_end": 32,
+     "n_train": 159448,
+     "n_eval": 10956,
+     "prevalence": 0.06663015699160277,
+     "nap": 0.6191666501702885,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 0.782
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 0.782
+     }
+    },
+    {
+     "fold": "t<=34 -> t35-36",
+     "train_end": 34,
+     "n_train": 170404,
+     "n_eval": 13712,
+     "prevalence": 0.07402275379229872,
+     "nap": 0.30413753793177195,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 0.955,
+      "P@500": 0.498
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 0.955,
+      "P@500": 0.498
+     }
+    },
+    {
+     "fold": "t<=36 -> t37-38",
+     "train_end": 36,
+     "n_train": 184116,
+     "n_eval": 6603,
+     "prevalence": 0.09223080417991822,
+     "nap": 0.21636669109138718,
+     "precision_at_k_worst": {
+      "P@100": 0.78,
+      "P@200": 0.395,
+      "P@500": 0.288
+     },
+     "precision_at_k_best": {
+      "P@100": 0.78,
+      "P@200": 0.395,
+      "P@500": 0.288
+     }
+    },
+    {
+     "fold": "t<=38 -> t39-40",
+     "train_end": 38,
+     "n_train": 190719,
+     "n_eval": 11764,
+     "prevalence": 0.048027881672900376,
+     "nap": 0.09065696369339682,
+     "precision_at_k_worst": {
+      "P@100": 0.43,
+      "P@200": 0.37,
+      "P@500": 0.152
+     },
+     "precision_at_k_best": {
+      "P@100": 0.43,
+      "P@200": 0.37,
+      "P@500": 0.152
+     }
+    }
+   ]
+  },
+  "HistGradientBoosting": {
+   "candidate": "HistGradientBoosting",
+   "scope": "undeclared",
+   "seed": 20260919,
+   "folds": 12,
+   "nap_mean": 0.5814457524551359,
+   "nap_sd": 0.16859944368462818,
+   "nap_min": 0.24585645209960375,
+   "nap_max": 0.8226051614490788,
+   "per_fold": [
+    {
+     "fold": "t<=16 -> t17-18",
+     "train_end": 16,
+     "n_train": 96519,
+     "n_eval": 4018,
+     "prevalence": 0.04952712792434047,
+     "nap": 0.42000885328942644,
+     "precision_at_k_worst": {
+      "P@100": 0.51,
+      "P@200": 0.42,
+      "P@500": 0.262
+     },
+     "precision_at_k_best": {
+      "P@100": 0.51,
+      "P@200": 0.42,
+      "P@500": 0.262
+     }
+    },
+    {
+     "fold": "t<=18 -> t19-20",
+     "train_end": 18,
+     "n_train": 100537,
+     "n_eval": 7125,
+     "prevalence": 0.07466666666666667,
+     "nap": 0.6855454250047094,
+     "precision_at_k_worst": {
+      "P@100": 0.98,
+      "P@200": 0.955,
+      "P@500": 0.672
+     },
+     "precision_at_k_best": {
+      "P@100": 0.98,
+      "P@200": 0.955,
+      "P@500": 0.672
+     }
+    },
+    {
+     "fold": "t<=20 -> t21-22",
+     "train_end": 20,
+     "n_train": 107662,
+     "n_eval": 21200,
+     "prevalence": 0.06212264150943396,
+     "nap": 0.3820254575786774,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 0.9,
+      "P@500": 0.68
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 0.9,
+      "P@500": 0.68
+     }
+    },
+    {
+     "fold": "t<=22 -> t23-24",
+     "train_end": 22,
+     "n_train": 128862,
+     "n_eval": 6777,
+     "prevalence": 0.13678618857901725,
+     "nap": 0.4859698857468165,
+     "precision_at_k_worst": {
+      "P@100": 0.99,
+      "P@200": 0.775,
+      "P@500": 0.726
+     },
+     "precision_at_k_best": {
+      "P@100": 0.99,
+      "P@200": 0.775,
+      "P@500": 0.726
+     }
+    },
+    {
+     "fold": "t<=24 -> t25-26",
+     "train_end": 24,
+     "n_train": 135639,
+     "n_eval": 7946,
+     "prevalence": 0.22816511452303045,
+     "nap": 0.7347893060675411,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 1.0
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 1.0
+     }
+    },
+    {
+     "fold": "t<=26 -> t27-28",
+     "train_end": 26,
+     "n_train": 143585,
+     "n_eval": 1379,
+     "prevalence": 0.10224800580130529,
+     "nap": 0.8226051614490788,
+     "precision_at_k_worst": {
+      "P@100": 0.94,
+      "P@200": 0.565,
+      "P@500": 0.274
+     },
+     "precision_at_k_best": {
+      "P@100": 0.94,
+      "P@200": 0.565,
+      "P@500": 0.274
+     }
+    },
+    {
+     "fold": "t<=28 -> t29-30",
+     "train_end": 28,
+     "n_train": 144964,
+     "n_eval": 5572,
+     "prevalence": 0.09565685570710697,
+     "nap": 0.5785442923063341,
+     "precision_at_k_worst": {
+      "P@100": 0.99,
+      "P@200": 0.82,
+      "P@500": 0.514
+     },
+     "precision_at_k_best": {
+      "P@100": 0.99,
+      "P@200": 0.825,
+      "P@500": 0.514
+     }
+    },
+    {
+     "fold": "t<=30 -> t31-32",
+     "train_end": 30,
+     "n_train": 150536,
+     "n_eval": 8912,
+     "prevalence": 0.10323159784560143,
+     "nap": 0.5775607293326941,
+     "precision_at_k_worst": {
+      "P@100": 0.98,
+      "P@200": 0.985,
+      "P@500": 0.746
+     },
+     "precision_at_k_best": {
+      "P@100": 0.98,
+      "P@200": 0.985,
+      "P@500": 0.746
+     }
+    },
+    {
+     "fold": "t<=32 -> t33-34",
+     "train_end": 32,
+     "n_train": 159448,
+     "n_eval": 10956,
+     "prevalence": 0.06663015699160277,
+     "nap": 0.7227931329647101,
+     "precision_at_k_worst": {
+      "P@100": 0.99,
+      "P@200": 0.775,
+      "P@500": 0.818
+     },
+     "precision_at_k_best": {
+      "P@100": 0.99,
+      "P@200": 0.775,
+      "P@500": 0.818
+     }
+    },
+    {
+     "fold": "t<=34 -> t35-36",
+     "train_end": 34,
+     "n_train": 170404,
+     "n_eval": 13712,
+     "prevalence": 0.07402275379229872,
+     "nap": 0.6621900762394293,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 0.854
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 0.864
+     }
+    },
+    {
+     "fold": "t<=36 -> t37-38",
+     "train_end": 36,
+     "n_train": 184116,
+     "n_eval": 6603,
+     "prevalence": 0.09223080417991822,
+     "nap": 0.6594602573826089,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 0.995,
+      "P@500": 0.67
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 0.995,
+      "P@500": 0.67
+     }
+    },
+    {
+     "fold": "t<=38 -> t39-40",
+     "train_end": 38,
+     "n_train": 190719,
+     "n_eval": 11764,
+     "prevalence": 0.048027881672900376,
+     "nap": 0.24585645209960375,
+     "precision_at_k_worst": {
+      "P@100": 0.63,
+      "P@200": 0.43,
+      "P@500": 0.398
+     },
+     "precision_at_k_best": {
+      "P@100": 0.63,
+      "P@200": 0.43,
+      "P@500": 0.398
+     }
+    }
+   ]
+  },
+  "LightGBM": {
+   "candidate": "LightGBM",
+   "scope": "undeclared",
+   "seed": 20260919,
+   "folds": 12,
+   "nap_mean": 0.5913694504736406,
+   "nap_sd": 0.16358793366084265,
+   "nap_min": 0.30333317648984065,
+   "nap_max": 0.8017969384334153,
+   "per_fold": [
+    {
+     "fold": "t<=16 -> t17-18",
+     "train_end": 16,
+     "n_train": 96519,
+     "n_eval": 4018,
+     "prevalence": 0.04952712792434047,
+     "nap": 0.3590029270271046,
+     "precision_at_k_worst": {
+      "P@100": 0.44,
+      "P@200": 0.325,
+      "P@500": 0.248
+     },
+     "precision_at_k_best": {
+      "P@100": 0.44,
+      "P@200": 0.325,
+      "P@500": 0.248
+     }
+    },
+    {
+     "fold": "t<=18 -> t19-20",
+     "train_end": 18,
+     "n_train": 100537,
+     "n_eval": 7125,
+     "prevalence": 0.07466666666666667,
+     "nap": 0.6792304058235439,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 0.95,
+      "P@500": 0.67
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 0.95,
+      "P@500": 0.67
+     }
+    },
+    {
+     "fold": "t<=20 -> t21-22",
+     "train_end": 20,
+     "n_train": 107662,
+     "n_eval": 21200,
+     "prevalence": 0.06212264150943396,
+     "nap": 0.3986443982269229,
+     "precision_at_k_worst": {
+      "P@100": 0.99,
+      "P@200": 0.91,
+      "P@500": 0.736
+     },
+     "precision_at_k_best": {
+      "P@100": 0.99,
+      "P@200": 0.91,
+      "P@500": 0.736
+     }
+    },
+    {
+     "fold": "t<=22 -> t23-24",
+     "train_end": 22,
+     "n_train": 128862,
+     "n_eval": 6777,
+     "prevalence": 0.13678618857901725,
+     "nap": 0.5583218350588772,
+     "precision_at_k_worst": {
+      "P@100": 0.99,
+      "P@200": 0.905,
+      "P@500": 0.756
+     },
+     "precision_at_k_best": {
+      "P@100": 0.99,
+      "P@200": 0.905,
+      "P@500": 0.756
+     }
+    },
+    {
+     "fold": "t<=24 -> t25-26",
+     "train_end": 24,
+     "n_train": 135639,
+     "n_eval": 7946,
+     "prevalence": 0.22816511452303045,
+     "nap": 0.7399976428549556,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 1.0
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 1.0
+     }
+    },
+    {
+     "fold": "t<=26 -> t27-28",
+     "train_end": 26,
+     "n_train": 143585,
+     "n_eval": 1379,
+     "prevalence": 0.10224800580130529,
+     "nap": 0.8017969384334153,
+     "precision_at_k_worst": {
+      "P@100": 0.87,
+      "P@200": 0.575,
+      "P@500": 0.274
+     },
+     "precision_at_k_best": {
+      "P@100": 0.87,
+      "P@200": 0.575,
+      "P@500": 0.274
+     }
+    },
+    {
+     "fold": "t<=28 -> t29-30",
+     "train_end": 28,
+     "n_train": 144964,
+     "n_eval": 5572,
+     "prevalence": 0.09565685570710697,
+     "nap": 0.5331799970454703,
+     "precision_at_k_worst": {
+      "P@100": 0.99,
+      "P@200": 0.78,
+      "P@500": 0.512
+     },
+     "precision_at_k_best": {
+      "P@100": 0.99,
+      "P@200": 0.79,
+      "P@500": 0.512
+     }
+    },
+    {
+     "fold": "t<=30 -> t31-32",
+     "train_end": 30,
+     "n_train": 150536,
+     "n_eval": 8912,
+     "prevalence": 0.10323159784560143,
+     "nap": 0.6394769882709809,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 0.99,
+      "P@500": 0.84
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 0.99,
+      "P@500": 0.84
+     }
+    },
+    {
+     "fold": "t<=32 -> t33-34",
+     "train_end": 32,
+     "n_train": 159448,
+     "n_eval": 10956,
+     "prevalence": 0.06663015699160277,
+     "nap": 0.7651384217308613,
+     "precision_at_k_worst": {
+      "P@100": 0.84,
+      "P@200": 0.845,
+      "P@500": 0.884
+     },
+     "precision_at_k_best": {
+      "P@100": 0.84,
+      "P@200": 0.845,
+      "P@500": 0.884
+     }
+    },
+    {
+     "fold": "t<=34 -> t35-36",
+     "train_end": 34,
+     "n_train": 170404,
+     "n_eval": 13712,
+     "prevalence": 0.07402275379229872,
+     "nap": 0.6582966393025008,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 0.876
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 1.0,
+      "P@500": 0.876
+     }
+    },
+    {
+     "fold": "t<=36 -> t37-38",
+     "train_end": 36,
+     "n_train": 184116,
+     "n_eval": 6603,
+     "prevalence": 0.09223080417991822,
+     "nap": 0.6600140354192139,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 0.995,
+      "P@500": 0.698
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 0.995,
+      "P@500": 0.698
+     }
+    },
+    {
+     "fold": "t<=38 -> t39-40",
+     "train_end": 38,
+     "n_train": 190719,
+     "n_eval": 11764,
+     "prevalence": 0.048027881672900376,
+     "nap": 0.30333317648984065,
+     "precision_at_k_worst": {
+      "P@100": 0.54,
+      "P@200": 0.615,
+      "P@500": 0.448
+     },
+     "precision_at_k_best": {
+      "P@100": 0.54,
+      "P@200": 0.615,
+      "P@500": 0.448
+     }
+    }
+   ]
+  }
+ },
+ "family_comparison": {
+  "protocol_version": "obsidianchain.eval_protocol/2",
+  "alpha": 0.05,
+  "correction": "holm-bonferroni",
+  "family_size": 15,
+  "comparisons": [
+   {
+    "verdict": "INDISTINGUISHABLE",
+    "favours": null,
+    "a": "LogisticRegression_L2",
+    "b": "LogisticRegression_L1",
+    "n_folds": 12,
+    "mean_difference": -0.01043747540134078,
+    "sd_difference": 0.019082094469692855,
+    "ci95": [
+     -0.022561659798163256,
+     0.0016867089954816956
+    ],
+    "test": "paired_t",
+    "p_value": 0.08469434703535002,
+    "permutation_p": 0.1005859375,
+    "permutation_usable": true,
+    "folds_won_by_a": 3,
+    "folds_won_by_b": 9,
+    "underpowered_for": "|difference| 0.0104 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "LogisticRegression_L2 vs LogisticRegression_L1",
+    "p_holm": 0.5081660822121001
+   },
+   {
+    "verdict": "FAVOURS",
+    "favours": "RandomForest",
+    "a": "LogisticRegression_L2",
+    "b": "RandomForest",
+    "n_folds": 12,
+    "mean_difference": -0.280762079066786,
+    "sd_difference": 0.24797859759057905,
+    "ci95": [
+     -0.4383201630826027,
+     -0.12320399505096932
+    ],
+    "test": "paired_t",
+    "p_value": 0.0023843571576344868,
+    "permutation_p": 0.00341796875,
+    "permutation_usable": true,
+    "folds_won_by_a": 2,
+    "folds_won_by_b": 10,
+    "underpowered_for": null,
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "LogisticRegression_L2 vs RandomForest",
+    "p_holm": 0.02145921441871038
+   },
+   {
+    "verdict": "INDISTINGUISHABLE",
+    "favours": null,
+    "a": "LogisticRegression_L2",
+    "b": "ExtraTrees",
+    "n_folds": 12,
+    "mean_difference": -0.01876009393636787,
+    "sd_difference": 0.11308501651580599,
+    "ci95": [
+     -0.09061088552179572,
+     0.053090697649059986
+    ],
+    "test": "paired_t",
+    "p_value": 0.5770766153331095,
+    "permutation_p": 0.580078125,
+    "permutation_usable": true,
+    "folds_won_by_a": 6,
+    "folds_won_by_b": 6,
+    "underpowered_for": "|difference| 0.0188 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "LogisticRegression_L2 vs ExtraTrees",
+    "p_holm": 1.0
+   },
+   {
+    "verdict": "FAVOURS",
+    "favours": "HistGradientBoosting",
+    "a": "LogisticRegression_L2",
+    "b": "HistGradientBoosting",
+    "n_folds": 12,
+    "mean_difference": -0.2898992211065173,
+    "sd_difference": 0.24708249096279025,
+    "ci95": [
+     -0.44688794613442084,
+     -0.1329104960786137
+    ],
+    "test": "paired_t",
+    "p_value": 0.0018691739583067148,
+    "permutation_p": 0.00341796875,
+    "permutation_usable": true,
+    "folds_won_by_a": 2,
+    "folds_won_by_b": 10,
+    "underpowered_for": null,
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "LogisticRegression_L2 vs HistGradientBoosting",
+    "p_holm": 0.01869173958306715
+   },
+   {
+    "verdict": "FAVOURS",
+    "favours": "LightGBM",
+    "a": "LogisticRegression_L2",
+    "b": "LightGBM",
+    "n_folds": 12,
+    "mean_difference": -0.299822919125022,
+    "sd_difference": 0.2349216964881027,
+    "ci95": [
+     -0.44908504396985127,
+     -0.15056079428019278
+    ],
+    "test": "paired_t",
+    "p_value": 0.0010266073319346502,
+    "permutation_p": 0.0029296875,
+    "permutation_usable": true,
+    "folds_won_by_a": 2,
+    "folds_won_by_b": 10,
+    "underpowered_for": null,
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "LogisticRegression_L2 vs LightGBM",
+    "p_holm": 0.01254873303742212
+   },
+   {
+    "verdict": "FAVOURS",
+    "favours": "RandomForest",
+    "a": "LogisticRegression_L1",
+    "b": "RandomForest",
+    "n_folds": 12,
+    "mean_difference": -0.2703246036654453,
+    "sd_difference": 0.25391770766538363,
+    "ci95": [
+     -0.4316562181925128,
+     -0.1089929891383778
+    ],
+    "test": "paired_t",
+    "p_value": 0.0035760071309433954,
+    "permutation_p": 0.0048828125,
+    "permutation_usable": true,
+    "folds_won_by_a": 2,
+    "folds_won_by_b": 10,
+    "underpowered_for": null,
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "LogisticRegression_L1 vs RandomForest",
+    "p_holm": 0.02503204991660377
+   },
+   {
+    "verdict": "INDISTINGUISHABLE",
+    "favours": null,
+    "a": "LogisticRegression_L1",
+    "b": "ExtraTrees",
+    "n_folds": 12,
+    "mean_difference": -0.008322618535027089,
+    "sd_difference": 0.11568903523478379,
+    "ci95": [
+     -0.08182792467973501,
+     0.06518268760968082
+    ],
+    "test": "paired_t",
+    "p_value": 0.8077935208483931,
+    "permutation_p": 0.8046875,
+    "permutation_usable": true,
+    "folds_won_by_a": 6,
+    "folds_won_by_b": 6,
+    "underpowered_for": "|difference| 0.0083 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "LogisticRegression_L1 vs ExtraTrees",
+    "p_holm": 1.0
+   },
+   {
+    "verdict": "FAVOURS",
+    "favours": "HistGradientBoosting",
+    "a": "LogisticRegression_L1",
+    "b": "HistGradientBoosting",
+    "n_folds": 12,
+    "mean_difference": -0.2794617457051765,
+    "sd_difference": 0.24941533638029864,
+    "ci95": [
+     -0.4379326899965931,
+     -0.1209908014137599
+    ],
+    "test": "paired_t",
+    "p_value": 0.002557131057175458,
+    "permutation_p": 0.00439453125,
+    "permutation_usable": true,
+    "folds_won_by_a": 2,
+    "folds_won_by_b": 10,
+    "underpowered_for": null,
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "LogisticRegression_L1 vs HistGradientBoosting",
+    "p_holm": 0.02145921441871038
+   },
+   {
+    "verdict": "FAVOURS",
+    "favours": "LightGBM",
+    "a": "LogisticRegression_L1",
+    "b": "LightGBM",
+    "n_folds": 12,
+    "mean_difference": -0.28938544372368125,
+    "sd_difference": 0.23706804557292133,
+    "ci95": [
+     -0.44001129371543407,
+     -0.13875959373192842
+    ],
+    "test": "paired_t",
+    "p_value": 0.0014158007023968764,
+    "permutation_p": 0.0029296875,
+    "permutation_usable": true,
+    "folds_won_by_a": 2,
+    "folds_won_by_b": 10,
+    "underpowered_for": null,
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "LogisticRegression_L1 vs LightGBM",
+    "p_holm": 0.01557380772636564
+   },
+   {
+    "verdict": "FAVOURS",
+    "favours": "RandomForest",
+    "a": "RandomForest",
+    "b": "ExtraTrees",
+    "n_folds": 12,
+    "mean_difference": 0.26200198513041817,
+    "sd_difference": 0.18875256419574582,
+    "ci95": [
+     0.14207432743451068,
+     0.3819296428263257
+    ],
+    "test": "paired_t",
+    "p_value": 0.0005459213561559173,
+    "permutation_p": 0.00048828125,
+    "permutation_usable": true,
+    "folds_won_by_a": 12,
+    "folds_won_by_b": 0,
+    "underpowered_for": null,
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "RandomForest vs ExtraTrees",
+    "p_holm": 0.0076428989861828415
+   },
+   {
+    "verdict": "INDISTINGUISHABLE",
+    "favours": null,
+    "a": "RandomForest",
+    "b": "HistGradientBoosting",
+    "n_folds": 12,
+    "mean_difference": -0.009137142039731204,
+    "sd_difference": 0.0864892202877212,
+    "ci95": [
+     -0.06408977089141142,
+     0.04581548681194902
+    ],
+    "test": "paired_t",
+    "p_value": 0.7213323062546325,
+    "permutation_p": 0.7275390625,
+    "permutation_usable": true,
+    "folds_won_by_a": 6,
+    "folds_won_by_b": 6,
+    "underpowered_for": "|difference| 0.0091 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "RandomForest vs HistGradientBoosting",
+    "p_holm": 1.0
+   },
+   {
+    "verdict": "INDISTINGUISHABLE",
+    "favours": null,
+    "a": "RandomForest",
+    "b": "LightGBM",
+    "n_folds": 12,
+    "mean_difference": -0.019060840058235985,
+    "sd_difference": 0.09507576503090766,
+    "ci95": [
+     -0.07946909915864514,
+     0.041347419042173164
+    ],
+    "test": "paired_t",
+    "p_value": 0.5017829762026803,
+    "permutation_p": 0.4921875,
+    "permutation_usable": true,
+    "folds_won_by_a": 4,
+    "folds_won_by_b": 8,
+    "underpowered_for": "|difference| 0.0191 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "RandomForest vs LightGBM",
+    "p_holm": 1.0
+   },
+   {
+    "verdict": "FAVOURS",
+    "favours": "HistGradientBoosting",
+    "a": "ExtraTrees",
+    "b": "HistGradientBoosting",
+    "n_folds": 12,
+    "mean_difference": -0.2711391271701494,
+    "sd_difference": 0.210672976087035,
+    "ci95": [
+     -0.4049943501155841,
+     -0.13728390422471465
+    ],
+    "test": "paired_t",
+    "p_value": 0.0009652871567247784,
+    "permutation_p": 0.00146484375,
+    "permutation_usable": true,
+    "folds_won_by_a": 1,
+    "folds_won_by_b": 11,
+    "underpowered_for": null,
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "ExtraTrees vs HistGradientBoosting",
+    "p_holm": 0.01254873303742212
+   },
+   {
+    "verdict": "FAVOURS",
+    "favours": "LightGBM",
+    "a": "ExtraTrees",
+    "b": "LightGBM",
+    "n_folds": 12,
+    "mean_difference": -0.28106282518865416,
+    "sd_difference": 0.19959449074011643,
+    "ci95": [
+     -0.4078791143631202,
+     -0.15424653601418817
+    ],
+    "test": "paired_t",
+    "p_value": 0.000488405148116695,
+    "permutation_p": 0.0009765625,
+    "permutation_usable": true,
+    "folds_won_by_a": 1,
+    "folds_won_by_b": 11,
+    "underpowered_for": null,
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "ExtraTrees vs LightGBM",
+    "p_holm": 0.007326077221750426
+   },
+   {
+    "verdict": "INDISTINGUISHABLE",
+    "favours": null,
+    "a": "HistGradientBoosting",
+    "b": "LightGBM",
+    "n_folds": 12,
+    "mean_difference": -0.009923698018504783,
+    "sd_difference": 0.0421627291754672,
+    "ci95": [
+     -0.03671261807172781,
+     0.01686522203471824
+    ],
+    "test": "paired_t",
+    "p_value": 0.43218096933731714,
+    "permutation_p": 0.4306640625,
+    "permutation_usable": true,
+    "folds_won_by_a": 5,
+    "folds_won_by_b": 7,
+    "underpowered_for": "|difference| 0.0099 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+    "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+    "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+    "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate.",
+    "label": "HistGradientBoosting vs LightGBM",
+    "p_holm": 1.0
+   }
+  ],
+  "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models."
+ },
+ "timings_sec": {
+  "LogisticRegression_L2": 3.2252731323242188,
+  "LogisticRegression_L1": 679.7350068092346,
+  "RandomForest": 11.661201238632202,
+  "ExtraTrees": 4.1031739711761475,
+  "HistGradientBoosting": 11.736685037612915,
+  "LightGBM": 7.289161920547485
+ },
+ "notes": "XGBoost not tested: not installed / not in the vendored offline wheel set. Dataset has no network-layer (Group E) columns - include_network=False in build_ps_dataset.py - so this experiment covers blockchain-only PS-native features only."
+}

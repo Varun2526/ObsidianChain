@@ -1,0 +1,88 @@
+{
+ "experiment_id": "exp11_synthetic_world_dataset_investigation",
+ "world_manifest": {
+  "adversarial_behaviours": [
+   "EXCHANGE_BATCH",
+   "CONSOLIDATION",
+   "UNIFORM_PAYOUT",
+   "BENIGN_EQUAL_SPLIT",
+   "MERCHANT_SWEEP"
+  ],
+  "behaviour_meaning": "These are synthetic transaction SHAPES generated to exercise the detectors. They are not claims about how real actors behave, and the positive-class designation is a labelling convention for a controlled experiment rather than a statement that a behaviour is unlawful.",
+  "behaviours": [
+   "NORMAL",
+   "EXCHANGE_BATCH",
+   "CONSOLIDATION",
+   "PEELING",
+   "MIXING_LIKE",
+   "RAPID_MOVEMENT",
+   "MULTI_HOP",
+   "UNIFORM_PAYOUT",
+   "BENIGN_EQUAL_SPLIT",
+   "MERCHANT_SWEEP"
+  ],
+  "config": {
+   "addresses_per_entity": 6,
+   "behaviour": {
+    "batch_outputs": 12,
+    "consolidation_inputs": 9,
+    "mixing_denomination": 0.1,
+    "mixing_participants": 6,
+    "multi_hop_length": 5,
+    "payout_outputs": 6,
+    "payout_value": 0.25,
+    "peel_depth": 7,
+    "peel_fraction": 0.08,
+    "rapid_transfers": 8
+   },
+   "entities_per_behaviour": 4,
+   "n_origins": 24,
+   "origins_for_multi_origin": 3,
+   "seed": 20260917
+  },
+  "config_sha256": "4974f088ed3040f37b03477e958b90106705abe5f063659f20a73c97c2223990",
+  "counts": {
+   "addresses": 1944,
+   "entities": 120,
+   "observations": 2976,
+   "transactions": 372
+  },
+  "created_at": "2026-09-17T19:43:42Z",
+  "generator_version": "1.0.0",
+  "network_generator_version": "2.0.0",
+  "notes": [
+   "SYNTHETIC_CONTROL. Every number measured on this world is a property of a generator, not of Bitcoin.",
+   "The chain layer and the network layer share txids because both were produced from one set of synthetic transactions.",
+   "Truth lives in world_truth/ and is read by no inference stage."
+  ],
+  "positive_class": [
+   "PEELING",
+   "MIXING_LIKE",
+   "RAPID_MOVEMENT"
+  ],
+  "positive_class_meaning": "class 1 designates the behaviours this synthetic evaluation treats as the positive label. It is a labelling convention for a controlled experiment, not a claim that the behaviour is unlawful.",
+  "provenance_type": "SYNTHETIC_CONTROL",
+  "schema": "obsidianchain.world/1",
+  "seed": 20260917,
+  "world_fingerprint": "20eb52881f0ff5f7f51149224114f6e15fd4d89bd4eae5564e154ea3e4e5c325"
+ },
+ "n_transactions": 372,
+ "n_usable_rows": 944,
+ "prevalence": 0.4152542372881356,
+ "production_group_e_stub_confirmed_constant": {
+  "observer_diversity_STUB_is_always": [
+   1.0
+  ],
+  "peer_count_STUB_is_always": [
+   1.0
+  ]
+ },
+ "shortcut_check_single_feature_auc": {
+  "is_peeling_candidate": 0.7551020408163265,
+  "is_mixing_candidate": 0.7448979591836735,
+  "tx_velocity_per_hour": 0.5878808044957113,
+  "n_txs_asof_t": 0.580301685891748
+ },
+ "n_standard_protocol_folds_usable": 3,
+ "n_standard_protocol_folds_total": 12
+}

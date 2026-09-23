@@ -1,0 +1,16 @@
+{
+ "experiment_id": "exp05_explanation_audit",
+ "fold": "t<=38 -> t39-40",
+ "treeshap_local_fidelity_max_abs_err": 1.9095836023552692e-14,
+ "n_rows_sampled": 500,
+ "top3_overlap": {
+  "mean_of_3": 1.4,
+  "pct_zero_overlap": 0.09,
+  "pct_full_overlap": 0.048
+ },
+ "direction_agreement": {
+  "n_pairs": 1500,
+  "agreement_rate": 0.33866666666666667,
+  "n_disagreements": 992
+ }
+}

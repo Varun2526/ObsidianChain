@@ -1,0 +1,280 @@
+{
+  "experiment_id": "exp14_risk_propagation",
+  "design": "EXPERIMENT exp14_risk_propagation.\n\nQuestion: does personalized-PageRank risk propagation from seed illicit\nwallets (``ml/propagation.py``) rank development-period addresses, and does\nit add to the v2 LightGBM model?\n\nDesign (fixed before running):\n* 12 rolling-origin folds from ``ml/protocol.py``. Rows are the v3\n  development parquets; ``last_t`` is each row's own timestep.\n* Graph: every Elliptic++ address-transaction edge (AddrTx inputs, TxAddr\n  outputs) with transaction timestep <= the fold's eval end. Structure is\n  observable at inference time; labels are not.\n* Seeds: development addresses with y = 1 and last_t <= train_end. No label\n  from the evaluation window is ever a seed.\n* Candidates, all scored on the same eval rows:\n    A  LightGBM v2 configuration alone\n    P  propagated risk alone\n    S  stack: logistic regression on [logit(A), log1p(P scaled)], fitted on a\n       calibration window (t in (train_end-2, train_end]) where both inputs\n       are produced exactly as at inference - LightGBM trained on\n       t <= train_end-2, seeds from t <= train_end-2.\n* Primary metric nAP; secondary transaction-weighted nAP. Paired verdicts\n  S vs A through ``protocol.paired_verdict``.\n",
+  "folds": [
+    {
+      "fold": "t<=16 -> t17-18",
+      "prevalence": 0.0495,
+      "prop_coverage": 0.9973,
+      "prop_coverage_positives": 1.0,
+      "stacker_coef": [
+        0.824,
+        0.669
+      ],
+      "nap_A": 0.5016,
+      "txw_A": 0.6826,
+      "nap_P": 0.0898,
+      "txw_P": 0.1612,
+      "nap_S": 0.5265,
+      "txw_S": 0.7058
+    },
+    {
+      "fold": "t<=18 -> t19-20",
+      "prevalence": 0.0747,
+      "prop_coverage": 0.7166,
+      "prop_coverage_positives": 1.0,
+      "stacker_coef": [
+        0.594,
+        1.134
+      ],
+      "nap_A": 0.71,
+      "txw_A": 0.8439,
+      "nap_P": 0.1746,
+      "txw_P": 0.1641,
+      "nap_S": 0.7308,
+      "txw_S": 0.85
+    },
+    {
+      "fold": "t<=20 -> t21-22",
+      "prevalence": 0.0621,
+      "prop_coverage": 0.5317,
+      "prop_coverage_positives": 1.0,
+      "stacker_coef": [
+        0.627,
+        1.254
+      ],
+      "nap_A": 0.4736,
+      "txw_A": 0.7945,
+      "nap_P": 0.6497,
+      "txw_P": 0.3776,
+      "nap_S": 0.6422,
+      "txw_S": 0.8879
+    },
+    {
+      "fold": "t<=22 -> t23-24",
+      "prevalence": 0.1368,
+      "prop_coverage": 0.9135,
+      "prop_coverage_positives": 1.0,
+      "stacker_coef": [
+        0.526,
+        3.507
+      ],
+      "nap_A": 0.6295,
+      "txw_A": 0.3719,
+      "nap_P": 0.4007,
+      "txw_P": 0.3077,
+      "nap_S": 0.6469,
+      "txw_S": 0.4452
+    },
+    {
+      "fold": "t<=24 -> t25-26",
+      "prevalence": 0.2282,
+      "prop_coverage": 0.8648,
+      "prop_coverage_positives": 0.9355,
+      "stacker_coef": [
+        0.539,
+        1.305
+      ],
+      "nap_A": 0.8347,
+      "txw_A": 0.8358,
+      "nap_P": 0.3538,
+      "txw_P": 0.2805,
+      "nap_S": 0.796,
+      "txw_S": 0.8033
+    },
+    {
+      "fold": "t<=26 -> t27-28",
+      "prevalence": 0.1022,
+      "prop_coverage": 0.9202,
+      "prop_coverage_positives": 0.9858,
+      "stacker_coef": [
+        0.691,
+        0.425
+      ],
+      "nap_A": 0.8556,
+      "txw_A": 0.9198,
+      "nap_P": 0.0085,
+      "txw_P": -0.0067,
+      "nap_S": 0.8565,
+      "txw_S": 0.9255
+    },
+    {
+      "fold": "t<=28 -> t29-30",
+      "prevalence": 0.0957,
+      "prop_coverage": 0.8943,
+      "prop_coverage_positives": 0.9962,
+      "stacker_coef": [
+        0.978,
+        0.297
+      ],
+      "nap_A": 0.4644,
+      "txw_A": 0.4733,
+      "nap_P": 0.5125,
+      "txw_P": 0.5509,
+      "nap_S": 0.5192,
+      "txw_S": 0.5367
+    },
+    {
+      "fold": "t<=30 -> t31-32",
+      "prevalence": 0.1032,
+      "prop_coverage": 0.8749,
+      "prop_coverage_positives": 1.0,
+      "stacker_coef": [
+        0.759,
+        1.234
+      ],
+      "nap_A": 0.6402,
+      "txw_A": 0.6167,
+      "nap_P": 0.36,
+      "txw_P": 0.4562,
+      "nap_S": 0.8015,
+      "txw_S": 0.8355
+    },
+    {
+      "fold": "t<=32 -> t33-34",
+      "prevalence": 0.0666,
+      "prop_coverage": 0.8204,
+      "prop_coverage_positives": 1.0,
+      "stacker_coef": [
+        0.874,
+        1.442
+      ],
+      "nap_A": 0.6934,
+      "txw_A": 0.4238,
+      "nap_P": 0.3911,
+      "txw_P": 0.429,
+      "nap_S": 0.7916,
+      "txw_S": 0.6157
+    },
+    {
+      "fold": "t<=34 -> t35-36",
+      "prevalence": 0.074,
+      "prop_coverage": 0.9939,
+      "prop_coverage_positives": 1.0,
+      "stacker_coef": [
+        0.933,
+        1.208
+      ],
+      "nap_A": 0.6826,
+      "txw_A": 0.6966,
+      "nap_P": 0.2914,
+      "txw_P": 0.1442,
+      "nap_S": 0.778,
+      "txw_S": 0.7417
+    },
+    {
+      "fold": "t<=36 -> t37-38",
+      "prevalence": 0.0922,
+      "prop_coverage": 0.9302,
+      "prop_coverage_positives": 0.9967,
+      "stacker_coef": [
+        0.943,
+        1.179
+      ],
+      "nap_A": 0.7052,
+      "txw_A": 0.8475,
+      "nap_P": 0.0678,
+      "txw_P": 0.114,
+      "nap_S": 0.6592,
+      "txw_S": 0.8108
+    },
+    {
+      "fold": "t<=38 -> t39-40",
+      "prevalence": 0.048,
+      "prop_coverage": 0.9766,
+      "prop_coverage_positives": 0.9929,
+      "stacker_coef": [
+        0.764,
+        -0.306
+      ],
+      "nap_A": 0.2431,
+      "txw_A": 0.4401,
+      "nap_P": 0.0612,
+      "txw_P": 0.0283,
+      "nap_S": 0.2144,
+      "txw_S": 0.4197
+    }
+  ],
+  "summary": {
+    "prop_coverage": 0.8695,
+    "prop_coverage_positives": 0.9923,
+    "nap_A": 0.6195,
+    "txw_A": 0.6622,
+    "nap_P": 0.2801,
+    "txw_P": 0.2506,
+    "nap_S": 0.6636,
+    "txw_S": 0.7148
+  },
+  "verdicts": {
+    "S_vs_A_nap": {
+      "verdict": "INDISTINGUISHABLE",
+      "favours": null,
+      "a": "stack",
+      "b": "lgbm",
+      "n_folds": 12,
+      "mean_difference": 0.044074999999999996,
+      "sd_difference": 0.07303387912469116,
+      "ci95": [
+        -0.002328512943998745,
+        0.09047851294399874
+      ],
+      "test": "paired_t",
+      "p_value": 0.06058400248078833,
+      "permutation_p": 0.0625,
+      "permutation_usable": true,
+      "folds_won_by_a": 9,
+      "folds_won_by_b": 3,
+      "underpowered_for": "|difference| 0.0441 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+      "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+      "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+      "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate."
+    },
+    "S_vs_A_txw": {
+      "verdict": "FAVOURS",
+      "favours": "stack",
+      "a": "stack",
+      "b": "lgbm",
+      "n_folds": 12,
+      "mean_difference": 0.05260833333333333,
+      "sd_difference": 0.08260787391849116,
+      "ci95": [
+        0.00012179431069271607,
+        0.10509487235597395
+      ],
+      "test": "paired_t",
+      "p_value": 0.049555836055369444,
+      "permutation_p": 0.04052734375,
+      "permutation_usable": true,
+      "folds_won_by_a": 9,
+      "folds_won_by_b": 3,
+      "underpowered_for": "|difference| 0.0526 is below this design's minimum detectable effect of 0.164 nAP, so a verdict of INDISTINGUISHABLE here reflects the study's power rather than the models",
+      "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+      "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+      "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate."
+    },
+    "P_vs_A_nap": {
+      "verdict": "FAVOURS",
+      "favours": "lgbm",
+      "a": "prop",
+      "b": "lgbm",
+      "n_folds": 12,
+      "mean_difference": -0.3394,
+      "sd_difference": 0.28135107476732213,
+      "ci95": [
+        -0.5181619444050528,
+        -0.16063805559494712
+      ],
+      "test": "paired_t",
+      "p_value": 0.0015396109116905753,
+      "permutation_p": 0.00244140625,
+      "permutation_usable": true,
+      "folds_won_by_a": 2,
+      "folds_won_by_b": 10,
+      "underpowered_for": null,
+      "meaning": "Differences are paired by fold and reported with their spread. On this data the fold-to-fold standard deviation is roughly 35x the seed-to-seed standard deviation, so a difference smaller than the fold spread is indistinguishable from the choice of window and is reported as such.",
+      "power_limits": "At 12 folds and the observed paired spread (sd 0.185), this design detects a 0.164 nAP difference at 80% power. Detecting 0.10 would need 29 folds and 0.05 would need 110 folds, neither of which the development period can supply. Differences below roughly 0.05 nAP are therefore PERMANENTLY unresolvable on this dataset, and a protocol run that reports INDISTINGUISHABLE for such a difference is reporting the limit of the data, not a property of the models.",
+      "note": "A verdict of INDISTINGUISHABLE does not mean the candidates are equal. It means this data cannot tell them apart, which is a different and more useful statement than a point estimate."
+    }
+  },
+  "runtime_seconds": 68.4
+}

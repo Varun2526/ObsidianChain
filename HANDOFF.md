@@ -9,6 +9,98 @@ looked correct.
 
 ---
 
+## 0. Current state (2026-09-23)
+
+Sections 1-11 below describe Phases 1-4 and remain accurate for that work.
+Phases 5-11 were built afterwards and are summarised here.
+
+| Layer | Where | State |
+|---|---|---|
+| Analytical API | `api/` | read-only over frozen artifacts; every route needs a session except `POST /auth/login`, `POST /auth/logout`, `GET /health` |
+| Application layer | `console/` | SQLite: users, sessions, RBAC, investigations, datasets, AnalysisRuns, alert references, dispositions, notes, reports, audit |
+| Frontend | `frontend/` | React/TS console; no identity or case state in browser storage |
+| Synthetic world | `world/` | coherent TXID-correlated chain+network world, `SYNTHETIC_CONTROL` |
+| ML — Phase 6 | `features/`, `ml/model.py` | LightGBM + isotonic + TreeSHAP over M0-M4; serves alert run `043ea584e99daf99` |
+| ML — PS-native | `pipeline/`, `ml/ps_model.py` | RandomForest; executed by the orchestrator for uploaded datasets |
+| **Evaluation protocol** | **`ml/protocol.py`** | **the only sanctioned way to compare models** |
+
+### 2026-09-23 (latest): default model is ps_native_v3, schema /4
+
+v3 supersedes v2 below: causal within-step order (the old txId order leaked
+and inflated v2 by ~0.06 nAP), group G upstream-flow features in CORE, 12-fold
+nAP 0.713. Rebuild: `build_ps_dataset.py`, `train_ps_model_v2.py` (writes
+v3), `train_ps_stacker_v2.py`. See ADR 0002 amendment.
+
+### 2026-09-23 (later): PS-native v2 shipped — read ADR 0002
+
+The "PS-native inference is blocked" note below is RESOLVED. Summary
+(`docs/decisions/0002-ps-native-v2-architecture.md`,
+`research/autoresearch_2026_09_23/18_architecture_upgrade.md`):
+
+- Feature schema `ps_native_features/3`; train/validation rebuilt. The holdout
+  is still `/1`, sealed, MD5 `a15500c94b9808cd42d584ad4b5c3017`, unopened.
+- `data/models/ps_native/v2/`: LightGBM, Platt, TreeSHAP explanations, rank
+  budget severity, drift reference, `stacker.json`. `holdout_evaluated: false`.
+  Rebuild: `python research/reproduction/train_ps_model_v2.py` then
+  `python research/reproduction/train_ps_stacker_v2.py`.
+- New: `ml/propagation.py` + `io/watchlist.py` (OFAC SDN / watchlist seeds),
+  `ml/embeddings.py` (link suggestions only), `ml/stacking.py`,
+  `ml/monitoring.py` (`monitoring.json` per run), `world/noisy.py`
+  (SYNTHETIC_CONTROL world v2, output under `data/synthetic_world_v2/`).
+- Fusion is noisy-OR with budget severity; the alert build is linear, not
+  O(clusters x transactions).
+- Uploaded-run alerts (`alerts.json`) are still not shown in the frontend;
+  the console shows run progress only.
+
+### Two production model paths — read ADR 0001 first
+
+`docs/decisions/0001-two-production-model-paths.md`. Both are production with
+declared, non-overlapping scopes: Phase 6 owns the Elliptic++ reference
+artifacts, PS-native owns uploaded-dataset runs. **Numbers are never compared
+across them** - `protocol.compare()` raises `ScopeMismatchError`.
+
+### The sealed holdout
+
+Timesteps **42-49 are sealed**. `protocol.development()` is the only accessor
+a model developer uses; `protocol.holdout()` raises unless `break_seal(reason)`
+is called with a written reason. A `Fold` whose evaluation window reaches t>=42
+**cannot be constructed**. The builder refuses to regenerate `test.parquet`
+without `OBSIDIANCHAIN_REGENERATE_HOLDOUT=1`.
+
+Current holdout MD5: `a15500c94b9808cd42d584ad4b5c3017`, schema
+`ps_native_features/1`. Development parquets are `/2`. That asymmetry is
+correct and deliberate.
+
+### PENDING: PS-native inference is blocked
+
+The generator fix moved the pipeline to `ps_native_features/2` (24 columns).
+The frozen `ps_native_v1` model declares `/1` (30 columns), so `ps_model.py`
+refuses rather than scoring misaligned columns. The orchestrator degrades
+honestly - all 17 stages complete, `ml_status = MODEL_UNAVAILABLE_FOR_SCHEMA`,
+no crash - but **uploaded-dataset runs get no risk score until a v2 model is
+trained under the protocol**. This is the known cost of fixing the data
+without retraining.
+
+### Installed skills (checked 2026-09-23)
+
+Present: the **superpowers** pack (`using-superpowers`, `brainstorming`,
+`writing-plans`, `test-driven-development`, `systematic-debugging`,
+`verification-before-completion`, `subagent-driven-development`,
+`executing-plans`, `requesting-code-review`, `receiving-code-review`,
+`dispatching-parallel-agents`, `using-git-worktrees`,
+`finishing-a-development-branch`, `writing-skills`, `skill-creator`), plus
+`llm-council`, `docs`, `xlsx`, `pptx`, `pdf`, `docx`, `webapp-testing`,
+`langsmith-fetch`, `changelog-generator`, `connect`/`connect-apps` and
+assorted unrelated utility skills.
+
+**NOT present:** Probabl, scikit-learn, statistical-analysis, statsmodels,
+SHAP, Orchestra Autoresearch. The ML audits were done without them.
+**Libraries:** scikit-learn 1.9.0 and scipy 1.17.1 ARE installed;
+**statsmodels and shap are not, and are not in the vendored wheel set** -
+adding either means re-vendoring and touching the offline build guarantee.
+
+---
+
 ## 1. The idea
 
 Co-spend clustering merges Bitcoin addresses that appear as inputs to the same
@@ -81,6 +173,50 @@ src/obsidianchain/
   demo/api.py             DEMO-flagged JSON envelope + flag enforcement
   demo/report.py          terminal report + self-contained HTML page
 
+  --- Phases 5-11, added after this section was first written ---
+  api/                    read-only HTTP layer over frozen artifacts
+    app.py                routes + PUBLIC_ROUTES (the whole unauth surface)
+    alerts.py evidence.py separation.py patterns.py evaluation.py
+    boundary.py           modules this package may NOT import
+    provenance_gate.py    refuses a non-PRODUCTION or torn artifact
+  console/                MUTABLE investigator state (SQLite)
+    db.py rbac.py users.py sessions.py investigations.py
+    datasets.py runs.py casework.py reports.py audit.py
+    routes_auth.py routes_investigations.py routes_casework.py
+  features/               M0-M4 feature groups
+    incidence.py behaviour.py graph.py peel.py netfeat.py
+    mixing.py             M4 - mixing/CoinJoin-like structure
+    dataset.py            FEATURE_GROUPS (frozen) + OPTIONAL (M4)
+  ml/
+    model.py              LightGBM + isotonic + severity bands
+    experiment.py         M0-M3 ablation, P1-P4
+    metrics.py            nAP, precision@k
+    protocol.py           THE canonical evaluation protocol + holdout seal
+    diagnostics.py        constant / duplicate / dependent feature detection
+    ps_model.py anomaly.py
+  pipeline/               PS-native path (orchestrator, 17 stages)
+    features_ps.py        ps_native_features/2 schema
+    orchestrator.py blockchain.py patterns.py alerts.py
+  world/                  coherent TXID-correlated synthetic world
+    generate.py behaviours.py overlap.py
+
+frontend/                 React/TS investigation console
+docs/decisions/           ADRs. 0001 = the two production model paths
+research/
+  audit_2026_09_22/       first ML audit (report + a1-a13 scripts)
+  protocol_2026_09_22/    protocol runs, decision-rule validation, power design
+  reproduction/           build_ps_dataset.py, train_ps_model.py
+
+data/models/ps_native/
+  v1/                     FROZEN model. Declares ps_native_features/1
+  datasets/train.parquet        /2, regenerated
+  datasets/validation.parquet   /2, regenerated
+  datasets/test.parquet         /1, SEALED — do not regenerate
+data/obsidianchain.sqlite3      console state (gitignored)
+data/uploads/                   content-addressed dataset storage (gitignored)
+data/synthetic_world/           SYNTHETIC_CONTROL world (gitignored)
+data/processed/tx_mixing.parquet  additive scan, no run fingerprint
+
 data/demo/                       DEMONSTRATION namespace (gitignored)
   raw/ processed/                its own chain + observations
   output/scenarios.json          DEMO-flagged payload
@@ -96,7 +232,7 @@ data/processed/worlds_truth/     QUARANTINED
 data/reach_stress/               self-contained fixture (own raw/ + processed/)
 ```
 
-Git: branch **`phase-3.3-checkpoint`**, clean. `main` is behind.
+Git: branch **`main`**. The `phase-3.3-checkpoint` note above is stale.
 
 ---
 
@@ -381,6 +517,21 @@ until Phase 3.7 picks a method.**
 7. **`peer_ip` must not identify the origin** for ordinary transactions, or
    the next phase can cheat by string comparison.
 8. Frozen dataset hash and Phase 1 numbers unchanged.
+9. **The holdout (t42-49) is sealed.** No development decision may be
+   informed by it. Enforced by `ml/protocol.py` at fold construction and at
+   read time; `tests/test_ml_protocol.py` pins both.
+10. **No model is superior on a point estimate.** Comparison goes through
+    `protocol.compare_family()`: paired by fold, Holm-corrected, and reported
+    with its confidence interval. Fold-to-fold sd on this problem is ~35x the
+    seed-to-seed sd.
+11. **No cross-scope comparison.** Phase 6 and PS-native numbers describe
+    different feature sets over different streams. `ScopeMismatchError`.
+12. **No fabricated feature.** `ml/diagnostics.assert_healthy()` refuses a
+    feature set containing a constant, an exact duplicate or a fixed
+    transform of another column. A new candidate must pass it.
+13. **Analytical artifacts never enter SQLite.** The console stores
+    identifiers (`alert_id`, `run_fingerprint`) only; a risk score lives in
+    exactly one place. `tests/test_console_boundary.py` checks the DDL.
 
 ---
 
@@ -396,6 +547,12 @@ until Phase 3.7 picks a method.**
 | **Self-loop ordering** | Filtering self-loops *before* the per-tx winner promoted the runner-up, asserting the payment output was change in 17,656 transactions. Filter **after**. | `tests/test_change.py` |
 | **AddrAddr misuse** | `AddrAddr_edgelist.csv` is money flow (`input_address, output_address`), NOT co-spend. Clustering on it unions every payer with every payee. Co-spend comes from `AddrTx_edgelist.csv` grouped on `txId`. | `test_loader_never_reads_addraddr` |
 | **Dataset mismatch** | Pairing a chain with the wrong network data resolved 0 addresses and reported a silent 100% abstention. | `tests/test_dataset_compatibility.py` |
+| **Single-window model selection** | RandomForest was selected over LightGBM on one validation window (0.5702 vs 0.5228). Under 12 rolling folds the difference is −0.019 and **the sign reverses**. Window sd 0.175 vs seed sd 0.005. | `ml/protocol.py`, `tests/test_ml_protocol.py` |
+| **The "1 sd" decision rule** | `\|mean diff\| > 1 sd` was reasoned, not measured. Simulation put its false-positive rate at **8.7%**. Replaced by a paired t-test at α=.05 (measured 5.1%). | `test_the_decision_rule_is_a_calibrated_test` |
+| **Folds reaching the holdout** | An audit's own rolling CV built folds `41-44` and `45-48` — evaluating on sealed timesteps. A `Fold` that does this now raises at construction. | `test_a_fold_that_reaches_the_holdout_cannot_be_constructed` |
+| **Fabricated per-output amounts** | `build_ps_dataset.py` synthesised per-input/output values by even division. Consequences: `*_std` ≡ 0, `*_max` ≡ `*_mean`, `equal_output_count` ≡ `output_count`, `output_entropy` ≡ log2(`output_count`), **`is_peeling_candidate` mathematically unable to fire** (`0.5 >= 0.8`), `is_mixing_candidate` reduced to a fan-in/fan-out rule firing on 34%. Nine of thirty features carried no information. | `ml/diagnostics.py`, `tests/test_feature_health.py`, `tests/test_ps_feature_schema.py` |
+| **Permutation test at n=5** | With 5 folds the smallest reachable two-sided p is 2/2^5 = 0.0625, so the exact test **cannot reject at .05** however large the effect. Reported as `permutation_usable: False` rather than as a non-significant p. | `test_the_permutation_check_declares_itself_unusable_below_seven_folds` |
+| **localStorage as a security boundary** | Identity, ownership and case state lived in the browser; any string logged you in as anyone. Now server-side sessions, scrypt, HttpOnly cookie. | `tests/test_console_auth.py`, `tests/test_api_access.py` |
 
 ---
 
@@ -426,6 +583,39 @@ until Phase 3.7 picks a method.**
 ---
 
 ## 9. Open questions / next steps
+
+### Current blockers (2026-09-23) — these come first
+
+1. **Train a v2 PS-native model** under `ml/protocol.py`. Until then
+   uploaded-dataset runs report `MODEL_UNAVAILABLE_FOR_SCHEMA`. This is the
+   one item blocking the product, and it is also the first legitimate use of
+   the protocol.
+2. **RandomForest vs LightGBM is unresolved and may be unresolvable.**
+   0.019 nAP apart against a minimum detectable effect of 0.164. Detecting
+   0.05 would need 110 folds; the development period supplies 12. Do not
+   pick one on a point estimate.
+3. **Severity bands do not deliver their advertised precision.** A
+   rank-derived cutoff is applied as a value threshold under heavy score
+   ties: CRITICAL advertises 90%, measures 82.2% on validation and 37.2% on
+   test. A plain top-K queue beats the bands outright (P@200 = 0.95).
+   Fixing it is a ranking-policy decision, not a model change.
+4. **Isotonic calibration degrades ranking.** Brier improves, AP falls
+   (LR 0.2925 → 0.1642) and resolution collapses from ~10,000 distinct
+   scores to ~55. Candidate policy: rank on raw scores, carry the calibrated
+   probability as a display field only.
+5. **M3 network features are not as-of-t.** `netfeat.build()` takes no
+   cutoff while M0/M1/M2 do. Currently benign because M3 contributes ~nothing,
+   but a future model that can exploit it would get an unearned lift. Fix
+   before any retrain that includes M3.
+6. **`ps_model.py` explanations are not SHAP.** It computes
+   `global feature_importances_ × |raw value|` and derives direction from
+   whether the calibrated probability exceeds 0.5. The Phase 6 path's
+   TreeSHAP (`pred_contrib`) is correct; this one is not.
+7. **statsmodels / shap are not vendored.** Decide whether the offline build
+   guarantee is worth re-vendoring for. Everything needed so far has been
+   done with scipy.
+
+### Older Phase 3.7 / Phase 4 questions
 
 **Phase 4 architecture audit: `docs/archive/PHASE4_ARCHITECTURE_AUDIT.md`.** Read it
 before any Phase 4 structural work. Headline: E1+E3 can replace the current
@@ -489,6 +679,39 @@ make demo                          # build + run + render, then open
 make run ARGS="demo"               # reuse an existing fixture
 make run ARGS="demo --rebuild"
 ```
+
+---
+
+### Application layer, synthetic world, evaluation
+
+```bash
+# Console accounts (there is no self-registration)
+make run ARGS="console-init"
+make run ARGS="console-user-add alice --role INVESTIGATOR"
+
+# Additive structural scan - does NOT touch any alert artifact or fingerprint
+make run ARGS="mixing-scan"
+
+# Coherent synthetic world + degradation sweep (SYNTHETIC_CONTROL)
+make run ARGS="synthetic-world-build"
+make run ARGS="synthetic-world-overlap"
+
+# Rebuild the PS DEVELOPMENT parquets. The sealed holdout is skipped.
+python3 research/reproduction/build_ps_dataset.py
+
+# The canonical model comparison. Reads train+validation only.
+python3 research/protocol_2026_09_22/run_protocol.py
+
+# Supporting evidence for the protocol's constants
+python3 research/protocol_2026_09_22/validate_decision_rule.py
+python3 research/protocol_2026_09_22/power_design.py
+```
+
+**Never** set `OBSIDIANCHAIN_REGENERATE_HOLDOUT=1` without a written reason
+recorded alongside the run.
+
+Test suite: `1745 passed, 4 skipped` (backend, excluding
+`test_phase6_leakage.py` which is container-only), `101 passed` (frontend).
 
 ---
 

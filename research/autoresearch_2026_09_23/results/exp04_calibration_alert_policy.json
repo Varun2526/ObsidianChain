@@ -1,0 +1,142 @@
+{
+ "experiment_id": "exp04_calibration_alert_policy",
+ "fold": "t<=38 -> t39-40",
+ "n_eval": 11764,
+ "positives": 565,
+ "distinct_scores": {
+  "raw": 2185,
+  "isotonic_calibrated": 50
+ },
+ "brier": {
+  "raw": 0.03922205241558675,
+  "calibrated": 0.04019005554822043
+ },
+ "nap": {
+  "raw": 0.2835454696158098,
+  "calibrated": 0.2707248838710247
+ },
+ "policy_topk": {
+  "raw_score_topK": [
+   {
+    "k": 50,
+    "precision": 0.32,
+    "recall": 0.02831858407079646
+   },
+   {
+    "k": 100,
+    "precision": 0.45,
+    "recall": 0.07964601769911504
+   },
+   {
+    "k": 200,
+    "precision": 0.565,
+    "recall": 0.2
+   },
+   {
+    "k": 500,
+    "precision": 0.446,
+    "recall": 0.39469026548672564
+   }
+  ],
+  "calibrated_score_topK": [
+   {
+    "k": 50,
+    "precision": 0.26,
+    "recall": 0.023008849557522124
+   },
+   {
+    "k": 100,
+    "precision": 0.44,
+    "recall": 0.07787610619469026
+   },
+   {
+    "k": 200,
+    "precision": 0.565,
+    "recall": 0.2
+   },
+   {
+    "k": 500,
+    "precision": 0.45,
+    "recall": 0.39823008849557523
+   }
+  ]
+ },
+ "precision_at_k_tie_bounds": {
+  "raw": {
+   "K=50": {
+    "worst": 0.32,
+    "best": 0.34,
+    "n_tied_at_cutoff": 4
+   },
+   "K=100": {
+    "worst": 0.45,
+    "best": 0.45,
+    "n_tied_at_cutoff": 12
+   },
+   "K=200": {
+    "worst": 0.565,
+    "best": 0.565,
+    "n_tied_at_cutoff": 1
+   },
+   "K=500": {
+    "worst": 0.446,
+    "best": 0.446,
+    "n_tied_at_cutoff": 1
+   }
+  },
+  "calibrated": {
+   "K=50": {
+    "worst": 0.16,
+    "best": 0.42,
+    "n_tied_at_cutoff": 44
+   },
+   "K=100": {
+    "worst": 0.42,
+    "best": 0.46,
+    "n_tied_at_cutoff": 23
+   },
+   "K=200": {
+    "worst": 0.565,
+    "best": 0.565,
+    "n_tied_at_cutoff": 33
+   },
+   "K=500": {
+    "worst": 0.44,
+    "best": 0.452,
+    "n_tied_at_cutoff": 63
+   }
+  }
+ },
+ "v1_frozen_calibration_reference": {
+  "method": "IsotonicRegression",
+  "dataset": "validation.parquet (timesteps 35-41)",
+  "calibrated_brier": 0.036118200963563496,
+  "raw_brier": 0.04186015888399271,
+  "severity_bands": [
+   {
+    "band": "CRITICAL",
+    "target_precision": 0.9,
+    "threshold": 0.669683257918552,
+    "support": 840,
+    "validation_precision": 0.9,
+    "populated": true
+   },
+   {
+    "band": "HIGH",
+    "target_precision": 0.75,
+    "threshold": 0.2148859543817527,
+    "support": 1452,
+    "validation_precision": 0.75,
+    "populated": true
+   },
+   {
+    "band": "MEDIUM",
+    "target_precision": 0.5,
+    "threshold": 0.1138801261829653,
+    "support": 2602,
+    "validation_precision": 0.5,
+    "populated": true
+   }
+  ]
+ }
+}

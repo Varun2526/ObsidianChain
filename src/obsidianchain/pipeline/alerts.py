@@ -18,6 +18,7 @@ import pandas as pd
 from obsidianchain.correlation.engine import CorrelationResult
 from obsidianchain.geoip import GeoIPProvider
 from obsidianchain.ml.anomaly import AnomalyDetectionResult
+from obsidianchain.ml.propagation import PropagationResult
 from obsidianchain.pipeline.blockchain import BlockchainGraph, ClusterResult
 from obsidianchain.pipeline.features import MlStageResult
 from obsidianchain.pipeline.patterns import MixingResult, PeelingResult
@@ -27,6 +28,10 @@ ANOMALY_CONTEXT = "ANOMALY_CONTEXT"
 BLOCKCHAIN_CONTEXT = "BLOCKCHAIN_CONTEXT"
 NETWORK_CONTEXT = "NETWORK_CONTEXT"
 MODEL_SIGNAL = "MODEL_SIGNAL"
+#: Structural closeness to seed illicit wallets (OFAC SDN, analyst
+#: watchlists) by personalized PageRank. A claim about the GRAPH around an
+#: entity, never about the entity itself.
+PROPAGATION_CONTEXT = "PROPAGATION_CONTEXT"
 
 
 @dataclass
@@ -113,16 +118,69 @@ class AlertRunResult:
         return pd.DataFrame(rows)
 
 
-def _determine_severity(score: float) -> str:
-    if score >= 0.80:
-        return "CRITICAL"
-    if score >= 0.60:
-        return "HIGH"
-    if score >= 0.40:
-        return "MEDIUM"
-    if score >= 0.20:
-        return "LOW"
-    return "INFORMATIONAL"
+#: Weight of each evidence line in the noisy-OR fusion. POLICY, not fitted:
+#: only the model line has labels behind it (it is a calibrated probability,
+#: or the stacked model + propagation probability). The rule lines are
+#: discounted because their scores are hand-set strengths, not
+#: probabilities. A line's contribution is weight x score.
+FUSION_WEIGHTS = {
+    MODEL_SIGNAL: 1.0,
+    PROPAGATION_CONTEXT: 0.8,
+    PATTERN_CONTEXT: 0.6,
+    ANOMALY_CONTEXT: 0.5,
+}
+
+#: A line counts as corroborating when PRESENT with at least this score.
+CORROBORATION_MIN = 0.3
+
+#: Share of a run's alerts per band, most severe first; the rest are LOW or
+#: INFORMATIONAL. Budgets rather than thresholds, because an analyst's
+#: capacity is fixed and a static threshold failed out-of-time (exp09).
+ALERT_SEVERITY_BUDGET = (("CRITICAL", 0.02), ("HIGH", 0.08), ("MEDIUM", 0.20))
+
+#: Below this fused score an alert is INFORMATIONAL whatever its rank, so a
+#: quiet capture does not produce CRITICAL alerts just because something
+#: has to rank first.
+SEVERITY_FLOOR = 0.20
+
+
+def noisy_or(lines: list[tuple[float, float]]) -> float:
+    """``1 - prod(1 - w*s)``. Any strong line raises priority; independent
+    agreement compounds; a missing line (not appended) is neutral rather
+    than dragging an average down, as the old weighted mean did."""
+    remaining = 1.0
+    for score, weight in lines:
+        remaining *= 1.0 - max(0.0, min(1.0, weight * score))
+    return 1.0 - remaining
+
+
+def assign_budget_severity(alerts: list[AlertItem]) -> None:
+    """Severity from rank position, for alerts already sorted best-first."""
+    n = len(alerts)
+    start = 0
+    for band, share in ALERT_SEVERITY_BUDGET:
+        end = min(n, max(start, int(-(-share * n // 1))))
+        for alert in alerts[start:end]:
+            alert.severity = band if alert.fused_risk_score >= SEVERITY_FLOOR else "INFORMATIONAL"
+        start = end
+    for alert in alerts[start:]:
+        alert.severity = "LOW" if alert.fused_risk_score >= SEVERITY_FLOOR else "INFORMATIONAL"
+
+
+def _model_line(ml_result: MlStageResult | None, propagation_result: PropagationResult | None,
+                stacker: dict[str, Any] | None) -> pd.Series | None:
+    """Per-address model probability, stacked with propagation when possible."""
+    if ml_result is None or not ml_result.is_available:
+        return None
+    scores = ml_result.scores.set_index("address")
+    line = scores["ml_risk_score"].astype(float)
+    if (stacker is not None and propagation_result is not None
+            and propagation_result.seeds_in_graph > 0 and "ml_raw_score" in scores.columns):
+        from obsidianchain.ml.stacking import apply_stacker
+        prop = propagation_result.scores.reindex(scores.index).fillna(0.0).to_numpy()
+        line = pd.Series(apply_stacker(stacker, scores["ml_raw_score"].to_numpy(), prop), index=scores.index)
+        line.attrs["stacked"] = True
+    return line
 
 
 def build_alert_run(
@@ -135,21 +193,27 @@ def build_alert_run(
     peeling_result: PeelingResult | None = None,
     mixing_result: MixingResult | None = None,
     geoip_provider: GeoIPProvider | None = None,
+    propagation_result: PropagationResult | None = None,
+    seed_sources: dict[str, Any] | None = None,
+    link_suggestions: Any | None = None,
+    stacker: dict[str, Any] | None = None,
 ) -> AlertRunResult:
     """Fuse multi-source evidence and rank alerts across all entity clusters."""
     alerts: list[AlertItem] = []
 
-    # Map transactions to clusters
-    tx_to_clusters: dict[str, set[str]] = {}
+    # Address -> transactions, built once. The previous per-cluster scan of
+    # every transaction was O(clusters x transactions): 69 s of a 84 s run on
+    # a 7,303-transaction capture.
+    addr_txs: dict[str, set[str]] = {}
     for txid, fact in blockchain_graph.transactions.items():
-        for in_addr, _ in fact.inputs:
-            cid = cluster_result.address_to_cluster.get(in_addr)
-            if cid:
-                tx_to_clusters.setdefault(txid, set()).add(cid)
-        for out_addr, _ in fact.outputs:
-            cid = cluster_result.address_to_cluster.get(out_addr)
-            if cid:
-                tx_to_clusters.setdefault(txid, set()).add(cid)
+        for a, _ in list(fact.inputs) + list(fact.outputs):
+            addr_txs.setdefault(a, set()).add(txid)
+
+    # Per-address model line. With seeds present and a frozen stacker, the
+    # model score and the propagated seed risk are combined by the stacker
+    # fitted out-of-fold on Elliptic++ (exp14); otherwise the calibrated
+    # model probability is used alone.
+    model_line = _model_line(ml_result, propagation_result, stacker)
 
     # Evaluate each cluster
     for cid, addrs in cluster_result.cluster_to_addresses.items():
@@ -157,11 +221,9 @@ def build_alert_run(
         scores_to_fuse: list[tuple[float, float]] = []  # (score, weight)
 
         # 1. BLOCKCHAIN CONTEXT
-        total_txs = set()
+        total_txs: set[str] = set()
         for a in addrs:
-            for txid, fact in blockchain_graph.transactions.items():
-                if any(in_a == a for in_a, _ in fact.inputs) or any(out_a == a for out_a, _ in fact.outputs):
-                    total_txs.add(txid)
+            total_txs |= addr_txs.get(a, set())
 
         evidence_items.append(EvidenceItem(
             category=BLOCKCHAIN_CONTEXT,
@@ -204,7 +266,7 @@ def build_alert_run(
                     score=0.0,
                     explanation="No anomalous feature deviation detected across member addresses.",
                 ))
-        scores_to_fuse.append((c_anom, 0.40))
+        scores_to_fuse.append((c_anom, FUSION_WEIGHTS[ANOMALY_CONTEXT]))
 
         # 3. PATTERN CONTEXT: Peeling & Mixing
         c_peel_score = 0.0
@@ -272,7 +334,7 @@ def build_alert_run(
                 ))
 
         pattern_score = max(c_peel_score, c_mix_score)
-        scores_to_fuse.append((pattern_score, 0.40))
+        scores_to_fuse.append((pattern_score, FUSION_WEIGHTS[PATTERN_CONTEXT]))
 
         # 4. NETWORK CONTEXT
         cluster_ips: set[str] = set()
@@ -321,7 +383,11 @@ def build_alert_run(
         if ml_result and ml_result.is_available:
             # Score from model if available
             ml_sub = ml_result.scores[ml_result.scores["address"].isin(addrs)]
-            ml_risk = float(ml_sub["ml_risk_score"].max()) if not ml_sub.empty else 0.0
+            member_line = model_line.reindex(addrs).dropna() if model_line is not None else None
+            if member_line is not None and not member_line.empty:
+                ml_risk = float(member_line.max())
+            else:
+                ml_risk = float(ml_sub["ml_risk_score"].max()) if not ml_sub.empty else 0.0
 
             # Format model explanation
             exps_text = ""
@@ -336,10 +402,16 @@ def build_alert_run(
                 signal_name="supervised_risk_model",
                 status="PRESENT",
                 score=ml_risk,
-                details={"model_scores": ml_sub.to_dict(orient="records")},
-                explanation=f"Supervised ML risk model scored member address at {ml_risk:.4f} risk.{exps_text}",
+                details={
+                    "model_scores": ml_sub.to_dict(orient="records"),
+                    "combined_with_propagation": bool(model_line is not None and model_line.attrs.get("stacked")),
+                },
+                explanation=(
+                    f"Supervised model{' + seed propagation (stacked)' if model_line is not None and model_line.attrs.get('stacked') else ''} "
+                    f"scored member address at {ml_risk:.4f} probability.{exps_text}"
+                ),
             ))
-            scores_to_fuse.append((ml_risk, 0.20))
+            scores_to_fuse.append((ml_risk, FUSION_WEIGHTS[MODEL_SIGNAL]))
         else:
             incomp_reason = ml_result.reason if ml_result else "No supervised model configured."
             evidence_items.append(EvidenceItem(
@@ -351,20 +423,20 @@ def build_alert_run(
                 explanation=f"{ml_result.status if ml_result else 'MODEL_UNAVAILABLE'}: {incomp_reason}",
             ))
 
-        # Compute fused risk score (weighted average of active signals)
-        total_w = sum(w for s, w in scores_to_fuse)
-        if total_w > 0:
-            fused_score = sum(s * w for s, w in scores_to_fuse) / total_w
-        else:
-            fused_score = 0.0
+        # 6. RISK PROPAGATION from seed wallets
+        prop_ev, prop_score = _propagation_evidence(addrs, propagation_result, seed_sources or {})
+        evidence_items.append(prop_ev)
+        stacked = model_line is not None and model_line.attrs.get("stacked")
+        if not stacked and propagation_result is not None and propagation_result.seeds_in_graph > 0:
+            # Propagation counts on its own only when the stacker has not
+            # already folded it into the model line - never twice.
+            scores_to_fuse.append((prop_score, FUSION_WEIGHTS[PROPAGATION_CONTEXT]))
 
-        # Reinforce if multiple distinct signals agree
-        reinforcement = 0.0
-        if c_anom > 0.5 and pattern_score > 0.5:
-            reinforcement += 0.15
-        if c_anom > 0.5 and len(addrs) > 1:
-            reinforcement += 0.05
-        fused_score = min(1.0, fused_score + reinforcement)
+        fused_score = noisy_or(scores_to_fuse)
+        corroborating = sum(
+            1 for e in evidence_items
+            if e.status == "PRESENT" and e.category in FUSION_WEIGHTS and e.score >= CORROBORATION_MIN
+        )
 
         alert_item = AlertItem(
             alert_id=f"alert_{cid}",
@@ -372,20 +444,89 @@ def build_alert_run(
             primary_address=lead_addr,
             member_addresses=addrs,
             fused_risk_score=fused_score,
-            severity=_determine_severity(fused_score),
+            severity="INFORMATIONAL",
             evidence=evidence_items,
             summary={
+                "confidence": round(fused_score, 4),
+                "corroborating_evidence_lines": corroborating,
                 "anomaly_score": c_anom,
                 "peeling_detected": c_peel_score > 0,
                 "mixing_detected": c_mix_score > 0,
                 "network_observations": obs_count,
+                # Embedding-similar entities in OTHER clusters. Shown, not fused:
+                # similarity is a hint about ownership, not about risk.
+                "suggested_links": (
+                    link_suggestions.for_cluster(cid)[:5] if link_suggestions else []
+                ),
             },
         )
         alerts.append(alert_item)
 
-    # Sort descending by fused risk score and assign ranks
-    alerts.sort(key=lambda a: a.fused_risk_score, reverse=True)
+    # Rank by fused score, then by how many independent lines agree, then by
+    # id for determinism. Severity is a budget over that ranking.
+    alerts.sort(key=lambda a: (-a.fused_risk_score,
+                               -a.summary["corroborating_evidence_lines"], a.alert_id))
     for rank_idx, alert in enumerate(alerts):
         alert.rank = rank_idx + 1
+    assign_budget_severity(alerts)
 
     return AlertRunResult(run_id=run_id, alerts=alerts)
+
+
+def _propagation_evidence(
+    addrs: list[str],
+    result: PropagationResult | None,
+    seed_sources: dict[str, Any],
+) -> tuple[EvidenceItem, float]:
+    """One PROPAGATION_CONTEXT item for a cluster, and its score.
+
+    Three distinct silences are kept distinct: propagation not run, no seed
+    wallet present in this capture, and seeds present but no path to this
+    cluster. Only the last is a measured absence of risk.
+    """
+    if result is None:
+        return EvidenceItem(
+            category=PROPAGATION_CONTEXT, signal_name="seed_risk_propagation",
+            status="NO_EVIDENCE", score=0.0,
+            details={"reason": "PROPAGATION_NOT_RUN"},
+            explanation="Risk propagation was not run for this analysis.",
+        ), 0.0
+    if result.seeds_in_graph == 0:
+        return EvidenceItem(
+            category=PROPAGATION_CONTEXT, signal_name="seed_risk_propagation",
+            status="NO_EVIDENCE", score=0.0,
+            details={"reason": "NO_SEED_WALLET_IN_CAPTURE", "seeds_loaded": len(result.seeds)},
+            explanation=(f"None of the {len(result.seeds)} seed wallet(s) appears in this "
+                         f"capture, so no risk can be propagated."),
+        ), 0.0
+
+    member_scores = result.scores.reindex(addrs).fillna(0.0)
+    best = str(member_scores.idxmax())
+    score = float(member_scores.max())
+    seeded = [a for a in addrs if a in seed_sources]
+    if seeded:
+        src = seed_sources[seeded[0]]
+        label = f" ({src.label})" if getattr(src, "label", "") else ""
+        return EvidenceItem(
+            category=PROPAGATION_CONTEXT, signal_name="seed_risk_propagation",
+            status="PRESENT", score=1.0,
+            details={"seed_members": seeded, "source": getattr(src, "source", "CALLER")},
+            explanation=(f"Member {seeded[0]} is a seed wallet listed by "
+                         f"{getattr(src, 'source', 'the caller')}{label}."),
+        ), 1.0
+    path = result.paths.get(best)
+    if score <= 0.0 or path is None:
+        return EvidenceItem(
+            category=PROPAGATION_CONTEXT, signal_name="seed_risk_propagation",
+            status="NO_EVIDENCE", score=score,
+            details={"reason": "NO_PATH_TO_SEED", "seeds_in_graph": result.seeds_in_graph},
+            explanation="No short transaction path connects this entity to a seed wallet.",
+        ), score
+    return EvidenceItem(
+        category=PROPAGATION_CONTEXT, signal_name="seed_risk_propagation",
+        status="PRESENT", score=score,
+        details={"member": best, "nearest_seed": path["seed"], "hops": path["hops"],
+                 "path": path["path"], "alpha": result.alpha},
+        explanation=(f"Member {best} is {path['hops']} transaction hop(s) from seed wallet "
+                     f"{path['seed']}; propagated risk {score:.3f}."),
+    ), score

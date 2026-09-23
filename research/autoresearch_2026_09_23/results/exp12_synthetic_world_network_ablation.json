@@ -1,0 +1,204 @@
+{
+ "experiment_id": "exp12_synthetic_world_network_ablation",
+ "caveat": "DESCRIPTIVE / EXPLORATORY ONLY. Only 3 folds usable at this world's current size - far below this program's normal 12-fold, Holm-corrected standard. No KEEP/REJECT verdict is issued; see 16_synthetic_world_investigation.md for the full reasoning and recommendation.",
+ "results": {
+  "CORE_only": {
+   "candidate": "CORE_only",
+   "scope": "undeclared",
+   "seed": 20260919,
+   "folds": 3,
+   "nap_mean": 1.0,
+   "nap_sd": 0.0,
+   "nap_min": 1.0,
+   "nap_max": 1.0,
+   "per_fold": [
+    {
+     "fold": "t<=34 -> t35-36",
+     "train_end": 34,
+     "n_train": 472,
+     "n_eval": 376,
+     "prevalence": 0.3404255319148936,
+     "nap": 1.0,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 0.64,
+      "P@500": 0.3404255319148936
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 0.64,
+      "P@500": 0.3404255319148936
+     }
+    },
+    {
+     "fold": "t<=36 -> t37-38",
+     "train_end": 36,
+     "n_train": 848,
+     "n_eval": 38,
+     "prevalence": 0.631578947368421,
+     "nap": 1.0,
+     "precision_at_k_worst": {
+      "P@100": 0.631578947368421,
+      "P@200": 0.631578947368421,
+      "P@500": 0.631578947368421
+     },
+     "precision_at_k_best": {
+      "P@100": 0.631578947368421,
+      "P@200": 0.631578947368421,
+      "P@500": 0.631578947368421
+     }
+    },
+    {
+     "fold": "t<=38 -> t39-40",
+     "train_end": 38,
+     "n_train": 886,
+     "n_eval": 46,
+     "prevalence": 0.6956521739130435,
+     "nap": 1.0,
+     "precision_at_k_worst": {
+      "P@100": 0.6956521739130435,
+      "P@200": 0.6956521739130435,
+      "P@500": 0.6956521739130435
+     },
+     "precision_at_k_best": {
+      "P@100": 0.6956521739130435,
+      "P@200": 0.6956521739130435,
+      "P@500": 0.6956521739130435
+     }
+    }
+   ]
+  },
+  "CORE_plus_correct_network": {
+   "candidate": "CORE_plus_correct_network",
+   "scope": "undeclared",
+   "seed": 20260919,
+   "folds": 3,
+   "nap_mean": 1.0,
+   "nap_sd": 0.0,
+   "nap_min": 1.0,
+   "nap_max": 1.0,
+   "per_fold": [
+    {
+     "fold": "t<=34 -> t35-36",
+     "train_end": 34,
+     "n_train": 472,
+     "n_eval": 376,
+     "prevalence": 0.3404255319148936,
+     "nap": 1.0,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 0.64,
+      "P@500": 0.3404255319148936
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 0.64,
+      "P@500": 0.3404255319148936
+     }
+    },
+    {
+     "fold": "t<=36 -> t37-38",
+     "train_end": 36,
+     "n_train": 848,
+     "n_eval": 38,
+     "prevalence": 0.631578947368421,
+     "nap": 1.0,
+     "precision_at_k_worst": {
+      "P@100": 0.631578947368421,
+      "P@200": 0.631578947368421,
+      "P@500": 0.631578947368421
+     },
+     "precision_at_k_best": {
+      "P@100": 0.631578947368421,
+      "P@200": 0.631578947368421,
+      "P@500": 0.631578947368421
+     }
+    },
+    {
+     "fold": "t<=38 -> t39-40",
+     "train_end": 38,
+     "n_train": 886,
+     "n_eval": 46,
+     "prevalence": 0.6956521739130435,
+     "nap": 1.0,
+     "precision_at_k_worst": {
+      "P@100": 0.6956521739130435,
+      "P@200": 0.6956521739130435,
+      "P@500": 0.6956521739130435
+     },
+     "precision_at_k_best": {
+      "P@100": 0.6956521739130435,
+      "P@200": 0.6956521739130435,
+      "P@500": 0.6956521739130435
+     }
+    }
+   ]
+  },
+  "CORE_plus_stub_network": {
+   "candidate": "CORE_plus_stub_network",
+   "scope": "undeclared",
+   "seed": 20260919,
+   "folds": 3,
+   "nap_mean": 1.0,
+   "nap_sd": 0.0,
+   "nap_min": 1.0,
+   "nap_max": 1.0,
+   "per_fold": [
+    {
+     "fold": "t<=34 -> t35-36",
+     "train_end": 34,
+     "n_train": 472,
+     "n_eval": 376,
+     "prevalence": 0.3404255319148936,
+     "nap": 1.0,
+     "precision_at_k_worst": {
+      "P@100": 1.0,
+      "P@200": 0.64,
+      "P@500": 0.3404255319148936
+     },
+     "precision_at_k_best": {
+      "P@100": 1.0,
+      "P@200": 0.64,
+      "P@500": 0.3404255319148936
+     }
+    },
+    {
+     "fold": "t<=36 -> t37-38",
+     "train_end": 36,
+     "n_train": 848,
+     "n_eval": 38,
+     "prevalence": 0.631578947368421,
+     "nap": 1.0,
+     "precision_at_k_worst": {
+      "P@100": 0.631578947368421,
+      "P@200": 0.631578947368421,
+      "P@500": 0.631578947368421
+     },
+     "precision_at_k_best": {
+      "P@100": 0.631578947368421,
+      "P@200": 0.631578947368421,
+      "P@500": 0.631578947368421
+     }
+    },
+    {
+     "fold": "t<=38 -> t39-40",
+     "train_end": 38,
+     "n_train": 886,
+     "n_eval": 46,
+     "prevalence": 0.6956521739130435,
+     "nap": 1.0,
+     "precision_at_k_worst": {
+      "P@100": 0.6956521739130435,
+      "P@200": 0.6956521739130435,
+      "P@500": 0.6956521739130435
+     },
+     "precision_at_k_best": {
+      "P@100": 0.6956521739130435,
+      "P@200": 0.6956521739130435,
+      "P@500": 0.6956521739130435
+     }
+    }
+   ]
+  }
+ }
+}

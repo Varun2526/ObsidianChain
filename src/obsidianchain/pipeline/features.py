@@ -266,6 +266,9 @@ def execute_supervised_stage(
         if hasattr(model, "predict_address_features"):
             preds = model.predict_address_features(address_features)
             scored_df["ml_risk_score"] = [p.calibrated_risk_score for p in preds]
+            # The RANKING score. Calibration is monotone, but the stacker and
+            # the fusion consume the raw score the model was evaluated on.
+            scored_df["ml_raw_score"] = [p.raw_risk_score for p in preds]
             scored_df["ml_severity"] = [p.severity for p in preds]
             scored_df["ml_explanations"] = [[e.__dict__ for e in p.explanations] for p in preds]
         else:

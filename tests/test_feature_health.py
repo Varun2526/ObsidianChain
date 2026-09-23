@@ -235,7 +235,8 @@ def test_the_mixing_flag_is_no_longer_a_bare_cardinality_rule(ps_train) -> None:
 
 
 def test_the_schema_shrank_to_what_the_source_supports(ps_features) -> None:
-    assert len(ps_features) == 24
+    # 24 in /3; /4 adds the seven group-G upstream columns (exp20).
+    assert len(ps_features) == 31
 
 
 def test_the_fix_holds_over_the_pooled_development_data(ps_features) -> None:
