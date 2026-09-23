@@ -278,3 +278,14 @@ def test_the_published_policy_matches_the_enforced_one(client) -> None:
     served = client.get("/api/roles").json()["roles"]
     for role, caps in rbac.CAPABILITIES.items():
         assert set(served[role.value]) == {c.value for c in caps}
+
+
+def test_repeated_failed_logins_are_throttled(client) -> None:
+    from obsidianchain.console.routes_auth import LOGIN_MAX_FAILURES
+    for _ in range(LOGIN_MAX_FAILURES):
+        r = client.post("/api/auth/login", json={"username": "alice", "password": "wrong"})
+        assert r.status_code == 401
+    r = client.post("/api/auth/login", json={"username": "alice", "password": "alice-password"})
+    assert r.status_code == 429, "the right password must not bypass an active throttle"
+    other = client.post("/api/auth/login", json={"username": "rev", "password": "rev-password"})
+    assert other.status_code == 200, "one username's throttle does not lock out others"

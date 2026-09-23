@@ -59,9 +59,10 @@ from obsidianchain.pipeline.features_ps import (
 ROOT = Path(__file__).resolve().parents[2]
 DATASETS = ROOT / "data" / "models" / "ps_native" / "datasets"
 #: This script produces the CURRENT PS-native model. Its name is kept from
-#: the v2 introduction; since schema /4 it writes ps_native_v3.
-MODEL_VERSION = "ps_native_v3"
-OUT = ROOT / "data" / "models" / "ps_native" / "v3"
+#: the v2 introduction. Schema /5 (simultaneous events, whole-row
+#: snapshots) writes ps_native_v4; v3 (/4) stays frozen and immutable.
+MODEL_VERSION = "ps_native_v4"
+OUT = ROOT / "data" / "models" / "ps_native" / "v4"
 
 BASE_TIMESTAMP = 1400000000
 TIMESTEP_SECONDS = 1209600
@@ -176,6 +177,39 @@ def evaluate(dev: pd.DataFrame, features: list[str]) -> tuple[list[dict], pd.Dat
     return rows, pd.concat(oof, ignore_index=True)
 
 
+def lineage(ds_manifest: dict, evaluation_sha: str) -> dict:
+    """Everything needed to say exactly what produced this artifact."""
+    import platform
+
+    import lightgbm
+    import sklearn
+
+    from obsidianchain.provenance import git_revision
+    code = {rel: _sha256(ROOT / rel) for rel in (
+        "src/obsidianchain/pipeline/features_ps.py",
+        "src/obsidianchain/ml/ps_model.py",
+        "research/reproduction/build_ps_dataset.py",
+        "research/reproduction/train_ps_model_v2.py",
+    )}
+    config = {"hyperparameters": HYPERPARAMETERS, "seed": SEED, "train_window": TRAIN_WINDOW,
+              "calibration_folds": CALIBRATION_FOLDS, "features": list(CORE_PS_FEATURE_COLUMNS),
+              "feature_schema_version": PS_FEATURE_SCHEMA_VERSION}
+    return {
+        "source_commit": git_revision(ROOT),
+        "source_commit_note": "commit the artifact was trained from; uncommitted edits are "
+                              "visible as a code_sha256 mismatch against that commit",
+        "code_sha256": code,
+        "config_sha256": hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest(),
+        "config": config,
+        "training_data_sha256": {k: v for k, v in ds_manifest["artifact_hashes"].items() if k != "test.parquet"},
+        "raw_source_sha256": ds_manifest.get("source_dataset_hashes"),
+        "evaluation_sha256": evaluation_sha,
+        "environment": {"python": platform.python_version(), "lightgbm": lightgbm.__version__,
+                        "scikit-learn": sklearn.__version__, "numpy": np.__version__,
+                        "pandas": pd.__version__, "platform": platform.platform()},
+    }
+
+
 def main() -> dict:
     dev = load_development()
     features = list(CORE_PS_FEATURE_COLUMNS)
@@ -229,6 +263,10 @@ def main() -> dict:
     # new data, so every real run would read as a major shift.
     reference = build_reference_profile(recent, features, oof.raw.to_numpy())
 
+    from obsidianchain.ml import registry as model_registry
+    reg = model_registry.Registry.open(OUT.parent)
+    if MODEL_VERSION in reg.data["models"]:
+        raise SystemExit(f"{MODEL_VERSION} is registered and immutable; bump MODEL_VERSION to retrain")
     OUT.mkdir(parents=True, exist_ok=True)
     artifact = {
         "model_name": "LightGBM",
@@ -300,6 +338,7 @@ def main() -> dict:
     for name in ("evaluation.json", "calibration.json", "feature_schema.json"):
         manifest.setdefault("artifacts", {})[name] = _sha256(OUT / name)
     manifest["artifacts"]["model.joblib"] = model_sha
+    manifest["lineage"] = lineage(ds_manifest, evaluation_sha=manifest["artifacts"]["evaluation.json"])
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2))
     print(f"wrote {OUT}  model sha256 {model_sha[:12]}")
     return manifest
@@ -307,3 +346,4 @@ def main() -> dict:
 
 if __name__ == "__main__":
     sys.exit(0 if main() else 1)
+

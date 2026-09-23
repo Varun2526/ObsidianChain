@@ -2,14 +2,14 @@
   "schema": "obsidianchain.ps_dataset_manifest/1",
   "provenance_type": "RESEARCH_DERIVED_CANONICAL_TRAINING_REPRESENTATION",
   "generator": "research/reproduction/build_ps_dataset.py",
-  "generated_at": "2026-09-23T14:58:39.697783+00:00",
+  "generated_at": "2026-09-23T15:19:52.669576+00:00",
   "source_dataset_hashes": {
     "AddrTx_edgelist.csv": "f5f903f752387f66a1bccaeff54e293b2e8470fcddf5eb56b88aa06fd23a8f3b",
     "TxAddr_edgelist.csv": "9f5afbdde7bc3d91fb7a4655be55799d6504cd0063ae55a0753a5a41189932b8",
     "txs_features.csv": "2db326ec8ddb68f1d810c1834e1ff62e0a8300378f0984a1e3b2ca82a439821b",
     "wallets_classes.csv": "4e5132c99f941666bf1fefd4100a1428d339c9252ec6987909e1adf8eac902f9"
   },
-  "feature_schema_version": "ps_native_features/4",
+  "feature_schema_version": "ps_native_features/5",
   "feature_list": [
     "input_count",
     "output_count",
@@ -55,8 +55,8 @@
     "validation": "step 35-41",
     "test": "step 42-49"
   },
-  "schema_note": "train and validation are ps_native_features/4. The sealed holdout was NOT regenerated and remains ps_native_features/1. A model must not be fitted on the development schema and scored on /1.",
-  "development_schema_version": "ps_native_features/4",
+  "schema_note": "train and validation are ps_native_features/5. The sealed holdout was NOT regenerated and remains ps_native_features/1. A model must not be fitted on the development schema and scored on /1.",
+  "development_schema_version": "ps_native_features/5",
   "holdout_schema_version": "ps_native_features/1",
   "row_counts": {
     "train": 170404,
@@ -74,10 +74,10 @@
     "test": 51817
   },
   "artifact_hashes": {
-    "train.parquet": "287d053cb3b903a60037b2a0263ba902b6de2ef79c8b987c7b90027012b53f82",
-    "validation.parquet": "2dfb9da4d6670217742b80f1e2583c915f8efd3dee9cb718e8a31349792aab63",
+    "train.parquet": "c137206c34df3eba5e1f7eb7a9abf27c152d82f776b679c5cdf5cdf92680ea78",
+    "validation.parquet": "611ae43d30dd2c31e02973ad617a9460dbf8d1f58a6c1b59799479fcc1a663c5",
     "test.parquet": "1386d8afd87b9b3844eaa7797d44d8ae00518b0efda3c86cdaa7b94b10e70973"
   },
   "total_usable_rows": 262433,
-  "duration_seconds": 32.83
+  "duration_seconds": 33.45
 }

@@ -1,0 +1,30 @@
+{
+  "schema": "obsidianchain.production_gate_spec/1",
+  "written_before_holdout": true,
+  "provenance_note": "Thresholds were set after the development and confirmation results of ps_native_v4 were visible and BEFORE the sealed holdout was opened. They encode operational requirements, not the observed values: every ranking threshold sits below the confirmation mean by design, so the gate asks 'is this model usable', not 'did it repeat itself'.",
+  "result_types": {
+    "development": "tuning folds 1-6 (protocol B)",
+    "confirmation": "folds 7-12, never used for selection",
+    "holdout": "t42-49, opened once under ADR 0003"
+  },
+  "criteria": {
+    "1_leakage_safety":      {"check": "tests/test_leakage_audit.py passes", "blocking": true},
+    "2_temporal_validity":   {"check": "protocol folds never reach t42; selection record exp22 exists; confirmation folds not used for selection", "blocking": true},
+    "3_data_quality":        {"check": "feature contract holds on every training and evaluation set; capture contract tests pass", "blocking": true},
+    "4_ranking_quality":     {"check": "confirmation means: nAP >= 0.60, address P@100 >= 0.90, ceiling-normalised R@500 >= 0.75", "blocking": true},
+    "5_calibration":         {"check": "honest per-fold Platt (folds 5-12): mean ECE <= 0.05, max ECE <= 0.10", "blocking": true},
+    "6_stability":           {"check": "fold nAP sd <= 0.20 and no significant downward trend (p < 0.05 with negative slope fails)", "blocking": true},
+    "7_worst_fold":          {"check": "all folds: worst nAP >= 0.40, worst address P@100 >= 0.70", "blocking": true},
+    "8_slice_performance":   {"check": "mean nAP >= 0.50 on first_seen and receiver_only (the majority populations); every other slice reported, any slice mean < 0.30 is a WARNING", "blocking": true},
+    "9_reproducibility":     {"check": "production training reproduces the exp22 per-fold nAP to 1e-9", "blocking": true},
+    "10_inference_determinism": {"check": "batch invariance and run reproducibility tests pass", "blocking": true},
+    "11_latency":            {"check": "single-row p95 <= 50 ms and >= 10,000 rows/s at 10k-row batches", "blocking": true},
+    "12_reliability":        {"check": "tests/test_registry_and_chaos.py passes", "blocking": true},
+    "13_security":           {"check": "registry verifies every artifact; console auth and throttle tests pass", "blocking": true},
+    "14_monitoring":         {"check": "model carries a drift reference profile; monitoring tests pass", "blocking": true},
+    "15_rollback":           {"check": "a fallback on the SAME feature schema is registered and verifies", "blocking": true},
+    "16_artifact_lineage":   {"check": "manifest lineage has source commit, code hashes, config hash, raw data hashes, environment, evaluation hash", "blocking": true},
+    "17_auditability":       {"check": "prediction audit log and evidence-class tests pass", "blocking": true},
+    "18_holdout":            {"check": "holdout nAP >= 0.50, address P@100 >= 0.80, ceiling-normalised R@500 >= 0.60, ECE <= 0.10, and nAP >= (worst confirmation-fold nAP - 0.05)", "blocking": true}
+  }
+}

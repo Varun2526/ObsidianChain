@@ -1,4 +1,4 @@
-"""The frozen ML + risk-propagation stacker (``data/models/ps_native/v3/stacker.json``).
+"""The frozen ML + risk-propagation stacker (``stacker.json`` beside each model).
 
 Two inputs, both monotone: the LightGBM raw score (as a logit) and the
 propagated seed risk (``log1p(PROP_SCALE * p)``, so the long tail of tiny
@@ -15,7 +15,7 @@ from typing import Any
 import numpy as np
 
 PROP_SCALE = 1000.0
-DEFAULT_STACKER = Path("data") / "models" / "ps_native" / "v3" / "stacker.json"
+DEFAULT_STACKER = Path("data") / "models" / "ps_native" / "v5" / "stacker.json"
 
 
 def _logit(p: np.ndarray) -> np.ndarray:

@@ -1,0 +1,82 @@
+{
+  "schema_version": "ps_native_features/5",
+  "feature_contract": "obsidianchain.feature_contract/1",
+  "features": [
+    "input_count",
+    "output_count",
+    "total_input_amount",
+    "fee",
+    "fee_ratio",
+    "input_amount_mean",
+    "output_amount_mean",
+    "input_spread",
+    "output_spread",
+    "n_txs_asof_t",
+    "n_sent_asof_t",
+    "n_recv_asof_t",
+    "btc_recv_total_asof_t",
+    "net_flow_asof_t",
+    "active_duration_seconds",
+    "gap_since_last_tx",
+    "unique_counterparties_asof_t",
+    "cluster_size_asof_t",
+    "is_peeling_candidate",
+    "is_mixing_candidate",
+    "addr_is_sender",
+    "addr_is_self_change",
+    "counterparty_max_n_txs_asof_t",
+    "counterparty_mean_n_txs_asof_t",
+    "upstream_funded_share",
+    "upstream_mean_output_count",
+    "upstream_mean_input_count",
+    "upstream_peel_share",
+    "upstream_mix_share",
+    "upstream_min_hold_seconds",
+    "upstream_chain_depth"
+  ],
+  "groups": {
+    "A_transaction": [
+      "input_count",
+      "output_count",
+      "total_input_amount",
+      "fee",
+      "fee_ratio",
+      "input_amount_mean",
+      "output_amount_mean",
+      "input_spread",
+      "output_spread"
+    ],
+    "B_address_history": [
+      "n_txs_asof_t",
+      "n_sent_asof_t",
+      "n_recv_asof_t",
+      "btc_recv_total_asof_t",
+      "net_flow_asof_t",
+      "active_duration_seconds",
+      "gap_since_last_tx"
+    ],
+    "C_graph": [
+      "unique_counterparties_asof_t",
+      "cluster_size_asof_t"
+    ],
+    "D_patterns": [
+      "is_peeling_candidate",
+      "is_mixing_candidate"
+    ],
+    "F_role": [
+      "addr_is_sender",
+      "addr_is_self_change",
+      "counterparty_max_n_txs_asof_t",
+      "counterparty_mean_n_txs_asof_t"
+    ],
+    "G_upstream": [
+      "upstream_funded_share",
+      "upstream_mean_output_count",
+      "upstream_mean_input_count",
+      "upstream_peel_share",
+      "upstream_mix_share",
+      "upstream_min_hold_seconds",
+      "upstream_chain_depth"
+    ]
+  }
+}

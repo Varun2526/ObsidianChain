@@ -52,6 +52,13 @@ class InvalidCredentials(ConsoleError):
     code = "invalid_credentials"
 
 
+class TooManyAttempts(ConsoleError):
+    """Login throttled after repeated failures for one username and client."""
+
+    status = 429
+    code = "too_many_attempts"
+
+
 class SessionExpired(ConsoleError):
     """The session existed and is no longer valid.
 
