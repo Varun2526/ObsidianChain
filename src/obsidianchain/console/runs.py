@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import secrets
 import sqlite3
+from pathlib import Path
 from dataclasses import dataclass
 
 from obsidianchain.console import db, errors

@@ -35,7 +35,7 @@ import pandas as pd
 
 from obsidianchain.alerts.graph import InvestigationGraph, project_investigation_graph
 from obsidianchain.correlation.engine import CorrelationResult, correlate_blockchain_and_network
-from obsidianchain.geoip import GeoIPProvider, OfflineCSVProvider, TestFixtureProvider
+from obsidianchain.geoip import GeoIPProvider, OfflineCSVProvider
 from obsidianchain.io import ingest
 from obsidianchain.ml.anomaly import AnomalyDetectionResult, detect_address_anomalies
 from obsidianchain.pipeline.alerts import AlertRunResult, build_alert_run
@@ -583,7 +583,6 @@ def _load_serving_model(registry_root: str | Path | None) -> tuple[Any, dict[str
 
 def _prediction_audit(ml_result, features: pd.DataFrame, model: Any, run_id: str,
                       input_sha256: str) -> pd.DataFrame:
-    import numpy as np
     scores = ml_result.scores.reset_index(drop=True)
     feats = features.reset_index(drop=True)
     matrix = feats[list(model.features)].to_numpy(dtype="float64")
@@ -613,7 +612,7 @@ def _shadow(registry_root, champion: Any, ml_result, features: pd.DataFrame) -> 
         return None
     from obsidianchain.ml import registry
     try:
-        if registry.Registry.open(registry_root or registry.DEFAULT_ROOT).role("candidate") is None:
+        if registry.Registry.open(registry_root).role("candidate") is None:
             return None
         from obsidianchain.ml.ps_model import PsNativeRiskModel
         candidate = PsNativeRiskModel.from_registry("candidate", registry_root)

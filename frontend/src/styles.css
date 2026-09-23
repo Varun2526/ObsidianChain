@@ -633,6 +633,7 @@ select:-webkit-autofill {
 .sev-HIGH     { background: rgba(255,136,51,0.10); color: var(--high); border: 1px solid rgba(255,136,51,0.2); }
 .sev-MEDIUM   { background: rgba(255,204,0,0.08);  color: var(--medium); border: 1px solid rgba(255,204,0,0.15); }
 .sev-LOW      { background: rgba(113,113,122,0.10); color: var(--low); border: 1px solid rgba(113,113,122,0.2); }
+.sev-INFORMATIONAL { background: transparent; color: var(--text-dim); border: 1px solid var(--hairline); }
 
 /* ── CATEGORY CHIPS ──────────────────────────────────────────────── */
 

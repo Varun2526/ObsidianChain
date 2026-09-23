@@ -171,17 +171,18 @@ class PsNativeRiskModel:
         """The registry's verified, schema-compatible model for ``role``."""
         from obsidianchain.ml import registry
         from obsidianchain.pipeline.features_ps import PS_FEATURE_SCHEMA_VERSION
-        version, model_dir = registry.resolve(role, root or registry.DEFAULT_ROOT, PS_FEATURE_SCHEMA_VERSION)
+        root = root or registry.default_root()
+        version, model_dir = registry.resolve(role, root, PS_FEATURE_SCHEMA_VERSION)
         model = cls.load(model_dir, require_live_schema=True)
         if model.version != version:
             raise ValueError(f"registry names {version} but the manifest says {model.version}")
         model.role = role
         # The frozen manifest can only ever say "not evaluated"; the registry
         # carries the locked holdout result once it exists.
-        holdout = registry.Registry.open(root or registry.DEFAULT_ROOT).entry(version).get("holdout")
+        holdout = registry.Registry.open(root).entry(version).get("holdout")
         model.holdout_evaluated = holdout is not None
         model.holdout_summary = holdout
-        drift_baseline = Path(root or registry.DEFAULT_ROOT) / "monitoring" / f"{version}_baseline.json"
+        drift_baseline = Path(root) / "monitoring" / f"{version}_baseline.json"
         if drift_baseline.is_file():
             model.drift_baseline = json.loads(drift_baseline.read_text())
         return model

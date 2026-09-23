@@ -248,3 +248,15 @@ def test_attestation_requires_the_exact_training_code(tiny_registry) -> None:
         reg.attest("test_a", "c0ffee", lambda c, p: b"print(2)")
     reg.attest("test_a", "c0ffee", lambda c, p: b"print(1)")
     assert reg.entry("test_a")["attested_source_commit"] == "c0ffee"
+
+
+def test_serving_finds_the_registry_under_obsidianchain_data(tmp_path, monkeypatch, tiny_registry) -> None:
+    """The container runs from /app with data at /data: the registry must be
+    found through OBSIDIANCHAIN_DATA, not the working directory."""
+    data = tmp_path / "mounted_data"
+    (data / "models").mkdir(parents=True)
+    shutil.copytree(tiny_registry, data / "models" / "ps_native")
+    monkeypatch.setenv("OBSIDIANCHAIN_DATA", str(data))
+    monkeypatch.chdir(tmp_path)  # nothing under ./data here
+    assert registry.default_root() == data / "models" / "ps_native"
+    assert PsNativeRiskModel.from_registry("champion").version == "test_a"

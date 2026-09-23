@@ -460,3 +460,10 @@ export const getTransactionDrilldown = (txid: number | string, signal?: AbortSig
     {},
     signal,
   );
+
+export const getRunResults = (investigationId: string, runId: string, limit = 50, signal?: AbortSignal) =>
+  call<import("./types").RunResults>(
+    `/investigations/${encodeURIComponent(investigationId)}/runs/${encodeURIComponent(runId)}/results?limit=${limit}`,
+    {},
+    signal,
+  );

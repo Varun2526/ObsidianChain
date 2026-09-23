@@ -8,6 +8,7 @@ see it.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 
@@ -410,6 +411,65 @@ def get_run_progress(
 ) -> dict:
     inv.require_readable(conn, actor, investigation_id)
     return runs_mod.get_progress(conn, run_id)
+
+
+@router.get(
+    "/{investigation_id}/runs/{run_id}/results",
+    summary="Ranked alerts, model provenance and model trust of a completed run",
+)
+def get_run_results(
+    request: Request,
+    investigation_id: str,
+    run_id: str,
+    limit: int = 50,
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.current_user),
+) -> dict:
+    """The result of one uploaded-dataset run, for the case it belongs to.
+
+    The run id is resolved through the database (run -> dataset ->
+    investigation), never used as a path fragment on its own, so a caller can
+    neither read another case's run nor walk the filesystem. Every number
+    carries the kind of result it is: the model's holdout result is a
+    HOLDOUT result for the model; the run's own alerts have no measured
+    precision until labels arrive.
+    """
+    inv.require_readable(conn, actor, investigation_id)
+    run = runs_mod.get(conn, run_id)
+    dataset = datasets_mod.get(conn, run.dataset_id) if run is not None else None
+    if run is None or dataset is None or dataset.investigation_id != investigation_id:
+        raise errors.NotFound(f"no run {run_id!r} in this investigation")
+    if run.status != "COMPLETE":
+        raise errors.Conflict(f"run {run_id} is {run.status}, results exist only for COMPLETE runs")
+    run_dir = Path(deps.data_root_of(request)) / "runs" / run.id
+    try:
+        manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+        alerts = json.loads((run_dir / "alerts.json").read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise errors.NotFound(f"run {run_id} artifacts are missing on disk") from exc
+    limit = max(1, min(int(limit), 500))
+    provenance = manifest.get("provenance", {})
+    trust = provenance.get("model_trust", {})
+    return {
+        "run_id": run.id,
+        "run_fingerprint": run.run_fingerprint,
+        "created_at": manifest.get("created_at_utc"),
+        "input_sha256": manifest.get("input_dataset", {}).get("sha256"),
+        "ml_status": provenance.get("ml_status"),
+        "model": {
+            "version": trust.get("model_version"),
+            "feature_schema_version": trust.get("feature_schema_version"),
+            "holdout_result": trust.get("holdout_summary"),
+            "holdout_result_type": "HOLDOUT (model-level, t42-49 of Elliptic++; not this run)",
+        },
+        "run_result_type": "PRODUCTION RUN - performance unverified until labels arrive",
+        "monitoring_alerts": provenance.get("monitoring_alerts", []),
+        "drift_relative_to_development": trust.get("drift_relative_to_development"),
+        "total_alerts": alerts.get("total_alerts", 0),
+        "alerts": alerts.get("alerts", [])[:limit],
+        "stages": [{k: s.get(k) for k in ("stage_number", "stage_name", "status", "duration_seconds")}
+                   for s in manifest.get("stages", [])],
+    }
 
 
 # ---- history ------------------------------------------------------------
