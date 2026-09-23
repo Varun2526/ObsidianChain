@@ -2633,7 +2633,7 @@ app.add_typer(model_app, name="model")
 
 def _registry(root: Path | None):
     from obsidianchain.ml import registry
-    return registry.Registry.open(root or registry.DEFAULT_ROOT)
+    return registry.Registry.open(root)
 
 
 @model_app.command("list")

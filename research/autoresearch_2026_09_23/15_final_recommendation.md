@@ -1,5 +1,12 @@
 # 15 — Final Recommendation (2026-09-23, interim — development research is not yet complete)
 
+> **STATUS (2026-09-23, final): historical.** Absolute metric values in this
+> document were computed before the leakage fixes L1-L6
+> (`research/autoresearch_2026_09_23/19_leakage_audit.md`) and are
+> **INVALID or WITHDRAWN**. Current valid numbers: `docs/results_register.md`.
+> Current model: `docs/model_card.md`.
+
+
 **Updated same day, cycle 2**: a round-2 model search (exp06), a
 cross-model ablation confirmation (exp07), a counterparty-history feature
 test (exp08), and an alert-policy redesign prototype (exp09) have been

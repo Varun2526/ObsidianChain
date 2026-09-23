@@ -1,0 +1,107 @@
+# CI for ObsidianChain. Runs on every pull request and on pushes to main.
+#
+# What it guarantees on a clean checkout (no gitignored local data):
+#   * the test suite passes on Python 3.11 - the container's interpreter -
+#     including the leakage audit, contract, registry, chaos, fusion and
+#     evaluation-framework tests. Tests that verify locally built,
+#     gitignored artifacts are DESELECTED by marker, and the job lists them;
+#     they run under `make test` where the data exists.
+#   * no syntax error or undefined name anywhere in src/, tests/, research/.
+#   * every registered model artifact matches its registered SHA-256, the
+#     champion has a PASSING production-gate report and an attested source
+#     commit, and the champion and fallback share the live feature schema.
+#     A research run cannot silently change a production artifact: any byte
+#     change breaks the hash check, and a new model must be registered and
+#     promoted explicitly (docs/runbook.md).
+#   * a dependency vulnerability audit of requirements.txt (reported; see the
+#     job comment for why it does not block).
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e . --no-deps
+      - name: Deselected tests (need local artifacts)
+        run: python -m pytest -o addopts="" -q -m requires_local_artifacts --co | tail -1
+      - name: Test suite
+        run: python -m pytest -o addopts="" -q -p no:cacheprovider -m "not requires_local_artifacts"
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Syntax errors and undefined names
+        run: |
+          pip install ruff==0.16.8
+          ruff check --select E9,F63,F7,F82 src tests research
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  model-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          pip install -r requirements.txt
+          pip install -e . --no-deps
+      - name: Registry, gate and lineage checks
+        run: python scripts/check_model_integrity.py
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    # Reported, not blocking: the pinned set is vendored for an offline
+    # build, and a new advisory must be triaged (upgrade + re-vendor, or a
+    # written, dated ignore) rather than fail every unrelated pull request.
+    # docs/security.md describes the triage.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: pip-audit
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt --strict

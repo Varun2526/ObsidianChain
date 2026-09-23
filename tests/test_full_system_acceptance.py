@@ -382,6 +382,35 @@ class TestCaseworkAcceptance:
         action_names = [e["action"] for e in events]
         assert "DATASET_ANALYSIS_RUN" in action_names
 
+    def test_run_results_are_served_to_the_case_and_only_to_it(self, signed_in) -> None:
+        client = signed_in
+        inv_id = client.post("/api/investigations", json={"name": "Results Case"}).json()["id"]
+        other_id = client.post("/api/investigations", json={"name": "Other Case"}).json()["id"]
+        upload = client.post(
+            f"/api/investigations/{inv_id}/datasets?filename=a.json&format=json",
+            content=Path("tests/data/synthetic_acceptance_capture.json").read_bytes(),
+            headers={"Content-Type": "application/json"},
+        ).json()
+        ds_id = upload["dataset"]["id"]
+        run_id = client.post(f"/api/investigations/{inv_id}/datasets/{ds_id}/run").json()["run_id"]
+
+        resp = client.get(f"/api/investigations/{inv_id}/runs/{run_id}/results?limit=5")
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        from obsidianchain.ml import registry
+        assert body["ml_status"] == "SCORED"
+        assert body["model"]["version"] == registry.Registry.open().role("champion")
+        assert body["model"]["holdout_result"]["nap"] > 0
+        assert "unverified until labels" in body["run_result_type"]
+        assert 0 < len(body["alerts"]) <= 5
+        assert {e["evidence_class"] for e in body["alerts"][0]["evidence"]} >= {"MODEL", "RULE"}
+        codes = {a["code"] for a in body["monitoring_alerts"]}
+        assert "PERFORMANCE_UNVERIFIED_UNTIL_LABELS" in codes
+
+        # Another case cannot read this run, and an unknown run is 404.
+        assert client.get(f"/api/investigations/{other_id}/runs/{run_id}/results").status_code == 404
+        assert client.get(f"/api/investigations/{inv_id}/runs/nope/results").status_code == 404
+
     def test_alert_graph_api_endpoint(self, signed_in) -> None:
         client = signed_in
 

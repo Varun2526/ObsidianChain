@@ -62,16 +62,21 @@ def _ofac_cached(path: str, mtime: float) -> tuple[Seed, ...]:
     return tuple(seeds)
 
 
-def load_ofac(path: str | Path = DEFAULT_OFAC_ZIP) -> list[Seed]:
+def _data_root() -> Path:
+    import os
+    return Path(os.environ.get("OBSIDIANCHAIN_DATA") or "data")
+
+
+def load_ofac(path: str | Path | None = None) -> list[Seed]:
     """Bitcoin addresses on the OFAC SDN list. Empty if the file is absent."""
-    path = Path(path)
+    path = Path(path) if path is not None else _data_root() / "raw" / "ofac_sdn" / "sdn_xml.zip"
     if not path.is_file():
         return []
     return list(_ofac_cached(str(path.resolve()), path.stat().st_mtime))
 
 
-def load_csv_watchlists(directory: str | Path = DEFAULT_WATCHLIST_DIR) -> list[Seed]:
-    directory = Path(directory)
+def load_csv_watchlists(directory: str | Path | None = None) -> list[Seed]:
+    directory = Path(directory) if directory is not None else _data_root() / "watchlists"
     if not directory.is_dir():
         return []
     seeds: list[Seed] = []
@@ -84,8 +89,8 @@ def load_csv_watchlists(directory: str | Path = DEFAULT_WATCHLIST_DIR) -> list[S
     return seeds
 
 
-def load_default_seeds(ofac_zip: str | Path = DEFAULT_OFAC_ZIP,
-                       watchlist_dir: str | Path = DEFAULT_WATCHLIST_DIR) -> list[Seed]:
+def load_default_seeds(ofac_zip: str | Path | None = None,
+                       watchlist_dir: str | Path | None = None) -> list[Seed]:
     """Every seed from every offline source, first source wins on duplicates."""
     out: dict[str, Seed] = {}
     for seed in load_ofac(ofac_zip) + load_csv_watchlists(watchlist_dir):

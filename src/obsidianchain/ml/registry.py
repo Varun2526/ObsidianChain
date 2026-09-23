@@ -35,7 +35,16 @@ from pathlib import Path
 from typing import Any
 
 REGISTRY_SCHEMA = "obsidianchain.model_registry/1"
+#: Relative default, kept for callers that pass it explicitly. Serving uses
+#: default_root(), which honours OBSIDIANCHAIN_DATA: in the container the
+#: code runs from /app and the data is mounted at /data, so a cwd-relative
+#: path would find no model at all.
 DEFAULT_ROOT = Path("data") / "models" / "ps_native"
+
+
+def default_root() -> Path:
+    import os
+    return Path(os.environ.get("OBSIDIANCHAIN_DATA") or "data") / "models" / "ps_native"
 REGISTRY_FILE = "registry.json"
 ROLES = ("champion", "candidate", "fallback")
 
@@ -74,8 +83,8 @@ class Registry:
         return self.root / REGISTRY_FILE
 
     @classmethod
-    def open(cls, root: str | Path = DEFAULT_ROOT) -> "Registry":
-        root = Path(root)
+    def open(cls, root: str | Path | None = None) -> "Registry":
+        root = Path(root) if root is not None else default_root()
         path = root / REGISTRY_FILE
         if path.is_file():
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -204,7 +213,7 @@ class Registry:
                                      "previous": previous, "reason": reason})
 
 
-def resolve(role: str = "champion", root: str | Path = DEFAULT_ROOT,
+def resolve(role: str = "champion", root: str | Path | None = None,
             live_schema: str | None = None) -> tuple[str, Path]:
     """The verified, schema-compatible model directory for ``role``.
 

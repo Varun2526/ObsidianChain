@@ -24,33 +24,29 @@ Phases 5-11 were built afterwards and are summarised here.
 | ML — PS-native | `pipeline/`, `ml/ps_model.py` | RandomForest; executed by the orchestrator for uploaded datasets |
 | **Evaluation protocol** | **`ml/protocol.py`** | **the only sanctioned way to compare models** |
 
-### 2026-09-23 (latest): default model is ps_native_v3, schema /4
+### 2026-09-23 (final): champion ps_native_v5, schema /5 — start here
 
-v3 supersedes v2 below: causal within-step order (the old txId order leaked
-and inflated v2 by ~0.06 nAP), group G upstream-flow features in CORE, 12-fold
-nAP 0.713. Rebuild: `build_ps_dataset.py`, `train_ps_model_v2.py` (writes
-v3), `train_ps_stacker_v2.py`. See ADR 0002 amendment.
+The v2/v3 sections below are **historical; their numbers are INVALID** (leaks
+L1-L6, `research/autoresearch_2026_09_23/19_leakage_audit.md`). Read, in order:
 
-### 2026-09-23 (later): PS-native v2 shipped — read ADR 0002
+1. `docs/results_register.md`: every number, VALID / INVALID / WITHDRAWN, by result type
+2. `docs/model_card.md`: what the champion is, how it performs, how it fails
+3. `docs/runbook.md`: serving, monitoring, promotion, delayed labels, rollback, incidents
+4. `research/autoresearch_2026_09_23/20_production_program.md`: the full engineering report
+5. `docs/decisions/0003-holdout-exception-protocol-b.md`: the one holdout opening
 
-The "PS-native inference is blocked" note below is RESOLVED. Summary
-(`docs/decisions/0002-ps-native-v2-architecture.md`,
-`research/autoresearch_2026_09_23/18_architecture_upgrade.md`):
-
-- Feature schema `ps_native_features/3`; train/validation rebuilt. The holdout
-  is still `/1`, sealed, MD5 `a15500c94b9808cd42d584ad4b5c3017`, unopened.
-- `data/models/ps_native/v2/`: LightGBM, Platt, TreeSHAP explanations, rank
-  budget severity, drift reference, `stacker.json`. `holdout_evaluated: false`.
-  Rebuild: `python research/reproduction/train_ps_model_v2.py` then
-  `python research/reproduction/train_ps_stacker_v2.py`.
-- New: `ml/propagation.py` + `io/watchlist.py` (OFAC SDN / watchlist seeds),
-  `ml/embeddings.py` (link suggestions only), `ml/stacking.py`,
-  `ml/monitoring.py` (`monitoring.json` per run), `world/noisy.py`
-  (SYNTHETIC_CONTROL world v2, output under `data/synthetic_world_v2/`).
-- Fusion is noisy-OR with budget severity; the alert build is linear, not
-  O(clusters x transactions).
-- Uploaded-run alerts (`alerts.json`) are still not shown in the frontend;
-  the console shows run progress only.
+Facts to carry:
+- **Serving goes through `data/models/ps_native/registry.json` only.**
+  Champion ps_native_v5 (attested at 5431241), fallback
+  ps_native_v5_fallback_no_g.
+- **Holdout t42-49 has been opened, for v5, once.** It cannot be used to
+  select or tune anything again. The next model needs a newer period as its
+  holdout.
+- **Known failure mode:** per-window collapse after t43, invisible to input
+  monitoring. The delayed-label loop (`obsidianchain model health`) is
+  mandatory.
+- Evaluation unit: protocol B (new addresses at window end). The protocol-A
+  parquets remain for research history.
 
 ### Two production model paths — read ADR 0001 first
 
