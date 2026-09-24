@@ -314,6 +314,9 @@ async def upload_dataset(
         filename=filename,
         declared_format=format,
     )
+    if dataset.status == "VALIDATED":
+        inv.advance_lifecycle(conn, actor, investigation_id, "VALIDATING",
+                              reason=f"dataset {dataset.id} validated")
     return {"dataset": dataset.as_dict(), "analysis_run": run}
 
 
@@ -369,6 +372,8 @@ async def run_dataset_analysis(
         raise errors.NotFound(f"stored dataset file {storage_path} not found on disk")
 
     runs_dir = Path(data_root) / "runs"
+    inv.advance_lifecycle(conn, actor, investigation_id, "ANALYZING",
+                          reason=f"analysis run {run_id} started")
     updated_run, outcome = runs_mod.execute_run(
         conn,
         run_id,
@@ -391,6 +396,9 @@ async def run_dataset_analysis(
             "alerts_count": outcome.alert_result.total_alerts,
         },
     )
+    if updated_run.status == "COMPLETE":
+        inv.advance_lifecycle(conn, actor, investigation_id, "ACTIVE",
+                              reason=f"analysis run {run_id} completed")
     return {
         "run_id": run_id,
         "analysis_run": updated_run.as_dict(),
@@ -411,6 +419,20 @@ def get_run_progress(
 ) -> dict:
     inv.require_readable(conn, actor, investigation_id)
     return runs_mod.get_progress(conn, run_id)
+
+
+def _scalar_summary(summary) -> dict:
+    """A stage's recorded counts, without its embedded payloads (graphs, paths)."""
+    if not isinstance(summary, dict):
+        return {}
+    out = {}
+    for k, v in summary.items():
+        if isinstance(v, (int, float, str, bool)) or v is None:
+            if not (isinstance(v, str) and ("/" in v or len(v) > 80)):
+                out[k] = v
+        elif isinstance(v, list) and k in ("warnings", "errors"):
+            out[k] = [str(x) for x in v[:5]]
+    return out
 
 
 def _complete_run_dir(request, conn, actor, investigation_id: str, run_id: str):
@@ -472,7 +494,8 @@ def get_run_results(
         "drift_relative_to_development": trust.get("drift_relative_to_development"),
         "total_alerts": alerts.get("total_alerts", 0),
         "alerts": alerts.get("alerts", [])[:limit],
-        "stages": [{k: s.get(k) for k in ("stage_number", "stage_name", "status", "duration_seconds")}
+        "stages": [{**{k: s.get(k) for k in ("stage_number", "stage_name", "status", "duration_seconds")},
+                    "summary": _scalar_summary(s.get("summary"))}
                    for s in manifest.get("stages", [])],
     }
 

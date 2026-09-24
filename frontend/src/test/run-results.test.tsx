@@ -20,6 +20,7 @@ const RESULTS: RunResults = {
   monitoring_alerts: [{ severity: "INFO", code: "PERFORMANCE_UNVERIFIED_UNTIL_LABELS", detail: "run model health later" }],
   drift_relative_to_development: "WITHIN_BASELINE",
   total_alerts: 1,
+  stages: [],
   alerts: [{
     alert_id: "alert_c1", cluster_id: "c1", primary_address: "1LeadAddressExample0000", member_count: 2,
     fused_risk_score: 0.91, severity: "CRITICAL", rank: 1, summary: { corroborating_evidence_lines: 2 },
