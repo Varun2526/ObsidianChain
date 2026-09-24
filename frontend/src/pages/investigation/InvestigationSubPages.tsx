@@ -207,7 +207,7 @@ export function EvidenceSubPage() {
             <div className="banner banner-synthetic" style={{ marginBottom: 16 }}>
               <h4>Multi-Layer Forensic Evidence</h4>
               <p>
-                Analytical claims are anchored across four independent evidence layers: Ledger state, Structural graph topology, P2P network telemetry, and Supervised ML feature attribution.
+                Each figure below names its layer: on-chain ledger values, structural patterns, model feature attributions, and network observations (a synthetic overlay in this deployment). They are not independent confirmations of one another.
               </p>
             </div>
             <EvidencePanel evidence={detail.evidence} />

@@ -878,6 +878,7 @@ td .row-link:hover { color: var(--oc-accent-strong); }
   background: var(--oc-ground);
 }
 .workspace > * { min-height: 0; }
+.panel-fullscreen { position: fixed; inset: 8px; z-index: 45; margin: 0; box-shadow: var(--oc-shadow-overlay); }
 .ws-panel { background: var(--oc-surface-1); overflow-y: auto; }
 .ws-panel-left { border-right: 1px solid var(--oc-hairline); }
 .ws-panel-right { border-left: 1px solid var(--oc-hairline); }
