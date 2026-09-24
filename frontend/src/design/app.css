@@ -869,6 +869,14 @@ td .row-link:hover { color: var(--oc-accent-strong); }
   grid-template-columns: 280px minmax(0, 1fr) var(--oc-inspector-w);
   flex: 1; min-height: 0;
 }
+.workspace-fullscreen {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  height: 100dvh;
+  width: 100vw;
+  background: var(--oc-ground);
+}
 .workspace > * { min-height: 0; }
 .ws-panel { background: var(--oc-surface-1); overflow-y: auto; }
 .ws-panel-left { border-right: 1px solid var(--oc-hairline); }
@@ -1001,6 +1009,7 @@ td .row-link:hover { color: var(--oc-accent-strong); }
   .ws-panel-left, .ws-panel-right { border: 0; border-bottom: 1px solid var(--oc-hairline); overflow: visible; }
   .ws-panel-right { border-top: 1px solid var(--oc-hairline); }
   .content.content-flush { overflow-y: auto; }
+  .workspace-fullscreen { overflow-y: auto; }
 }
 
 @media (max-width: 860px) {

@@ -115,34 +115,17 @@ export function InvestigationOverview() {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {/* Status Progression Controls */}
+          {/* DRAFT -> VALIDATING -> ANALYZING -> ACTIVE follow real events
+              (a validated upload, a completed analysis run) and are set by
+              the backend. DRAFT -> ACTIVE is deliberately not a shortcut. */}
           {inv.status === "DRAFT" && isOwnerOrAdmin && (
-            <button
-              className="btn btn-sm btn-primary"
-              onClick={() => changeStatus("VALIDATING")}
-              disabled={busy}
-            >
-              Validate Dataset →
-            </button>
+            <Link to={`/investigations/new?case=${invId}`} className="btn btn-sm btn-primary">Upload a dataset</Link>
           )}
 
-          {inv.status === "VALIDATING" && isOwnerOrAdmin && (
-            <button
-              className="btn btn-sm btn-primary"
-              onClick={() => changeStatus("ANALYZING")}
-              disabled={busy}
-            >
-              Run Analysis →
-            </button>
-          )}
-
-          {inv.status === "ANALYZING" && isOwnerOrAdmin && (
-            <button
-              className="btn btn-sm btn-primary"
-              onClick={() => changeStatus("ACTIVE")}
-              disabled={busy}
-            >
-              Activate Case →
-            </button>
+          {(inv.status === "VALIDATING" || inv.status === "ANALYZING") && (
+            <span className="small muted">
+              {inv.status === "VALIDATING" ? "Dataset validated; run the analysis from the dataset panel below." : "Analysis in progress."}
+            </span>
           )}
 
           {inv.status === "ACTIVE" && isOwnerOrAdmin && (
@@ -152,7 +135,7 @@ export function InvestigationOverview() {
                 onClick={() => changeStatus("SUBMITTED")}
                 disabled={busy}
               >
-                Submit for Review →
+                Submit for Review 
               </button>
               <button
                 className="btn btn-sm"
@@ -170,7 +153,7 @@ export function InvestigationOverview() {
               onClick={() => changeStatus("ACTIVE")}
               disabled={busy}
             >
-              Resume Casework →
+              Resume Casework 
             </button>
           )}
 
@@ -180,13 +163,13 @@ export function InvestigationOverview() {
               onClick={() => changeStatus("IN_REVIEW")}
               disabled={busy}
             >
-              Begin Review →
+              Begin Review 
             </button>
           )}
 
           {inv.status === "IN_REVIEW" && canReview && (
             <Link to={`/inv/${invId}/review`} className="btn btn-sm btn-primary">
-              Review Work Product →
+              Review Work Product 
             </Link>
           )}
 
@@ -196,7 +179,7 @@ export function InvestigationOverview() {
               onClick={() => changeStatus("CLOSED")}
               disabled={busy}
             >
-              Close Approved Case →
+              Close Approved Case 
             </button>
           )}
 
@@ -258,7 +241,7 @@ export function InvestigationOverview() {
           )}
 
           <Link to={`/inv/${invId}/report`} className="btn btn-sm">
-            Generate Report →
+            Generate Report 
           </Link>
         </div>
       </div>
@@ -279,7 +262,7 @@ export function InvestigationOverview() {
       }}>
         <div className="panel-head">
           <h2 style={{ fontSize: "0.95rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            Investigation Health & Context
+            Case context
           </h2>
           <span className="small muted mono">Case Status: {inv.status}</span>
         </div>
@@ -292,7 +275,7 @@ export function InvestigationOverview() {
                 <span className={`status-badge status-${inv.status.toLowerCase()}`}>{inv.status}</span>
               </div>
               <strong style={{ display: "block", fontSize: 13 }}>
-                {inv.status === "REVIEW" ? "Under Independent Review" : inv.status === "CLOSED" ? "Findings Approved" : "Active Casework"}
+                {inv.status === "SUBMITTED" || inv.status === "IN_REVIEW" ? "Under independent review" : inv.status === "APPROVED" ? "Findings approved" : inv.status === "CLOSED" ? "Closed" : "Casework"}
               </strong>
               <span className="small faint mono">
                 Audit Trail Append-Only
@@ -330,13 +313,13 @@ export function InvestigationOverview() {
             {/* 4. Run Fingerprint */}
             <div style={{ padding: "12px 14px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                <span className="small muted">Bound run</span>
+                <span className="small muted">Reference alert run</span>
                 <RunStatusChip status={run?.status ?? "CURRENT"} />
               </div>
               <strong style={{ display: "block", fontSize: 13 }} className="mono">
-                {run?.bound_run_fingerprint ? `${run.bound_run_fingerprint.slice(0, 14)}…` : "UNBOUND"}
+                {run?.bound_run_fingerprint ? `${run.bound_run_fingerprint.slice(0, 14)}…` : "Not bound"}
               </strong>
-              <span className="small faint">Bound Analytical Artifact</span>
+              <span className="small faint">{run?.bound_run_fingerprint ? "Fixed for every alert in this case" : "Binds when the first alert is referenced"}</span>
             </div>
           </div>
         </div>
@@ -349,7 +332,7 @@ export function InvestigationOverview() {
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <span className="small muted">Ranked by risk prioritization</span>
             <Link to={`/inv/${invId}/alerts`} className="btn btn-sm">
-              All Alerts ({alerts.length}) →
+              All Alerts ({alerts.length}) 
             </Link>
           </div>
         </div>
@@ -359,8 +342,9 @@ export function InvestigationOverview() {
         ) : alerts.length === 0 ? (
           <div className="panel-body">
             <p className="muted" style={{ margin: 0 }}>
-              No alerts were generated for this analysis or referenced into this case yet.{" "}
-              <Link to={`/inv/${invId}/alerts`}>View alert queue</Link> to inspect results from the 17-stage analytical pipeline.
+              No reference-run alerts are in this case yet. Add them from the{" "}
+              <Link to="/alerts">alert queue</Link>.
+              {dataset?.analysis_run?.status === "COMPLETE" && " The uploaded dataset's own ranked entities are listed under the dataset run below."}
             </p>
           </div>
         ) : (
@@ -396,7 +380,7 @@ export function InvestigationOverview() {
                     </td>
                     <td>
                       <Link to={`/inv/${invId}/alerts/${a.alert_id}`} className="btn btn-sm">
-                        Investigate →
+                        Investigate 
                       </Link>
                     </td>
                   </tr>
@@ -441,7 +425,7 @@ export function InvestigationOverview() {
             <Link to={`/inv/${invId}/graph`} className="panel" style={{ margin: 0, padding: 14, textDecoration: "none", color: "inherit", display: "block" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                 <strong>Investigation Graph</strong>
-                <span className="small" style={{ color: "var(--cyan)" }}>Open →</span>
+                <span className="small" style={{ color: "var(--cyan)" }}>Open </span>
               </div>
               <p className="small muted" style={{ margin: 0 }}>
                 Interactive graph exploring entity clusters, co-spending links, and transaction flows.
@@ -451,7 +435,7 @@ export function InvestigationOverview() {
             <Link to={`/inv/${invId}/timeline`} className="panel" style={{ margin: 0, padding: 14, textDecoration: "none", color: "inherit", display: "block" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                 <strong>Activity Timeline</strong>
-                <span className="small" style={{ color: "var(--cyan)" }}>Open →</span>
+                <span className="small" style={{ color: "var(--cyan)" }}>Open </span>
               </div>
               <p className="small muted" style={{ margin: 0 }}>
                 Chronological sequence of transactions, peer announcements, and pattern emergence.
@@ -461,7 +445,7 @@ export function InvestigationOverview() {
             <Link to={`/inv/${invId}/network`} className="panel" style={{ margin: 0, padding: 14, textDecoration: "none", color: "inherit", display: "block" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                 <strong>Network Intelligence</strong>
-                <span className="small" style={{ color: "var(--cyan)" }}>Open →</span>
+                <span className="small" style={{ color: "var(--cyan)" }}>Open </span>
               </div>
               <p className="small muted" style={{ margin: 0 }}>
                 P2P propagation timing, peer observer diversity, and ASN/GeoIP telemetry.
@@ -471,7 +455,7 @@ export function InvestigationOverview() {
             <Link to={`/inv/${invId}/evidence`} className="panel" style={{ margin: 0, padding: 14, textDecoration: "none", color: "inherit", display: "block" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                 <strong>Evidence Matrix</strong>
-                <span className="small" style={{ color: "var(--cyan)" }}>Open →</span>
+                <span className="small" style={{ color: "var(--cyan)" }}>Open </span>
               </div>
               <p className="small muted" style={{ margin: 0 }}>
                 Multi-layer evidence fusion across ledger, topology, network, and ML signals.
@@ -497,43 +481,51 @@ export function InvestigationOverview() {
               <h3 style={{ margin: "0 0 6px", fontSize: "1rem" }}>
                 {(summary?.outstanding ?? 0) > 0
                   ? `Review and triage ${summary?.outstanding} pending alert${summary?.outstanding === 1 ? "" : "s"}`
+                  : inv.status === "ACTIVE" && (summary?.alerts_referenced ?? 0) === 0
+                  ? "No alerts referenced yet"
                   : inv.status === "ACTIVE"
-                  ? "All case alerts triaged — Ready to submit for independent review"
-                  : inv.status === "REVIEW"
+                  ? "Every referenced alert has a disposition - ready to submit for review"
+                  : inv.status === "SUBMITTED" || inv.status === "IN_REVIEW"
                   ? "Investigation awaiting reviewer assessment and formal sign-off"
+                  : inv.status === "RETURNED"
+                  ? "Returned by the reviewer - read the review note, resume casework"
                   : "Investigation completed and findings recorded"}
               </h3>
               <p className="small muted" style={{ margin: 0, maxWidth: 650, lineHeight: 1.5 }}>
                 {(summary?.outstanding ?? 0) > 0
                   ? "Open the highest-priority alert to inspect the SHAP feature contributions, peeling-chain patterns, and network observations, then record your disposition."
+                  : inv.status === "ACTIVE" && (summary?.alerts_referenced ?? 0) === 0
+                  ? "Review the dataset run's ranked entities, or reference alerts from the queue and record a disposition for each, before submitting."
                   : inv.status === "ACTIVE"
                   ? "Submit this investigation to the Review Queue for independent quality assurance and reviewer decision."
-                  : inv.status === "REVIEW"
+                  : inv.status === "SUBMITTED" || inv.status === "IN_REVIEW"
                   ? "A reviewer will evaluate the case findings, inspect evidence layers, and record a decision."
-                  : "All findings are locked and cryptographically bound. You may inspect or export the final report package."}
+                  : inv.status === "RETURNED"
+                  ? "The reviewer's rationale is in the case notes."
+                  : "Findings are recorded. The report can be read and exported; the audit trail holds every step."}
               </p>
             </div>
 
             <div>
               {(summary?.outstanding ?? 0) > 0 ? (
                 <Link to={`/inv/${invId}/alerts`} className="btn btn-primary">
-                  Triage Priority Alerts →
+                  Triage Priority Alerts 
                 </Link>
               ) : inv.status === "ACTIVE" ? (
                 <button
                   className="btn btn-primary"
-                  onClick={() => changeStatus("REVIEW")}
+                  onClick={() => changeStatus("SUBMITTED")}
                   disabled={busy}
                 >
-                  Submit for Review →
+                  Submit for review
                 </button>
-              ) : inv.status === "REVIEW" ? (
+              ) : inv.status === "SUBMITTED" || inv.status === "IN_REVIEW" ? (
                 <Link to={`/inv/${invId}/review`} className="btn btn-primary">
-                  Open Review Workspace →
+                  Open Review Workspace 
                 </Link>
               ) : (
                 <Link to={`/inv/${invId}/report`} className="btn btn-primary">
-                  View Final Report →
+                  View Final Report 
                 </Link>
               )}
             </div>

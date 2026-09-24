@@ -1,173 +1,148 @@
 /**
- * Admin Dashboard — Institutional System & Health Oversight
+ * System administration: who can use the system, what state the casework
+ * is in, what security-relevant events happened, and what the deployment
+ * is serving. Every figure is read from an API; nothing is asserted.
  *
- * Provides air-gapped system overview:
- * - Workstation & Hardware telemetry
- * - Offline air-gapped mode verification
- * - User and Role breakdown
- * - Analytical run cache and artifact storage footprint
+ * Counts from the audit log cover the latest 100 events (the endpoint's
+ * limit), and the page says so rather than presenting them as totals.
  */
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import * as api from "../../api/console";
 import { fetchAlerts } from "../../api/client";
 import { listModels } from "../../api/intel";
+import type { AuditEvent } from "../../api/types";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { Metric, PageHeader } from "../../components/ui/intel";
+import { Skeleton } from "../../components/ui/primitives";
 import { useApi } from "../../lib/useApi";
-import type { AuditEvent, Investigation, UserAccount } from "../../api/types";
+
+const LIFECYCLE = ["DRAFT", "VALIDATING", "ANALYZING", "ACTIVE", "SUBMITTED", "IN_REVIEW", "RETURNED", "APPROVED", "CLOSED", "ARCHIVED"];
+const SECURITY_ACTIONS = new Set(["LOGIN_FAILED", "USER_CREATED", "USER_DEACTIVATED", "USER_ACTIVATED", "USER_ROLE_CHANGED",
+  "USER_DELETED", "PASSWORD_RESET", "PASSWORD_CHANGED", "INVESTIGATION_DELETED", "INVESTIGATION_ARCHIVED"]);
 
 export function AdminDashboard() {
-  const [users, setUsers] = useState<UserAccount[]>([]);
-  const [cases, setCases] = useState<Investigation[]>([]);
-  const [activity, setActivity] = useState<AuditEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const users = useApi((s) => api.listUsers(s), []);
+  const cases = useApi((s) => api.listInvestigations(s), []);
+  const activity = useApi((s) => api.recentActivity(100, s), []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    Promise.all([
-      api.listUsers(controller.signal).catch(() => ({ users: [] })),
-      api.listInvestigations(controller.signal).catch(() => ({ investigations: [] })),
-      api.recentActivity(10, controller.signal).catch(() => ({ events: [] })),
-    ]).then(([uRes, cRes, aRes]) => {
-      setUsers(uRes.users);
-      setCases((cRes as any).investigations || []);
-      setActivity(aRes.events);
-      setLoading(false);
-    });
-
-    return () => controller.abort();
-  }, []);
-
-  const totalDatasets = cases.reduce((acc, c) => acc + (c.datasets?.length || 0), 0);
-  const adminUsers = users.filter((u) => u.role === "ADMIN");
-  const investigatorUsers = users.filter((u) => u.role === "INVESTIGATOR");
-  const reviewerUsers = users.filter((u) => u.role === "REVIEWER");
+  const u = users.data?.users ?? [];
+  const c = cases.data?.investigations ?? [];
+  const events: AuditEvent[] = activity.data?.events ?? [];
+  const byStatus = new Map(LIFECYCLE.map((s) => [s, c.filter((x) => x.status === s).length]));
+  const maxStatus = Math.max(1, ...byStatus.values());
+  const datasets = c.reduce((n, x) => n + (x.summary?.dataset_count ?? x.datasets?.length ?? 0), 0);
+  const failedLogins = events.filter((e) => e.action === "LOGIN_FAILED").length;
+  const security = events.filter((e) => SECURITY_ACTIONS.has(e.action));
+  const loading = users.loading || cases.loading || activity.loading;
 
   return (
     <>
-      <div className="page-header" style={{ marginBottom: 20 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <h1 style={{ margin: 0 }}>System Administration</h1>
-          </div>
-          <p className="muted" style={{ margin: 0 }}>
-            Workstation health, user authorization management, dataset registry, and append-only audit trail
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Administration"
+        title="System"
+        sub="Accounts, casework state, security events and what the deployment is serving."
+        actions={<>
+          <Link className="btn btn-sm" to="/admin/users">Users and roles</Link>
+          <Link className="btn btn-sm" to="/admin/audit">Audit log</Link>
+        </>}
+      />
+
+      {[users.error, cases.error, activity.error].filter((e) => e != null).map((e, i) => <ErrorState key={i} error={e} />)}
+
+      <div className="metric-strip">
+        <Metric k="Active accounts" v={loading ? "…" : u.filter((x) => x.active).length}
+                d={`${u.filter((x) => x.role === "INVESTIGATOR" && x.active).length} investigator · ${u.filter((x) => x.role === "REVIEWER" && x.active).length} reviewer · ${u.filter((x) => x.role === "ADMIN" && x.active).length} admin`} />
+        <Metric k="Open cases" v={loading ? "…" : c.filter((x) => !["CLOSED", "ARCHIVED"].includes(x.status)).length} d={`${c.length} in total`} />
+        <Metric k="Awaiting review" v={loading ? "…" : byStatus.get("SUBMITTED") ?? 0} d={`${byStatus.get("IN_REVIEW") ?? 0} in review`} />
+        <Metric k="Datasets uploaded" v={loading ? "…" : datasets} d="across all cases" />
+        <Metric k="Failed sign-ins" v={loading ? "…" : failedLogins} tone={failedLogins ? "var(--oc-sev-high)" : undefined} d="in the latest 100 audit events" />
       </div>
 
-      {/* Deployment facts: each one read from the API, none asserted */}
-      <DeploymentFacts />
+      <div className="grid-2">
+        <section className="panel">
+          <div className="panel-head"><h2>Cases by lifecycle status</h2></div>
+          <div className="panel-body">
+            {cases.loading ? <Skeleton rows={4} /> : (
+              <div className="severity-bars">
+                {LIFECYCLE.map((s) => (
+                  <div className="severity-bar-row" key={s} style={{ gridTemplateColumns: "96px 1fr 40px" }}>
+                    <span className="severity-bar-label">{s.replace("_", " ")}</span>
+                    <span className="severity-bar-track"><span className="severity-bar-fill" style={{ display: "block", width: `${((byStatus.get(s) ?? 0) / maxStatus) * 100}%`, background: "var(--oc-ev-model)" }} /></span>
+                    <span className="severity-bar-count">{byStatus.get(s) ?? 0}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="note" style={{ marginTop: 10 }}>DRAFT to ACTIVE follow uploads and completed analysis runs; the rest are decisions by people.</p>
+          </div>
+        </section>
 
-      {/* Admin Modules Grid */}
-      <div className="card-grid-4" style={{ marginBottom: 24 }}>
-        <div className="stat-card">
-          <span className="stat-card-value">{users.length}</span>
-          <span className="stat-card-label">Authorized Users</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-card-value">{cases.length}</span>
-          <span className="stat-card-label">Total Investigations</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-card-value">{totalDatasets}</span>
-          <span className="stat-card-label">Ingested Datasets</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-card-value">{activity.length}</span>
-          <span className="stat-card-label">Recent Audit Events</span>
-        </div>
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Accounts</h2><span className="spacer" /><Link className="btn btn-sm btn-ghost" to="/admin/users">Manage</Link>
+          </div>
+          <div className="panel-body flush table-wrap">
+            {users.loading ? <Skeleton rows={3} /> : (
+              <table>
+                <thead><tr><th>User</th><th>Role</th><th>Status</th><th>Created</th></tr></thead>
+                <tbody>{u.map((x) => (
+                  <tr key={x.id}>
+                    <td><span className="strong small">{x.display_name}</span> <span className="mono small faint">{x.username}</span></td>
+                    <td><span className={`status-badge status-${x.role.toLowerCase()}`}>{x.role}</span></td>
+                    <td><span className={`status-badge ${x.active ? "status-active" : "status-closed"}`}>{x.active ? "active" : "deactivated"}</span></td>
+                    <td className="small muted">{new Date(x.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            )}
+          </div>
+        </section>
       </div>
 
-      {/* Admin Navigation Hub */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 24 }}>
-        <div className="panel" style={{ margin: 0 }}>
-          <div className="panel-head">
-            <h3>Users & RBAC Roles</h3>
-            <Link to="/admin/users" className="small">Manage Users →</Link>
-          </div>
-          <div className="panel-body">
-            <p className="small muted" style={{ marginTop: 0, marginBottom: 12 }}>
-              Manage accounts, configure RBAC permissions (Admin, Investigator, Reviewer), and provision workstation credentials.
-            </p>
-            <div style={{ display: "flex", gap: 12, fontSize: 13 }}>
-              <span><strong>{adminUsers.length}</strong> Admins</span>
-              <span className="faint">·</span>
-              <span><strong>{investigatorUsers.length}</strong> Investigators</span>
-              <span className="faint">·</span>
-              <span><strong>{reviewerUsers.length}</strong> Reviewers</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="panel" style={{ margin: 0 }}>
-          <div className="panel-head">
-            <h3>Dataset Registry</h3>
-            <Link to="/admin/datasets" className="small">View Registry →</Link>
-          </div>
-          <div className="panel-body">
-            <p className="small muted" style={{ marginTop: 0, marginBottom: 12 }}>
-              Inspect global forensic captures, verify cryptographic SHA-256 integrity, and monitor on-disk volume usage.
-            </p>
-            <span className="small muted">
-              <strong>{totalDatasets}</strong> stored archives addressed by SHA-256
-            </span>
-          </div>
-        </div>
-
-        <div className="panel" style={{ margin: 0 }}>
-          <div className="panel-head">
-            <h3>Global Audit Log</h3>
-            <Link to="/admin/audit" className="small">View Audit Log →</Link>
-          </div>
-          <div className="panel-body">
-            <p className="small muted" style={{ marginTop: 0, marginBottom: 12 }}>
-              Complete tamper-evident record of all logins, uploads, status transitions, alert dispositions, and reviewer decisions.
-            </p>
-            <span className="small muted">
-              Append-only tamper-evident compliance record
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent System Activity */}
       <section className="panel">
         <div className="panel-head">
-          <h2>Recent System & Casework Events</h2>
-          <Link to="/admin/audit" className="small muted">All Events →</Link>
+          <h2>Security events</h2>
+          <span className="small faint">failed sign-ins, account and role changes, deletions and archives, from the latest 100 audit events</span>
         </div>
-        <div className="panel-body flush">
-          {loading ? (
-            <p className="muted" style={{ padding: 16 }}>Loading system telemetry…</p>
-          ) : activity.length === 0 ? (
-            <p className="muted" style={{ padding: 16 }}>No recent audit events.</p>
+        <div className="panel-body flush table-wrap">
+          {activity.loading ? <Skeleton rows={3} /> : security.length === 0 ? (
+            <p className="muted small" style={{ padding: 16 }}>None in the latest 100 events.</p>
           ) : (
             <table>
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Actor</th>
-                  <th>Action</th>
-                  <th>Object</th>
-                  <th>Details</th>
+              <thead><tr><th>When</th><th>Action</th><th>By</th><th>Object</th><th>Detail</th></tr></thead>
+              <tbody>{security.slice(0, 20).map((e) => (
+                <tr key={e.id}>
+                  <td className="small muted nowrap">{new Date(e.at).toLocaleString()}</td>
+                  <td><span className={`audit ${e.action === "LOGIN_FAILED" ? "audit-warn" : "audit-write"}`}>{e.action.replace(/_/g, " ").toLowerCase()}</span></td>
+                  <td className="small">{e.actor_display_name ?? e.actor_username ?? "unauthenticated"}</td>
+                  <td className="mono small">{e.object_id ?? "—"}</td>
+                  <td className="small muted">{Object.entries(e.detail ?? {}).slice(0, 3).map(([k, v]) => `${k}: ${String(v)}`).join(", ") || "—"}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {activity.map((evt) => (
-                  <tr key={evt.id}>
-                    <td className="small muted mono">{new Date(evt.at).toLocaleTimeString()}</td>
-                    <td><strong>{evt.actor_display_name || evt.actor_username || "System"}</strong></td>
-                    <td><span className="status-badge status-draft">{evt.action}</span></td>
-                    <td className="mono small">{evt.object_id || "—"}</td>
-                    <td className="small muted">
-                      {evt.detail && typeof evt.detail === "object"
-                        ? Object.entries(evt.detail).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(", ")
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+              ))}</tbody>
+            </table>
+          )}
+        </div>
+      </section>
+
+      <DeploymentFacts />
+
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Recent activity</h2><span className="spacer" /><Link className="btn btn-sm btn-ghost" to="/admin/audit">Full audit log</Link>
+        </div>
+        <div className="panel-body flush table-wrap">
+          {activity.loading ? <Skeleton rows={3} /> : (
+            <table>
+              <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Case</th></tr></thead>
+              <tbody>{events.slice(0, 12).map((e) => (
+                <tr key={e.id}>
+                  <td className="small muted nowrap">{new Date(e.at).toLocaleString()}</td>
+                  <td className="small">{e.actor_display_name ?? e.actor_username ?? "system"}</td>
+                  <td><span className="audit">{e.action.replace(/_/g, " ").toLowerCase()}</span></td>
+                  <td className="mono small">{e.investigation_id ? <Link to={`/inv/${e.investigation_id}`}>{e.investigation_id}</Link> : "—"}</td>
+                </tr>
+              ))}</tbody>
             </table>
           )}
         </div>
@@ -181,7 +156,7 @@ function DeploymentFacts() {
   const run = useApi((sig) => fetchAlerts({ limit: 1 }, sig), []);
   return (
     <section className="panel">
-      <div className="panel-head"><h2>Deployment</h2><span className="small faint">read from the registry and the alert artifact</span></div>
+      <div className="panel-head"><h2>Deployment</h2><span className="small faint">read from the model registry and the alert artifact</span></div>
       <div className="panel-body">
         <dl className="kv">
           <dt>Champion model</dt><dd className="mono">{registry.data?.roles.champion ?? (registry.error ? "registry unavailable" : "…")}</dd>
@@ -191,7 +166,8 @@ function DeploymentFacts() {
           <dt>Alert artifact provenance</dt><dd>{run.data?.provenance.provenance_type ?? "…"}{run.data?.provenance.synthetic_network ? " · network layer synthetic" : ""}</dd>
         </dl>
         <p className="note" style={{ marginTop: 8 }}>
-          Network isolation is a property of how the container is run (<code>make serve</code> drops every interface but the published port); this page cannot observe it, so it does not claim it.
+          Network isolation is a property of how the container is run; this page cannot observe it, so it does not claim it.
+          Model health against delayed labels is checked with <code>obsidianchain model health</code>.
         </p>
       </div>
     </section>

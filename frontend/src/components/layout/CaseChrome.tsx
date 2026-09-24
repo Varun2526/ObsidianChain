@@ -128,7 +128,7 @@ export function PersistentCaseHeader({ inv }: { inv: Investigation }) {
   const runStatus = inv.run_status ?? inv.analytical_run?.status ?? "UNBOUND";
   const runFp = inv.bound_run_fingerprint
     ? inv.bound_run_fingerprint.slice(0, 16)
-    : "UNBOUND";
+    : "not bound";
 
   const totalAlerts = inv.summary?.alerts_referenced ?? 0;
   const outstanding = inv.summary?.outstanding ?? 0;
@@ -188,7 +188,7 @@ export function PersistentCaseHeader({ inv }: { inv: Investigation }) {
             </span>
           </div>
           <div className="case-ctx-item">
-            <span className="case-ctx-k">Run</span>
+            <span className="case-ctx-k">Alert run</span>
             <span className="case-ctx-v mono">
               {runFp}
               {" "}

@@ -27,9 +27,10 @@ import type {
   AlertDetail as AlertDetailData,
   CaseAlertDetail,
   DispositionState,
+  Investigation,
   RelatedAlertsResponse,
 } from "../../api/types";
-import { useAuth } from "../../store/auth";
+import { useAuth, useOptionalAuth } from "../../store/auth";
 import { DispositionBadge, DispositionHistory } from "../../components/layout/CaseChrome";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { EvidencePanel } from "../../components/forensics/EvidencePanel";
@@ -115,8 +116,55 @@ function GlobalAlertDetailPage({ alertId }: { alertId: string }) {
           )}
         </div>
       </div>
-      <AnalyticalAssessment data={data} />
+      <AnalyticalAssessment data={data} actions={<AddToInvestigation alertId={data.alert_id} />} />
     </>
+  );
+}
+
+/**
+ * Reference this alert into one of the caller's open investigations, from
+ * the global alert page. Offered only to roles that may reference alerts;
+ * the backend re-checks ownership and case state.
+ */
+function AddToInvestigation({ alertId }: { alertId: string }) {
+  const auth = useOptionalAuth();
+  const can = useCallback((c: string) => auth?.can(c) ?? false, [auth]);
+  const navigate = useNavigate();
+  const [cases, setCases] = useState<Investigation[] | null>(null);
+  const [target, setTarget] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!can("reference_alert")) return;
+    const controller = new AbortController();
+    api.listInvestigations(controller.signal)
+      .then((r) => setCases(r.investigations.filter((c) => ["DRAFT", "VALIDATING", "ANALYZING", "ACTIVE", "RETURNED"].includes(c.status))))
+      .catch(() => setCases([]));
+    return () => controller.abort();
+  }, [can]);
+  if (!can("reference_alert") || !cases) return null;
+  if (cases.length === 0) return <Link className="btn btn-sm" to="/investigations/new">Open an investigation</Link>;
+  const add = async () => {
+    if (!target) return;
+    setBusy(true); setError(null);
+    try {
+      await api.referenceAlert(target, alertId);
+      navigate(`/inv/${target}/alerts/${encodeURIComponent(alertId)}`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+      setBusy(false);
+    }
+  };
+  return (
+    <span className="row" style={{ flexWrap: "nowrap" }}>
+      <label className="sr-only" htmlFor="add-to-case">Investigation</label>
+      <select id="add-to-case" value={target} onChange={(e) => setTarget(e.target.value)} style={{ height: 26, padding: "0 8px" }}>
+        <option value="">Add to investigation…</option>
+        {cases.map((c) => <option key={c.id} value={c.id}>{c.case_label} · {c.name}</option>)}
+      </select>
+      <button type="button" className="btn btn-sm" disabled={!target || busy} onClick={add}>{busy ? "Adding…" : "Add"}</button>
+      {error && <span className="small" style={{ color: "var(--oc-danger)" }} role="alert">{error}</span>}
+    </span>
   );
 }
 
@@ -175,7 +223,8 @@ function CaseAlertDetailPage({ invId, alertId }: { invId: string; alertId: strin
         </span>
       </h2>
       {detail.analytical.available ? (
-        <AnalyticalAssessment data={detail.analytical.alert} />
+        <AnalyticalAssessment data={detail.analytical.alert}
+          actions={<a className="btn btn-sm" href="#investigator-assessment">Record decision</a>} />
       ) : (
         <section className="panel">
           <div className="panel-head">
@@ -205,7 +254,7 @@ function CaseAlertDetailPage({ invId, alertId }: { invId: string; alertId: strin
         </section>
       )}
 
-      <h2 className="assessment-heading assessment-heading--investigator">
+      <h2 id="investigator-assessment" className="assessment-heading assessment-heading--investigator">
         Investigator assessment
         <span className="assessment-sub">
           Recorded by named people in this investigation. Separate from the
@@ -457,7 +506,7 @@ function InvestigatorAssessment({
 
 /* --------------------------------------------------- analytical assessment */
 
-function AnalyticalAssessment({ data }: { data: AlertDetailData }) {
+function AnalyticalAssessment({ data, actions }: { data: AlertDetailData; actions?: React.ReactNode }) {
   const { summary, risk } = data;
   const [layer, setLayer] = useAnalysisLayer();
   const [activeTxid, setActiveTxid] = useState<string | null>(null);
@@ -484,6 +533,7 @@ function AnalyticalAssessment({ data }: { data: AlertDetailData }) {
           <p className="mono small faint">{data.alert_id}</p>
         </div>
         <div className="page-actions">
+          {actions}
           <Link className="btn btn-sm btn-primary" to={`/graph?alert=${encodeURIComponent(data.alert_id)}&hops=2`}>Trace money flow</Link>
         </div>
       </header>

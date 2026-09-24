@@ -8,7 +8,7 @@
  * 5. Live Backend-Driven 17-Stage Execution: Real polling from /progress with stage tracker
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import * as api from "../../api/console";
 import type {
@@ -16,6 +16,7 @@ import type {
   IngestResult,
   Investigation,
   RunProgressResponse,
+  RunResults,
   UploadedDataset,
 } from "../../api/types";
 import { ErrorState } from "../../components/ui/ErrorState";
@@ -103,6 +104,19 @@ export function NewInvestigation() {
   const [progress, setProgress] = useState<RunProgressResponse | null>(null);
 
   const validation = dataset?.validation as IngestResult | undefined;
+
+  // ?case=<id>: attach a dataset to an existing case (opened from the alert
+  // queue, still DRAFT) instead of creating a new one.
+  const [searchParams] = useSearchParams();
+  const existingCase = searchParams.get("case");
+  useEffect(() => {
+    if (!existingCase) return;
+    const controller = new AbortController();
+    api.getInvestigation(existingCase, controller.signal)
+      .then((r) => { setInvestigation(r); setName(r.name); setDescription(r.description ?? ""); setStep("upload"); })
+      .catch((cause) => { if ((cause as Error)?.name !== "AbortError") setError(cause instanceof Error ? cause : new Error(String(cause))); });
+    return () => controller.abort();
+  }, [existingCase]);
 
   const handleCreate = async () => {
     setBusy(true);
@@ -532,7 +546,7 @@ export function NewInvestigation() {
                 ONE FIXED, VERSIONED ANALYSIS
               </strong>
               <p className="small muted" style={{ margin: 0, lineHeight: 1.5 }}>
-                Runs the standard ObsidianChain detection, anomaly, pattern and evidence pipeline. Executes all 17 offline stages to derive entity clusters, feature vectors, supervised LightGBM risk scores, and multi-layer fused alerts.
+                Runs the standard ObsidianChain detection, anomaly, pattern and evidence pipeline. It executes all 17 offline stages to derive entity clusters, feature vectors, risk scores from the frozen registry champion when its feature contract is met, and multi-layer fused alerts.
               </p>
             </div>
 
@@ -611,7 +625,7 @@ export function NewInvestigation() {
             </div>
 
             {/* Live Stages Checklist */}
-            <div className="analysis-steps" style={{ maxHeight: 440, overflowY: "auto", paddingRight: 8 }}>
+            <div className="analysis-steps">
               {CANONICAL_STAGES.map((stageName, idx) => {
                 const stageNum = idx + 1;
                 const stageNumStr = String(stageNum).padStart(2, "0");
@@ -656,29 +670,10 @@ export function NewInvestigation() {
               })}
             </div>
 
-            {/* Run Complete Summary Card */}
-            {progress?.status === "COMPLETE" && (
-              <div className="panel" style={{ marginTop: 24, background: "var(--bg-raised)", borderColor: "var(--border-strong)" }}>
-                <div className="panel-body">
-                  <h3 style={{ margin: "0 0 12px", color: "var(--model)" }}>ANALYSIS COMPLETE</h3>
-                  <div className="card-grid-4">
-                    <StatMini k="Ranked Alerts" v={Number(progress.summary?.alerts_generated ?? progress?.alerts_count ?? 0)} />
-                    <StatMini k="Entities Clustered" v={Number(progress.summary?.entities_clustered ?? 0)} />
-                    <StatMini k="P2P Correlations" v={Number(progress.summary?.correlations_identified ?? 0)} />
-                    <div className="stat-mini">
-                      <span className="stat-mini-v mono" style={{ fontSize: "0.95rem" }}>
-                        {String(progress.summary?.run_fingerprint || activeRunId || "run_fused").slice(0, 12)}…
-                      </span>
-                      <span className="stat-mini-k">Run Fingerprint</span>
-                    </div>
-                  </div>
-
-                  <p className="muted small" style={{ marginTop: 14, marginBottom: 0 }}>
-                    Every artifact of this run is recorded with its SHA-256 hash in the run manifest and bound to
-                    this investigation. Casework decisions, graph exploration and alert triage are now available.
-                  </p>
-                </div>
-              </div>
+            {/* Run Complete Summary Card: counts read from the run manifest's
+                stage summaries, never defaulted */}
+            {progress?.status === "COMPLETE" && investigation && activeRunId && (
+              <RunCompleteCard investigationId={investigation.id} runId={activeRunId} />
             )}
 
             {progress?.status === "COMPLETE" && investigation && activeRunId && (
@@ -716,5 +711,38 @@ function StatMini({ k, v }: { k: string; v: number }) {
       <span className="stat-mini-v">{v.toLocaleString()}</span>
       <span className="stat-mini-k">{k}</span>
     </div>
+  );
+}
+
+function RunCompleteCard({ investigationId, runId }: { investigationId: string; runId: string }) {
+  const [res, setRes] = useState<RunResults | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    api.getRunResults(investigationId, runId, 1, controller.signal)
+      .then(setRes)
+      .catch((e) => { if ((e as Error)?.name !== "AbortError") setFailed((e as Error).message); });
+    return () => controller.abort();
+  }, [investigationId, runId]);
+  if (failed) return <div className="banner banner-error"><h4>Run summary unavailable</h4><p>{failed}</p></div>;
+  if (!res) return null;
+  const stage = (n: number) => res.stages.find((x) => x.stage_number === n)?.summary ?? {};
+  const num = (v: unknown) => (typeof v === "number" ? v.toLocaleString() : "n/a");
+  const corr = stage(6), clus = stage(8), valid = stage(2);
+  return (
+    <section className="panel" style={{ marginTop: 20 }}>
+      <div className="panel-head"><h2>Analysis complete</h2><span className="small faint">from the run manifest</span></div>
+      <div className="metric-strip" style={{ border: 0, borderRadius: 0, margin: 0 }}>
+        <div className="metric"><span className="metric-k">Ranked alerts</span><span className="metric-v">{num(res.total_alerts)}</span></div>
+        <div className="metric"><span className="metric-k">Valid records</span><span className="metric-v">{num(valid.rows_valid)}</span>
+          <span className="metric-d">{num(valid.exact_duplicates_rejected)} duplicate(s) rejected</span></div>
+        <div className="metric"><span className="metric-k">Clusters</span><span className="metric-v">{num(clus.n_clusters)}</span>
+          <span className="metric-d">{num(clus.clustered)} addresses in multi-address clusters</span></div>
+        <div className="metric"><span className="metric-k">Correlated transactions</span><span className="metric-v">{num(corr.correlated_count)}</span>
+          <span className="metric-d">of {num(corr.total_blockchain_transactions)} seen on the network layer</span></div>
+        <div className="metric"><span className="metric-k">Run fingerprint</span><span className="metric-v mono" style={{ fontSize: 14 }}>{res.run_fingerprint ?? "n/a"}</span></div>
+      </div>
+      <div className="panel-foot">Every artifact of this run is listed with its SHA-256 in the run manifest ({res.run_id}).</div>
+    </section>
   );
 }

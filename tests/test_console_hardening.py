@@ -287,3 +287,30 @@ def test_delete_investigation_protections(client, demo_setup) -> None:
 
     assert admin_c.get(f"/api/investigations/{case_id}").status_code == 404
 
+
+
+def test_lifecycle_follows_upload_and_analysis_events(client, demo_setup, root) -> None:
+    """A case reaches ACTIVE by validating and analysing a dataset, not by relabelling.
+
+    Before this, a case stayed DRAFT through a validated upload and a
+    completed run, and DRAFT -> SUBMITTED is not a permitted transition, so
+    no case could ever be submitted for review from the product.
+    """
+    from pathlib import Path
+    inv_c = TestClient(client.app)
+    login(inv_c, "investigator", demo_setup["investigator"]["password"])
+    case_id = inv_c.post("/api/investigations", json={"name": "Lifecycle"}).json()["id"]
+    sample = Path(__file__).parent / "data" / "synthetic_acceptance_capture.json"
+    up = inv_c.post(f"/api/investigations/{case_id}/datasets?filename=capture.json",
+                    content=sample.read_bytes(), headers={"Content-Type": "application/octet-stream"})
+    assert up.status_code == 201, up.text
+    assert inv_c.get(f"/api/investigations/{case_id}").json()["status"] == "VALIDATING"
+    ds = up.json()["dataset"]["id"]
+    run = inv_c.post(f"/api/investigations/{case_id}/datasets/{ds}/run")
+    assert run.status_code == 200, run.text
+    assert inv_c.get(f"/api/investigations/{case_id}").json()["status"] == "ACTIVE"
+    assert inv_c.post(f"/api/investigations/{case_id}/status", json={"status": "SUBMITTED"}).status_code == 200
+    events = inv_c.get(f"/api/investigations/{case_id}/history").json()["events"]
+    auto = [e for e in events if e["action"] == "INVESTIGATION_STATUS_CHANGED" and e["detail"].get("automatic")]
+    assert [e["detail"]["to"] for e in auto][::-1] == ["VALIDATING", "ANALYZING", "ACTIVE"] or \
+           sorted(e["detail"]["to"] for e in auto) == ["ACTIVE", "ANALYZING", "VALIDATING"]

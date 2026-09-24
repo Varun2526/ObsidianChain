@@ -23,27 +23,22 @@ export function AdminDatasetsPage() {
   const [datasets, setDatasets] = useState<DatasetRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
+    // The case list does not embed datasets; each case's registry is read.
     api.listInvestigations(controller.signal)
-      .then((r) => {
+      .then(async (r) => {
+        const per = await Promise.all(r.investigations.map((inv) =>
+          api.listDatasets(inv.id).then((d) => ({ inv, datasets: d.datasets })).catch(() => ({ inv, datasets: [] }))));
         const rows: DatasetRow[] = [];
-        for (const inv of r.investigations) {
-          if (inv.datasets) {
-            for (const d of inv.datasets) {
-              rows.push({
-                ...d,
-                case_id: inv.id,
-                case_label: inv.case_label,
-                case_name: inv.name,
-              });
-            }
-          }
+        for (const { inv, datasets: ds } of per) {
+          for (const d of ds) rows.push({ ...d, case_id: inv.id, case_label: inv.case_label, case_name: inv.name });
         }
-        setDatasets(rows);
+        if (!controller.signal.aborted) setDatasets(rows);
       })
-      .catch(() => {})
+      .catch((e) => { if ((e as Error)?.name !== "AbortError") setLoadError((e as Error).message); })
       .finally(() => setLoading(false));
 
     return () => controller.abort();
@@ -63,7 +58,7 @@ export function AdminDatasetsPage() {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
             <h1 style={{ margin: 0 }}>Dataset & Capture Registry</h1>
-            <span className="status-badge status-active">CONTENT-ADDRESSED (SHA-256)</span>
+            <span className="status-badge">SHA-256 recorded per file</span>
           </div>
           <p className="muted" style={{ margin: 0 }}>
             Forensic capture repository, cryptographic fingerprints, and linked casework references
@@ -87,8 +82,10 @@ export function AdminDatasetsPage() {
           <span className="stat-card-label">Validated Schema</span>
         </div>
         <div className="stat-card">
-          <span className="stat-card-value">100%</span>
-          <span className="stat-card-label">Offline Integrity</span>
+          <span className="stat-card-value">
+            {datasets.filter((d) => d.analysis_run?.status === "COMPLETE").length}
+          </span>
+          <span className="stat-card-label">Analysed ({datasets.filter((d) => d.status === "REJECTED").length} rejected)</span>
         </div>
       </div>
 
@@ -115,7 +112,9 @@ export function AdminDatasetsPage() {
           {loading ? (
             <div style={{ padding: 16 }}><Skeleton rows={5} /></div>
           ) : filtered.length === 0 ? (
-            <p className="muted" style={{ padding: 16 }}>No datasets found.</p>
+            loadError
+              ? <div className="banner banner-error" style={{ margin: 16 }}><h4>The dataset registry could not be read</h4><p>{loadError}</p></div>
+              : <p className="muted" style={{ padding: 16 }}>No datasets found.</p>
           ) : (
             <table>
               <thead>
