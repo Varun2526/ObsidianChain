@@ -2,7 +2,7 @@
  * A bounded money-flow view embedded in a detail page, with a way out to
  * the full explorer. Same canvas, same data, fewer controls.
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { GraphEdge, GraphNode } from "../../api/intel";
@@ -19,9 +19,18 @@ export function FlowPreview({ nodes, edges, explorerHref, truncated, note, heigh
   const [selected, setSelected] = useState<string | null>(null);
   const canvas = useRef<FlowGraphHandle>(null);
   const node = nodes.find((n) => n.id === selected) ?? null;
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    if (!full) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFull(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [full]);
+  useEffect(() => { const t = window.setTimeout(() => canvas.current?.fit(), 120); return () => window.clearTimeout(t); }, [full]);
+  const h = full ? "calc(100vh - 88px)" : height;
 
   return (
-    <section className="panel">
+    <section className={`panel${full ? " panel-fullscreen" : ""}`} aria-label={title}>
       <div className="panel-head">
         <h2>{title}</h2>
         <span className="small faint">{nodes.length} nodes · {edges.length} edges</span>
@@ -32,14 +41,16 @@ export function FlowPreview({ nodes, edges, explorerHref, truncated, note, heigh
           <button type="button" className="btn btn-sm" aria-pressed={layout === "explore"} onClick={() => setLayout("explore")}>Explore</button>
         </div>
         <button type="button" className="btn btn-sm btn-icon" aria-label="Fit graph to view" onClick={() => canvas.current?.fit()}><Icon name="fit" size={14} /></button>
+        <button type="button" className="btn btn-sm btn-icon" aria-pressed={full} aria-label={full ? "Exit fullscreen (Esc)" : "Fullscreen"}
+                title={full ? "Exit fullscreen (Esc)" : "Fullscreen"} onClick={() => setFull((v) => !v)}><Icon name="expand" size={14} /></button>
         <Link className="btn btn-sm" to={explorerHref}><Icon name="graph" size={14} />Open in explorer</Link>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: node ? "minmax(0,1fr) 300px" : "minmax(0,1fr)" }}>
-        <div className="graph-host" style={{ height, borderRadius: 0 }}>
+        <div className="graph-host" style={{ height: h, borderRadius: 0 }}>
           <FlowGraph ref={canvas} nodes={nodes} edges={edges} layout={layout} selectedId={selected} onSelect={setSelected} />
         </div>
         {node && (
-          <div style={{ borderLeft: "1px solid var(--oc-hairline)", maxHeight: height, overflowY: "auto" }}>
+          <div style={{ borderLeft: "1px solid var(--oc-hairline)", maxHeight: h, overflowY: "auto" }}>
             <NodeInspector node={node} edges={edges} actions={{}} />
           </div>
         )}
