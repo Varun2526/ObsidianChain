@@ -41,6 +41,10 @@ export function HistoryPage() {
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
+  // Read events (viewing a case or alert) are recorded too, and outnumber
+  // decisions many times over. Hidden by default, never dropped: the count
+  // is shown and one click brings them back.
+  const [showReads, setShowReads] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -64,6 +68,10 @@ export function HistoryPage() {
         </div>
         <span className="status-badge status-active">APPEND-ONLY</span>
       </div>
+      <label className="check-row" style={{ marginBottom: 8 }}>
+        <input type="checkbox" checked={showReads} onChange={(e) => setShowReads(e.target.checked)} />
+        Show view events ({events.filter((e) => e.action.endsWith("_VIEWED")).length} hidden)
+      </label>
 
       <section className="panel">
         {error ? (
@@ -82,7 +90,7 @@ export function HistoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {events.map((e) => (
+                {events.filter((e) => showReads || !e.action.endsWith("_VIEWED")).map((e) => (
                   <tr key={e.id}>
                     <td className="num faint">{e.id}</td>
                     <td className="small muted">{new Date(e.at).toLocaleString()}</td>
