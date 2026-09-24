@@ -1,11 +1,10 @@
 """AnalysisRun: the object that makes "not scored" a fact, not a footnote.
 
-Why this exists before any job runner does
-------------------------------------------
-There is no queue, no worker and no automatic ``upload -> phase6 -> phase7``
-path, deliberately. What was missing was not execution but HONESTY: the UI
-implied that an upload had produced the 2,128 baseline alerts, because there
-was no object capable of saying otherwise.
+Why this exists
+---------------
+Uploading only validates and stores a capture. Execution is an explicit,
+case-scoped action, so a dataset cannot be mistaken for scored output while it
+is waiting to be analysed.
 
 Every dataset gets a run row at upload time with ``status = NOT_RUN`` and
 ``run_fingerprint = NULL``. The schema's CHECK constraints make that pairing
@@ -13,8 +12,8 @@ structural - a fingerprint may exist only on a COMPLETE run - so "this
 dataset has not been scored" is something the database enforces rather than
 something a template remembers to say.
 
-When offline execution is wired in later, it fills these same rows. Nothing
-here has to change.
+The 17-stage offline pipeline fills these rows when the investigator starts an
+analysis. The row remains the durable record of whether that happened.
 """
 
 from __future__ import annotations
@@ -28,19 +27,12 @@ from obsidianchain.console import db, errors
 
 STATUSES = ("NOT_RUN", "QUEUED", "RUNNING", "COMPLETE", "FAILED")
 
-#: The command that actually produces scored artifacts. Named in the API
-#: response for the same reason the artifact loaders name their build
-#: commands: an operator should never have to guess.
-OFFLINE_COMMAND = (
-    'make run ARGS="phase6-dataset" && make run ARGS="phase7-alerts"'
-)
-
 NOT_RUN_MEANING = (
     "This dataset was received, parsed and validated. It has NOT been "
-    "scored. Producing risk requires building the as-of-t feature matrix "
-    "over the whole dataset and fitting on the temporal split, which is an "
-    "offline pipeline run, not a request. No alert shown anywhere in this "
-    "console was generated from this dataset."
+    "scored. Start the case-scoped offline analysis to derive its features "
+    "and score them with the frozen registry champion when the feature "
+    "contract is met. No alert shown elsewhere in this console was generated "
+    "from this dataset."
 )
 
 
@@ -73,7 +65,6 @@ class AnalysisRun:
         }
         if self.status == "NOT_RUN":
             payload["meaning"] = NOT_RUN_MEANING
-            payload["command"] = OFFLINE_COMMAND
         return payload
 
 
@@ -289,4 +280,3 @@ def execute_run(
         }
         set_status(conn, run_id, "FAILED", error=str(exc))
         raise
-

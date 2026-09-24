@@ -335,6 +335,44 @@ def set_status(
     return get(conn, investigation_id)
 
 
+#: The part of the lifecycle that follows system events rather than a
+#: person's decision, in order.
+PIPELINE_STAGES = ("DRAFT", "VALIDATING", "ANALYZING", "ACTIVE")
+
+
+def advance_lifecycle(
+    conn: sqlite3.Connection, actor: User, investigation_id: str, target: str, *, reason: str
+) -> Investigation:
+    """Move a case forward along DRAFT -> VALIDATING -> ANALYZING -> ACTIVE.
+
+    Driven by real events (a validated upload, a completed analysis run),
+    not by a button that only relabels the case. Only ever moves forward,
+    only inside the pipeline stages, and a case that has already left them
+    (submitted, in review, closed...) is not touched. Each step is audited
+    with the event that caused it.
+    """
+    found = get(conn, investigation_id)
+    if found is None or found.status not in PIPELINE_STAGES or target not in PIPELINE_STAGES:
+        return found
+    here, there = PIPELINE_STAGES.index(found.status), PIPELINE_STAGES.index(target)
+    if there <= here:
+        return found
+    now = db.utcnow()
+    with db.transaction(conn):
+        conn.execute(
+            "UPDATE investigations SET status = ?, updated_at = ? WHERE id = ?",
+            (target, now, investigation_id),
+        )
+        audit.record(
+            conn, actor_id=actor.id,
+            action=audit.INVESTIGATION_STATUS_CHANGED,
+            object_type="investigation", object_id=investigation_id,
+            investigation_id=investigation_id,
+            detail={"from": found.status, "to": target, "reason": reason, "automatic": True},
+        )
+    return get(conn, investigation_id)
+
+
 def archive(
     conn: sqlite3.Connection, actor: User, investigation_id: str
 ) -> Investigation:

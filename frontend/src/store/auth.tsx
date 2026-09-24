@@ -129,3 +129,8 @@ export function useAuth(): AuthContextValue {
   if (!ctx) throw new Error("useAuth must be inside <AuthProvider>");
   return ctx;
 }
+
+/** For optional affordances rendered outside a provider (tests, embeds): null there. */
+export function useOptionalAuth(): AuthContextValue | null {
+  return useContext(AuthContext);
+}

@@ -866,4 +866,6 @@ export interface RunResults {
   drift_relative_to_development: string | null;
   total_alerts: number;
   alerts: RunAlert[];
+  stages: { stage_number: number; stage_name: string; status: string; duration_seconds: number | null;
+            summary?: Record<string, unknown> }[];
 }

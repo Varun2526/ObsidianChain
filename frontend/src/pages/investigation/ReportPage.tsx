@@ -152,21 +152,21 @@ export function ReportPage() {
           {kase.status === "ACTIVE" && (
             <button
               className="btn btn-sm"
-              onClick={() => transitionStatus("REVIEW")}
+              onClick={() => transitionStatus("SUBMITTED")}
               disabled={busy}
               title="Submit this case and draft report for peer review"
             >
               Submit for Review
             </button>
           )}
-          {kase.status === "REVIEW" && (
+          {kase.status === "SUBMITTED" && (
             <button
               className="btn btn-sm btn-ghost"
               onClick={() => transitionStatus("ACTIVE")}
               disabled={busy}
-              title="Return case to active triage"
+              title="Withdraw the submission before a reviewer takes it"
             >
-              Return to Active
+              Withdraw submission
             </button>
           )}
           <button className="btn btn-sm" onClick={save} disabled={busy}>
@@ -181,7 +181,7 @@ export function ReportPage() {
             className="btn btn-sm"
             onClick={downloadJsonPackage}
             disabled={busy}
-            title="Download complete audited offline JSON package with cryptographic SHA-256"
+            title="Download the case bundle; the export is recorded in the audit log"
           >
             Export Package (JSON)
           </button>
@@ -201,9 +201,9 @@ export function ReportPage() {
         </div>
       )}
 
-      {kase.status === "REVIEW" && (
+      {(kase.status === "SUBMITTED" || kase.status === "IN_REVIEW") && (
         <div className="banner banner-synthetic no-print" style={{ marginBottom: 16 }}>
-          <h4>Case is Under Formal Peer Review</h4>
+          <h4>{kase.status === "SUBMITTED" ? "Submitted for review" : "Under review"}</h4>
           <p>
             This investigation is currently pending review. Reviewers should verify evidence traceability chains, analytical bindings, and investigator rationales before finalising the report.
           </p>

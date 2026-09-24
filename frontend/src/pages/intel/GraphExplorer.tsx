@@ -62,6 +62,7 @@ export function GraphExplorer() {
   const [pathStart, setPathStart] = useState<string | null>(null);
   const [find, setFind] = useState("");
   const [showList, setShowList] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [seedDraft, setSeedDraft] = useState("");
   const canvas = useRef<FlowGraphHandle>(null);
 
@@ -96,6 +97,18 @@ export function GraphExplorer() {
     load(ctrl.signal);
     return () => ctrl.abort();
   }, [load]);
+
+  // This is an in-product workspace mode rather than browser fullscreen: it
+  // keeps the inspector, keyboard escape hatch and responsive layout under
+  // the application's control.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isFullscreen]);
 
   const update = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
@@ -167,7 +180,7 @@ export function GraphExplorer() {
   });
 
   return (
-    <div className="workspace" aria-busy={loading}>
+    <div className={`workspace${isFullscreen ? " workspace-fullscreen" : ""}`} aria-busy={loading}>
       {/* ---- left: seeds, trace, filters ---- */}
       <aside className="ws-panel ws-panel-left" aria-label="Trace settings">
         <div className="ws-head"><Icon name="graph" /><h2>Graph explorer</h2></div>
@@ -325,6 +338,7 @@ export function GraphExplorer() {
           )}
           <div className="graph-overlay-br">
             <div className="graph-toolbar" style={{ flexDirection: "column" }}>
+              <button type="button" className="btn btn-sm btn-icon" aria-label={isFullscreen ? "Exit full-screen graph workspace" : "Open full-screen graph workspace"} aria-pressed={isFullscreen} onClick={() => setIsFullscreen((value) => !value)} title={isFullscreen ? "Exit full screen (Esc)" : "Full-screen workspace"}><Icon name={isFullscreen ? "close" : "expand"} size={14} /></button>
               <button type="button" className="btn btn-sm btn-icon" aria-label="Zoom in" onClick={() => canvas.current?.zoomBy(1.3)}><Icon name="plus" size={14} /></button>
               <button type="button" className="btn btn-sm btn-icon" aria-label="Zoom out" onClick={() => canvas.current?.zoomBy(1 / 1.3)}><Icon name="minus" size={14} /></button>
               <button type="button" className="btn btn-sm btn-icon" aria-label="Fit graph to view" onClick={() => canvas.current?.fit()}><Icon name="fit" size={14} /></button>
