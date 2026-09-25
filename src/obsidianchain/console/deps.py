@@ -89,8 +89,18 @@ def require_capability(capability: Capability):
     return _dependency
 
 
-def current_artifact_run(request: Request) -> str | None:
-    """The public fingerprint of the alert artifact on disk, or None.
+def current_artifact_run(
+    request: Request,
+    investigation_id: str | None = None,
+    conn: sqlite3.Connection = Depends(get_connection),
+) -> str | None:
+    """The run a case's alerts are current against, or None.
+
+    On a case route (``investigation_id`` in the path) whose case is bound
+    to one of its own completed uploaded-dataset runs, that run: it is
+    immutable and belongs to the case (``console/run_alerts.py``).
+    Otherwise the public fingerprint of the reference alert artifact on
+    disk.
 
     Returns None when the artifact is missing or unreadable rather than
     raising, because the console must stay usable when the analytical
@@ -104,12 +114,15 @@ def current_artifact_run(request: Request) -> str | None:
     """
     from obsidianchain.api import alerts as alerts_api, artifacts
 
+    from obsidianchain.console import run_alerts
+
     try:
         _frame, sidecar = artifacts.load_alerts(data_root_of(request))
-        return alerts_api.current_run_fingerprint(sidecar)
+        reference = alerts_api.current_run_fingerprint(sidecar)
     except Exception:
         # Deliberately broad: every failure mode here - artifact absent,
         # sidecar refused, torn publish, unreadable parquet - means the same
         # thing to this caller, which is that the current run is unknown.
         # The analytical routes still report each of them precisely.
-        return None
+        reference = None
+    return run_alerts.effective_run(conn, investigation_id, reference)

@@ -20,6 +20,7 @@ DISMISSED are both saying something true, about different things.
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 
 from fastapi import APIRouter, Body, Depends, Query, Request
 
@@ -31,6 +32,7 @@ from obsidianchain.console import (
     errors,
     investigations as inv,
     reports as reports_mod,
+    run_alerts,
     users as users_mod,
 )
 from obsidianchain.console.rbac import Capability, has
@@ -51,7 +53,7 @@ def _stale_block(reference, current_run) -> dict:
     }
 
 
-def _analytical(alert_id: str, reference, current_run, data_root) -> dict:
+def _analytical(conn, alert_id: str, reference, current_run, data_root) -> dict:
     """The immutable side, or an explicit statement of why it is unavailable.
 
     Never an empty object and never a silent omission. A reference whose run
@@ -60,6 +62,10 @@ def _analytical(alert_id: str, reference, current_run, data_root) -> dict:
     missing and why - which is the failure the old report page hid behind a
     swallowed 409.
     """
+    if reference.run_fingerprint == current_run or current_run is None:
+        own = run_alerts.view(conn, data_root, reference.investigation_id, alert_id)
+        if own is not None:
+            return own
     if current_run is None:
         return {
             "available": False,
@@ -161,6 +167,7 @@ def list_case_alerts(
 )
 def reference_alert(
     investigation_id: str,
+    request: Request,
     payload: dict = Body(...),
     conn: sqlite3.Connection = Depends(deps.get_connection),
     actor: User = Depends(deps.current_user),
@@ -173,9 +180,20 @@ def reference_alert(
     rather than accepted alongside.
     """
     alert_id = str(payload.get("alert_id") or "").strip()
-    run_fingerprint, _cluster = casework.parse_alert_id(alert_id)
+    run_fingerprint, rank = casework.parse_alert_id(alert_id)
 
-    if current_run is not None and run_fingerprint != current_run:
+    own_runs = run_alerts.case_runs(conn, investigation_id)
+    if run_fingerprint in own_runs:
+        # An alert from this case's own uploaded run: it must exist there.
+        run_dir = Path(deps.data_root_of(request)) / "runs" / own_runs[run_fingerprint]
+        if run_alerts.find_alert(run_dir, rank) is None:
+            raise errors.NotFound(f"run {own_runs[run_fingerprint]} has no alert {alert_id}")
+    elif run_alerts.belongs_to_another_case(conn, investigation_id, run_fingerprint):
+        raise errors.RunMismatch(
+            f"alert {alert_id} comes from another investigation's uploaded run; "
+            f"a case references only its own runs or the reference run."
+        )
+    elif current_run is not None and run_fingerprint != current_run:
         raise errors.RunMismatch(
             f"alert {alert_id} was minted against run {run_fingerprint}; the "
             f"artifact on disk is run {current_run}. Re-open the alert from "
@@ -216,7 +234,7 @@ def get_case_alert(
         "alert_id": alert_id,
         "investigation_id": investigation_id,
         "analytical": _analytical(
-            alert_id, reference, current_run, deps.data_root_of(request)
+            conn, alert_id, reference, current_run, deps.data_root_of(request)
         ),
         "investigator": _investigator(
             conn, investigation_id, alert_id, reference
@@ -456,3 +474,33 @@ def delete_filter(
     inv.require_readable(conn, actor, investigation_id)
     casework.delete_saved_filter(conn, user_id=actor.id, filter_id=filter_id)
     return {"ok": True}
+
+
+@router.get(
+    "/{investigation_id}/run-alerts/{alert_id}",
+    summary="One alert from this case's own uploaded run, referenced or not",
+)
+def get_run_alert(
+    investigation_id: str,
+    alert_id: str,
+    request: Request,
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.current_user),
+) -> dict:
+    """The analytical view of an uploaded-run alert before it is referenced.
+
+    Lets an investigator read why an alert was ranked before deciding to take
+    it into the case. Reading it is not referencing it: nothing is written
+    except the view event.
+    """
+    inv.require_readable(conn, actor, investigation_id)
+    casework.parse_alert_id(alert_id)
+    found = run_alerts.view(conn, deps.data_root_of(request), investigation_id, alert_id)
+    if found is None or not found.get("available"):
+        raise errors.NotFound(f"{alert_id} is not an alert of this investigation's runs")
+    audit.record_standalone(
+        conn, actor_id=actor.id, action=audit.ALERT_VIEWED,
+        object_type="alert", object_id=alert_id,
+        investigation_id=investigation_id, detail={"source": run_alerts.SOURCE},
+    )
+    return {**found, "referenced": casework.get_reference(conn, investigation_id, alert_id) is not None}
