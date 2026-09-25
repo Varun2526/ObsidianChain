@@ -286,6 +286,13 @@ export const getCaseAlert = (
     signal,
   );
 
+export const getRunAlert = (investigationId: string, alertRef: string, signal?: AbortSignal) =>
+  call<import("./types").RunAlertAnalytical & { referenced: boolean }>(
+    `/investigations/${encodeURIComponent(investigationId)}/run-alerts/${encodeURIComponent(alertRef)}`,
+    {},
+    signal,
+  );
+
 export const setDisposition = (
   investigationId: string,
   alertId: string,

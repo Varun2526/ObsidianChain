@@ -2,19 +2,24 @@
  * A bounded money-flow view embedded in a detail page, with a way out to
  * the full explorer. Same canvas, same data, fewer controls.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { GraphEdge, GraphNode } from "../../api/intel";
 import { Icon } from "../ui/Icon";
-import { FlowGraph, defaultLayout } from "./FlowGraph";
+import { FlowGraph, NO_FILTERS, defaultLayout } from "./FlowGraph";
 import type { FlowGraphHandle, GraphLayout } from "./FlowGraph";
 import { NodeInspector } from "./NodeInspector";
 
-export function FlowPreview({ nodes, edges, explorerHref, truncated, note, height = 440, title = "Money flow" }: {
+export function FlowPreview({ nodes, edges, explorerHref, truncated, note, height = 440, title = "Money flow", hiddenKinds }: {
   nodes: GraphNode[]; edges: GraphEdge[]; explorerHref: string; truncated?: boolean; note?: React.ReactNode;
   height?: number; title?: string;
+  /** Node kinds drawn hidden (e.g. the many single-address clusters of a run graph). */
+  hiddenKinds?: string[];
 }) {
+  const filters = useMemo(() => ({ ...NO_FILTERS, hiddenKinds: new Set(hiddenKinds ?? []) }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [(hiddenKinds ?? []).join(",")]);
   const [layout, setLayout] = useState<GraphLayout>(() => defaultLayout(nodes.length));
   const [selected, setSelected] = useState<string | null>(null);
   const canvas = useRef<FlowGraphHandle>(null);
@@ -47,11 +52,11 @@ export function FlowPreview({ nodes, edges, explorerHref, truncated, note, heigh
       </div>
       <div style={{ display: "grid", gridTemplateColumns: node ? "minmax(0,1fr) 300px" : "minmax(0,1fr)" }}>
         <div className="graph-host" style={{ height: h, borderRadius: 0 }}>
-          <FlowGraph ref={canvas} nodes={nodes} edges={edges} layout={layout} selectedId={selected} onSelect={setSelected} />
+          <FlowGraph ref={canvas} nodes={nodes} edges={edges} layout={layout} filters={filters} selectedId={selected} onSelect={setSelected} />
         </div>
         {node && (
           <div style={{ borderLeft: "1px solid var(--oc-hairline)", maxHeight: h, overflowY: "auto" }}>
-            <NodeInspector node={node} edges={edges} actions={{}} />
+            <NodeInspector node={node} edges={edges} actions={{ chainIndex: !explorerHref.includes("run=") }} />
           </div>
         )}
       </div>

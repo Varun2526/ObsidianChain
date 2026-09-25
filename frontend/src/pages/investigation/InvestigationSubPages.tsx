@@ -20,6 +20,32 @@ import { EvidencePanel } from "../../components/forensics/EvidencePanel";
 import { SeparationEvidencePanel } from "../../components/forensics/SeparationEvidencePanel";
 import { StructuralPatternsPanel } from "../../components/forensics/StructuralPatternsPanel";
 import { useAuth } from "../../store/auth";
+import { RunGraphPanel, RunNetworkPanel } from "../../components/forensics/RunNetworkPanel";
+import { useCaseRun } from "../../components/forensics/useCaseRun";
+
+/** A case with an uploaded, analysed dataset shows that run's own graph and network. */
+function RunOr({ kind, fallback }: { kind: "graph" | "network"; fallback: React.ReactNode }) {
+  const { invId = "" } = useParams();
+  const run = useCaseRun(invId);
+  if (run.loading) return <Skeleton rows={6} />;
+  if (!run.runId) return <>{fallback}</>;
+  return (
+    <>
+      <div className="page-header">
+        <h1>{kind === "graph" ? "Money flow and network graph" : "Network intelligence"}</h1>
+        {kind === "graph" && (
+          <Link className="btn btn-sm btn-primary" to={`/graph?${new URLSearchParams({ case: invId, run: run.runId }).toString()}`}>
+            Open graph workspace
+          </Link>
+        )}
+      </div>
+      <p className="muted small" style={{ marginTop: 0 }}>From <span className="mono">{run.filename}</span>, uploaded to this investigation.</p>
+      {kind === "graph"
+        ? <RunGraphPanel investigationId={invId} runId={run.runId} />
+        : <RunNetworkPanel investigationId={invId} runId={run.runId} />}
+    </>
+  );
+}
 
 function AlertSelector({
   rows, selected, onSelect,
@@ -149,6 +175,10 @@ function SubPage({
 }
 
 export function GraphSubPage() {
+  return <RunOr kind="graph" fallback={<ReferenceGraphSubPage />} />;
+}
+
+function ReferenceGraphSubPage() {
   return (
     <SubPage title="Money flow">
       {({ detail }) =>
@@ -174,6 +204,10 @@ export function TimelineSubPage() {
 }
 
 export function NetworkSubPage() {
+  return <RunOr kind="network" fallback={<ReferenceNetworkSubPage />} />;
+}
+
+function ReferenceNetworkSubPage() {
   return (
     <SubPage title="Network intelligence">
       {({ detail }) =>

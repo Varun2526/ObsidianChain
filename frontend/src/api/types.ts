@@ -496,7 +496,8 @@ export interface CaseAlertRow {
  * the old report page hid behind a swallowed 409.
  */
 export type CaseAlertAnalytical =
-  | { available: true; alert: AlertDetail }
+  | RunAlertAnalytical
+  | { available: true; source?: undefined; alert: AlertDetail }
   | {
       available: false;
       reason: "STALE_REFERENCE" | "ARTIFACT_UNAVAILABLE" | "ALERT_NOT_IN_RUN";
@@ -828,6 +829,8 @@ export interface RunEvidence {
   status: "PRESENT" | "NO_EVIDENCE" | "UNAVAILABLE";
   score: number;
   explanation: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  details?: Record<string, any>;
 }
 
 export interface RunAlert {
@@ -841,6 +844,29 @@ export interface RunAlert {
   summary: { confidence?: number; corroborating_evidence_lines?: number } & Record<string, unknown>;
   explanation_statement?: string;
   evidence: RunEvidence[];
+  /** The id under which this alert is referenced into its case (`<run fingerprint>:<rank>`). */
+  alert_ref?: string;
+}
+
+/** One uploaded-run alert as the case sees it (console/run_alerts.py). */
+export interface RunAlertView {
+  alert_ref: string;
+  run_id: string;
+  run_fingerprint: string;
+  dataset: { filename: string; sha256: string } | null;
+  model_version: string | null;
+  alert: RunAlert;
+  members: string[];
+  transactions: string[];
+  graph: { nodes: import("./intel").GraphNode[]; edges: import("./intel").GraphEdge[] };
+  network: { meaning: string | null; transactions: import("./intel").TxPropagation[] };
+}
+
+export interface RunAlertAnalytical {
+  available: true;
+  source: "UPLOADED_RUN";
+  meaning: string;
+  run_alert: RunAlertView;
 }
 
 export interface RunMonitoringAlert {

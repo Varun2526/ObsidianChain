@@ -18,13 +18,16 @@ export interface InspectorActions {
   onPathTo?: (id: string) => void;
   pathStart?: string | null;
   busy?: boolean;
+  /** False when the node is not in the reference chain index (an uploaded run's graph). */
+  chainIndex?: boolean;
 }
 
 export function NodeInspector({ node, edges, actions }: { node: GraphNode; edges: GraphEdge[]; actions: InspectorActions }) {
   const d = node.data;
   const { incoming, outgoing } = neighbours(node.id, edges);
-  const flowIn = incoming.filter((e) => e.kind === "PAYS" || e.kind === "SPENDS").length;
-  const flowOut = outgoing.filter((e) => e.kind === "PAYS" || e.kind === "SPENDS").length;
+  const isFlow = (k: string) => k === "PAYS" || k === "SPENDS" || k === "RECEIVES";
+  const flowIn = incoming.filter((e) => isFlow(e.kind)).length;
+  const flowOut = outgoing.filter((e) => isFlow(e.kind)).length;
   const canExpand = node.kind === "address" || node.kind === "transaction";
 
   return (
@@ -37,11 +40,11 @@ export function NodeInspector({ node, edges, actions }: { node: GraphNode; edges
         <div className="row" style={{ marginTop: 8 }}>
           {node.kind === "address" && d.address && (
             <>
-              <Link className="btn btn-sm" to={`/entity/${encodeURIComponent(d.address)}`}><Icon name="external" size={14} />Profile</Link>
+              {actions.chainIndex !== false && <Link className="btn btn-sm" to={`/entity/${encodeURIComponent(d.address)}`}><Icon name="external" size={14} />Profile</Link>}
               <CopyButton value={d.address} />
             </>
           )}
-          {node.kind === "transaction" && d.txid != null && (
+          {node.kind === "transaction" && d.txid != null && actions.chainIndex !== false && (
             <Link className="btn btn-sm" to={`/tx/${d.txid}`}><Icon name="external" size={14} />Transaction</Link>
           )}
           {node.kind === "cluster" && typeof d.alert_id === "string" && (
@@ -53,7 +56,22 @@ export function NodeInspector({ node, edges, actions }: { node: GraphNode; edges
       <div className="ws-section">
         <h3><EvidenceTag kind={node.kind === "ip" || node.kind === "asn" ? "network" : node.kind === "cluster" ? "heuristic" : "chain"} /> Observed</h3>
         <dl className="kv">
-          {node.kind === "transaction" && (
+          {node.kind === "address" && typeof d.anomaly_score === "number" && (
+            <>
+              <dt>Cluster</dt><dd className="mono small">{String(d.cluster_id ?? "n/a")}</dd>
+              <dt>Outlier score</dt><dd className="num">{d.anomaly_score.toFixed(3)}</dd>
+              {Array.isArray(d.top_deviations) && d.top_deviations[0] && <><dt>Largest deviation</dt><dd className="small">{String(d.top_deviations[0].description)}</dd></>}
+            </>
+          )}
+          {node.kind === "transaction" && actions.chainIndex === false && (
+            <>
+              <dt>Time (UTC)</dt><dd className="mono small">{d.timestamp ? new Date(Number(d.timestamp) * 1000).toISOString().replace("T", " ").slice(0, 19) : "n/a"}</dd>
+              <dt>Fee</dt><dd className="num">{d.fee == null ? "n/a" : `${Number(d.fee).toFixed(8)} BTC`}</dd>
+              {d.is_peeling === true && <><dt>Pattern</dt><dd>peeling chain, depth {String(d.peeling_depth ?? "?")}</dd></>}
+              {typeof d.mixing_classification === "string" && d.mixing_classification !== "NO_MIXING_SIGNAL" && <><dt>Mixing</dt><dd>{d.mixing_classification.replace(/_/g, " ").toLowerCase()}</dd></>}
+            </>
+          )}
+          {node.kind === "transaction" && actions.chainIndex !== false && (
             <>
               <dt>Timestep</dt><dd className="num">{d.timestep ?? "n/a"}</dd>
               <dt>Inputs · outputs</dt><dd className="num">{int(d.n_inputs as number)} · {int(d.n_outputs as number)}</dd>
@@ -65,7 +83,7 @@ export function NodeInspector({ node, edges, actions }: { node: GraphNode; edges
           {node.kind === "cluster" && (
             <>
               <dt>Cluster</dt><dd className="num">{String(d.cluster_id)}</dd>
-              <dt>Members</dt><dd className="num">{int(d.members_total as number)}</dd>
+              <dt>Members</dt><dd className="num">{int((d.members_total ?? d.member_count) as number)}</dd>
             </>
           )}
           {node.kind === "ip" && (
@@ -90,7 +108,7 @@ export function NodeInspector({ node, edges, actions }: { node: GraphNode; edges
         )}
       </div>
 
-      {node.kind === "address" && (
+      {node.kind === "address" && actions.chainIndex !== false && (
         <div className="ws-section">
           <h3>Attribution and model</h3>
           <AnnotationChips model={d.model} cluster={d.cluster} watchlist={d.watchlist} />
@@ -143,7 +161,8 @@ export function NodeInspector({ node, edges, actions }: { node: GraphNode; edges
             </div>
           )}
           <p className="note" style={{ marginTop: 8 }}>
-            Sources and destinations are computed over the loaded graph only. Expanding fetches one more hop from the chain index.
+            Sources and destinations follow value edges over the loaded graph only.
+            {actions.onExpand ? " Expanding fetches one more hop from the chain index." : ""}
           </p>
         </div>
       )}
