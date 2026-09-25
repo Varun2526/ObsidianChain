@@ -190,7 +190,7 @@ def run_pipeline(
     # 5. Network Analysis & 6. Blockchain <-> Network Correlation
     t0 = datetime.datetime.now(datetime.timezone.utc)
     corr = correlate_blockchain_and_network(frame, bg)
-    net_propagation = network_propagation.analyse(corr)
+    net_propagation = network_propagation.analyse(corr, geoip_provider)
     dt_corr = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     _add_stage(StageExecutionRecord(
         stage_number=5, stage_name="Network Analysis",
@@ -415,6 +415,7 @@ def run_pipeline(
         peeling_result=peel_result,
         mixing_result=mix_result,
         link_suggestions=link_suggestions,
+        geoip_provider=geoip_provider,
     )
     dt_graph = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     _add_stage(StageExecutionRecord(

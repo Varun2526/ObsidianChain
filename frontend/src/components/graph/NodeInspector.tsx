@@ -9,6 +9,8 @@ import { Icon } from "../ui/Icon";
 import { AnnotationChips, CopyButton, EvidenceTag, SevTag, btc, int, pct } from "../ui/intel";
 import { neighbours } from "./graphModel";
 
+const DBIP_ATTRIBUTION = "IP geolocation by DB-IP (db-ip.com), CC BY 4.0";
+
 export interface InspectorActions {
   onExpand?: (id: string, direction: "upstream" | "downstream" | "both") => void;
   onReach?: (id: string, direction: "upstream" | "downstream") => void;
@@ -49,7 +51,7 @@ export function NodeInspector({ node, edges, actions }: { node: GraphNode; edges
       </div>
 
       <div className="ws-section">
-        <h3><EvidenceTag kind={node.kind === "ip" ? "network" : node.kind === "cluster" ? "heuristic" : "chain"} /> Observed</h3>
+        <h3><EvidenceTag kind={node.kind === "ip" || node.kind === "asn" ? "network" : node.kind === "cluster" ? "heuristic" : "chain"} /> Observed</h3>
         <dl className="kv">
           {node.kind === "transaction" && (
             <>
@@ -69,11 +71,23 @@ export function NodeInspector({ node, edges, actions }: { node: GraphNode; edges
           {node.kind === "ip" && (
             <>
               <dt>ASN</dt><dd className="num">{d.asn == null ? "n/a" : String(d.asn)}</dd>
+              {d.globally_routable === false && <><dt>Address class</dt><dd>{String(d.special_purpose ?? "not globally routable")}</dd></>}
+              {typeof d.resolved_country === "string" && <><dt>Country (peer IP)</dt><dd>{d.resolved_country}</dd></>}
+              {typeof d.geo_country === "string" && d.geo_country && <><dt>Country (capture)</dt><dd>{d.geo_country} (unverified)</dd></>}
               <dt>Meaning</dt><dd>Relayed a transaction to an observer. Not the sender.</dd>
+            </>
+          )}
+          {node.kind === "asn" && (
+            <>
+              <dt>ASN</dt><dd className="num">AS{String(d.asn)}</dd>
+              {d.private_use === true && <><dt>Class</dt><dd>private-use ASN</dd></>}
             </>
           )}
           <dt>Flow edges in loaded graph</dt><dd className="num">{flowIn} in · {flowOut} out</dd>
         </dl>
+        {node.kind === "ip" && typeof d.resolved_country === "string" && (
+          <p className="note" style={{ marginTop: 6 }}>{DBIP_ATTRIBUTION}. A relay&apos;s country is not the sender&apos;s.</p>
+        )}
       </div>
 
       {node.kind === "address" && (

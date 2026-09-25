@@ -310,6 +310,7 @@ export interface PeerArrival {
   observers: string[];
   asns: number[];
   ip_class: string;
+  country_iso?: string | null;
 }
 
 export interface TxPropagation {
@@ -333,6 +334,8 @@ export interface TxPropagation {
   dominant_peer_ip: string | null;
   dominant_peer_share: number | null;
   non_routable_peer_share: number | null;
+  resolved_countries?: string[];
+  country_resolution?: string | null;
 }
 
 export interface RunNetworkResponse {
@@ -348,6 +351,8 @@ export interface RunNetworkResponse {
     distinct_peers: number;
     distinct_asns: number;
     observer_source: Record<string, number>;
+    distinct_resolved_countries?: number;
+    country_resolution?: string | null;
   };
   transactions: TxPropagation[];
   transactions_total: number;
