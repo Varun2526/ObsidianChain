@@ -464,6 +464,37 @@ export function NewInvestigation() {
                 </div>
               </div>
 
+              {/* Validation findings: what was coerced, rejected or refused, always visible */}
+              <div style={{ padding: "14px 16px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6, marginBottom: 16 }}>
+                <strong style={{ display: "block", marginBottom: 8, fontSize: 13, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Validation findings
+                </strong>
+                <p className="small" style={{ margin: "0 0 6px" }}>
+                  {validation?.validation?.rows_read ?? 0} rows read · {validation?.validation?.rows_valid ?? 0} kept
+                  {validation?.validation?.exact_duplicates_rejected ? ` · ${validation.validation.exact_duplicates_rejected} exact duplicate rejected` : ""}
+                  {" · "}{validation?.validation?.errors?.length ? `${validation.validation.errors.length} error(s)` : "no blocking errors"}
+                </p>
+                {!validation?.validation?.warnings?.length && !validation?.validation?.errors?.length && (
+                  <p className="small muted" style={{ margin: 0 }}>No field was missing, coerced or rejected.</p>
+                )}
+                  {validation?.validation?.warnings?.length ? (
+                    <div className="banner banner-synthetic" style={{ marginTop: 8 }}>
+                      <h4 style={{ margin: "0 0 4px" }}>Validation Warnings</h4>
+                      <ul style={{ margin: 0, paddingLeft: 18 }}>
+                        {validation.validation.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {validation?.validation?.errors?.length ? (
+                    <div className="banner banner-error" style={{ marginTop: 8 }}>
+                      <h4 style={{ margin: "0 0 4px" }}>Validation Errors</h4>
+                      <ul style={{ margin: 0, paddingLeft: 18 }}>
+                        {validation.validation.errors.map((e, i) => <li key={i}>{e}</li>)}
+                      </ul>
+                    </div>
+                  ) : null}
+              </div>
+
               {/* Collapsible Raw Technical Details */}
               <details style={{ marginTop: 12, padding: "10px 14px", background: "var(--bg-raised)", borderRadius: 6, border: "1px solid var(--hairline)" }}>
                 <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
@@ -474,22 +505,6 @@ export function NewInvestigation() {
                     <dt>Rows Read</dt><dd>{validation?.validation?.rows_read ?? 0}</dd>
                     <dt>Duplicates Filtered</dt><dd>{validation?.validation?.exact_duplicates_rejected ?? 0}</dd>
                   </dl>
-                  {validation?.validation?.warnings?.length ? (
-                    <div className="banner banner-synthetic" style={{ marginTop: 10 }}>
-                      <h4 style={{ margin: "0 0 4px" }}>Validation Warnings</h4>
-                      <ul style={{ margin: 0, paddingLeft: 18 }}>
-                        {validation.validation.warnings.map((w, i) => <li key={i}>{w}</li>)}
-                      </ul>
-                    </div>
-                  ) : null}
-                  {validation?.validation?.errors?.length ? (
-                    <div className="banner banner-error" style={{ marginTop: 10 }}>
-                      <h4 style={{ margin: "0 0 4px" }}>Validation Errors</h4>
-                      <ul style={{ margin: 0, paddingLeft: 18 }}>
-                        {validation.validation.errors.map((e, i) => <li key={i}>{e}</li>)}
-                      </ul>
-                    </div>
-                  ) : null}
                 </div>
               </details>
             </div>
