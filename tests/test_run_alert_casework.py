@@ -66,6 +66,7 @@ def test_reference_decide_and_report_an_uploaded_run_alert(setup):
     assert view["members"], "the alert's member addresses are listed"
     kinds = {n["kind"] for n in view["graph"]["nodes"]}
     assert {"cluster", "address", "transaction"} <= kinds
+    assert view["cross_layer"] is not None and "hop_pairs" in view["cross_layer"]["details"]
     ids = {n["id"] for n in view["graph"]["nodes"]}
     assert all(e["source"] in ids and e["target"] in ids for e in view["graph"]["edges"])
 

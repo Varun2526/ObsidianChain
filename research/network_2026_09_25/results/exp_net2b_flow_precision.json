@@ -1,0 +1,28 @@
+{
+  "experiment_id": "exp_net2b_flow_precision",
+  "provenance_type": "SYNTHETIC_CONTROL",
+  "results": {
+    "signal": {
+      "world": "signal",
+      "hop_adjacent_cluster_pairs": 2371,
+      "hop_adjacent_precision": 1.0,
+      "flows": 236,
+      "linked_cluster_pairs": 619,
+      "same_owner": 619,
+      "precision": 1.0,
+      "chance_precision": 0.001,
+      "relays_significant": 169
+    },
+    "null": {
+      "world": "null",
+      "hop_adjacent_cluster_pairs": 2337,
+      "hop_adjacent_precision": 1.0,
+      "flows": 235,
+      "linked_cluster_pairs": 603,
+      "same_owner": 603,
+      "precision": 1.0,
+      "chance_precision": 0.00075,
+      "relays_significant": 173
+    }
+  }
+}

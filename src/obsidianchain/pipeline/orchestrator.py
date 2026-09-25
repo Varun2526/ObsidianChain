@@ -38,6 +38,7 @@ from obsidianchain.correlation.engine import CorrelationResult, correlate_blockc
 from obsidianchain.geoip import GeoIPProvider, OfflineCSVProvider
 from obsidianchain.io import ingest
 from obsidianchain.ml.anomaly import AnomalyDetectionResult, detect_address_anomalies
+from obsidianchain.correlation import cross_layer as cross_layer_mod
 from obsidianchain.network import propagation as network_propagation
 from obsidianchain.pipeline.alerts import AlertRunResult, build_alert_run
 from obsidianchain.pipeline.blockchain import BlockchainGraph, ClusterResult, build_blockchain_layer
@@ -191,6 +192,7 @@ def run_pipeline(
     t0 = datetime.datetime.now(datetime.timezone.utc)
     corr = correlate_blockchain_and_network(frame, bg)
     net_propagation = network_propagation.analyse(corr, geoip_provider)
+    cross_layer = cross_layer_mod.analyse(bg, net_propagation)
     dt_corr = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     _add_stage(StageExecutionRecord(
         stage_number=5, stage_name="Network Analysis",
@@ -201,7 +203,7 @@ def run_pipeline(
     _add_stage(StageExecutionRecord(
         stage_number=6, stage_name="Blockchain ↔ Network Correlation",
         status="SUCCESS", duration_seconds=dt_corr,
-        summary=corr.summary(),
+        summary={**corr.summary(), "cross_layer": cross_layer.summary()},
     ))
 
     # Record 7 & 8 stages in presentation record
@@ -377,6 +379,7 @@ def run_pipeline(
         geoip_provider=geoip_provider,
         propagation_result=prop_result,
         network_propagation=net_propagation,
+        cross_layer=cross_layer,
         seed_sources=seed_sources,
         link_suggestions=link_suggestions,
         stacker=_load_stacker(active_model),
@@ -416,6 +419,7 @@ def run_pipeline(
         mixing_result=mix_result,
         link_suggestions=link_suggestions,
         geoip_provider=geoip_provider,
+        cross_layer=cross_layer,
     )
     dt_graph = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     _add_stage(StageExecutionRecord(

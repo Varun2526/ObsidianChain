@@ -198,6 +198,14 @@ function stylesheet(large: boolean): cytoscape.Stylesheet[] {
     { selector: 'edge[kind = "ANNOUNCED_BY"]', style: {
       "line-style": "dotted", "line-color": c.network, "target-arrow-color": c.network, opacity: 0.55,
     } },
+    { selector: 'edge[kind = "SAME_FIRST_RELAY"]', style: {
+      "line-style": "dashed", "line-dash-pattern": [6, 3], "line-color": c.network, "target-arrow-color": c.network,
+      width: 1.8, opacity: 0.9, "curve-style": "bezier",
+    } },
+    { selector: 'edge[kind = "CROSS_LAYER_LINK"]', style: {
+      "line-style": "dashed", "line-dash-pattern": [2, 4], "line-color": c.network, "target-arrow-shape": "none",
+      width: 1.4, opacity: 0.7, "curve-style": "bezier",
+    } },
     { selector: ".dim", style: { opacity: 0.12 } },
     { selector: "edge.dim", style: { opacity: 0.06 } },
     { selector: "node.hl", style: { opacity: 1, label: "data(label)", color: c.textStrong } },
