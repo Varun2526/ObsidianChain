@@ -266,6 +266,7 @@ EXPECTED_IMPORT_GRAPH = {
     "obsidianchain.console.passwords",
     "obsidianchain.console.rbac",
     "obsidianchain.console.reports",
+    "obsidianchain.console.run_alerts",
     "obsidianchain.console.routes_auth",
     "obsidianchain.console.routes_casework",
     "obsidianchain.console.routes_investigations",
