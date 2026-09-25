@@ -783,7 +783,7 @@ export interface RunStageInfo {
 
 export interface RunProgressResponse {
   run_id?: string;
-  status: "NOT_RUN" | "RUNNING" | "COMPLETE" | "FAILED";
+  status: "NOT_RUN" | "QUEUED" | "RUNNING" | "COMPLETE" | "FAILED";
   current_stage: number;
   total_stages: number;
   stage_name: string;

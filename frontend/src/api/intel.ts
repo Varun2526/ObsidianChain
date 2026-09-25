@@ -111,7 +111,7 @@ export interface AddressProfile {
 
 // ---- graph ----------------------------------------------------------------
 
-export type GraphNodeKind = "address" | "transaction" | "cluster" | "ip";
+export type GraphNodeKind = "address" | "transaction" | "cluster" | "ip" | "asn";
 export type GraphEdgeKind = "SPENDS" | "PAYS" | "MEMBER_OF" | "ANNOUNCED_BY" | string;
 
 export interface GraphNode {
@@ -301,6 +301,58 @@ export interface RunGraphResponse {
   meaning: string;
 }
 
+// ---- run network propagation (network/propagation.py) --------------------
+
+export interface PeerArrival {
+  peer_ip: string;
+  first_seen_ms: number | null;
+  observations: number;
+  observers: string[];
+  asns: number[];
+  ip_class: string;
+}
+
+export interface TxPropagation {
+  txid: string;
+  observations: number;
+  timed_observations: number;
+  observer_source: string;
+  observers: string[] | null;
+  observer_count: number | null;
+  first_seen_ms: number | null;
+  last_seen_ms: number | null;
+  spread_ms: number | null;
+  first_seen_peers: string[];
+  first_seen_observers: string[];
+  peer_count: number;
+  peers: PeerArrival[];
+  asns: number[];
+  asn_count: number;
+  countries: string[];
+  country_source: string | null;
+  dominant_peer_ip: string | null;
+  dominant_peer_share: number | null;
+  non_routable_peer_share: number | null;
+}
+
+export interface RunNetworkResponse {
+  run_id: string;
+  schema: string;
+  meaning: string;
+  summary: {
+    transactions_with_observations: number;
+    observations: number;
+    with_timing: number;
+    with_spread: number;
+    median_spread_ms: number | null;
+    distinct_peers: number;
+    distinct_asns: number;
+    observer_source: Record<string, number>;
+  };
+  transactions: TxPropagation[];
+  transactions_total: number;
+}
+
 // ---- calls ----------------------------------------------------------------
 
 const enc = encodeURIComponent;
@@ -328,3 +380,6 @@ export const getModel = (version: string, signal?: AbortSignal) =>
 
 export const getRunGraph = (investigationId: string, runId: string, signal?: AbortSignal) =>
   apiGet<RunGraphResponse>(`/investigations/${enc(investigationId)}/runs/${enc(runId)}/graph`, signal);
+
+export const getRunNetwork = (investigationId: string, runId: string, signal?: AbortSignal) =>
+  apiGet<RunNetworkResponse>(`/investigations/${enc(investigationId)}/runs/${enc(runId)}/network`, signal);

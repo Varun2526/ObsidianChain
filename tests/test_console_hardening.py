@@ -306,7 +306,7 @@ def test_lifecycle_follows_upload_and_analysis_events(client, demo_setup, root) 
     assert up.status_code == 201, up.text
     assert inv_c.get(f"/api/investigations/{case_id}").json()["status"] == "VALIDATING"
     ds = up.json()["dataset"]["id"]
-    run = inv_c.post(f"/api/investigations/{case_id}/datasets/{ds}/run")
+    run = inv_c.post(f"/api/investigations/{case_id}/datasets/{ds}/run?wait=true")
     assert run.status_code == 200, run.text
     assert inv_c.get(f"/api/investigations/{case_id}").json()["status"] == "ACTIVE"
     assert inv_c.post(f"/api/investigations/{case_id}/status", json={"status": "SUBMITTED"}).status_code == 200
@@ -314,3 +314,37 @@ def test_lifecycle_follows_upload_and_analysis_events(client, demo_setup, root) 
     auto = [e for e in events if e["action"] == "INVESTIGATION_STATUS_CHANGED" and e["detail"].get("automatic")]
     assert [e["detail"]["to"] for e in auto][::-1] == ["VALIDATING", "ANALYZING", "ACTIVE"] or \
            sorted(e["detail"]["to"] for e in auto) == ["ACTIVE", "ANALYZING", "VALIDATING"]
+
+
+def test_analysis_runs_in_the_background(client, demo_setup, root) -> None:
+    """The run no longer holds the request: it is queued and polled.
+
+    Previously the pipeline executed inside the POST, so a 40k-row capture
+    held the only server process (and the progress poll) for ~23 s.
+    """
+    import time
+    from pathlib import Path
+    inv_c = TestClient(client.app)
+    login(inv_c, "investigator", demo_setup["investigator"]["password"])
+    case_id = inv_c.post("/api/investigations", json={"name": "Async"}).json()["id"]
+    sample = Path(__file__).parent / "data" / "synthetic_acceptance_capture.json"
+    ds = inv_c.post(f"/api/investigations/{case_id}/datasets?filename=c.json", content=sample.read_bytes(),
+                    headers={"Content-Type": "application/octet-stream"}).json()["dataset"]["id"]
+    started = inv_c.post(f"/api/investigations/{case_id}/datasets/{ds}/run")
+    assert started.status_code == 200 and started.json()["status"] == "QUEUED"
+    run_id = started.json()["run_id"]
+    # a second start while one is queued or running is refused, not duplicated
+    again = inv_c.post(f"/api/investigations/{case_id}/datasets/{ds}/run")
+    assert again.status_code in (200, 409)
+    status = None
+    for _ in range(300):
+        status = inv_c.get(f"/api/investigations/{case_id}/runs/{run_id}/progress").json()["status"]
+        if status in ("COMPLETE", "FAILED"):
+            break
+        time.sleep(0.1)
+    assert status == "COMPLETE"
+    assert inv_c.get(f"/api/investigations/{case_id}").json()["status"] == "ACTIVE"
+    net = inv_c.get(f"/api/investigations/{case_id}/runs/{run_id}/network")
+    assert net.status_code == 200 and net.json()["summary"]["transactions_with_observations"] > 0
+    actions = [e["action"] for e in inv_c.get(f"/api/investigations/{case_id}/history").json()["events"]]
+    assert "DATASET_ANALYSIS_RUN" in actions
