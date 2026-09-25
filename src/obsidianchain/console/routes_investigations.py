@@ -24,6 +24,7 @@ from obsidianchain.console import (
     integrity,
     investigations as inv,
     reports as reports_mod,
+    run_alerts,
     runs as runs_mod,
     users as users_mod,
 )
@@ -84,7 +85,8 @@ def list_investigations(
             {
                 **case.as_dict(owner=_owner_of(conn, case)),
                 "summary": casework.summary(conn, case.id),
-                "run_status": reports_mod._run_status(case, current_run),
+                "run_status": reports_mod._run_status(
+                    case, run_alerts.effective_run(conn, case.id, current_run)),
             }
             for case in found
         ],
@@ -536,7 +538,9 @@ def get_run_results(
         "monitoring_alerts": provenance.get("monitoring_alerts", []),
         "drift_relative_to_development": trust.get("drift_relative_to_development"),
         "total_alerts": alerts.get("total_alerts", 0),
-        "alerts": alerts.get("alerts", [])[:limit],
+        # alert_ref is the id under which a run alert is referenced into this case.
+        "alerts": [{**a, "alert_ref": run_alerts.alert_ref(run.run_fingerprint, a["rank"])}
+                   for a in alerts.get("alerts", [])[:limit]],
         "stages": [{**{k: s.get(k) for k in ("stage_number", "stage_name", "status", "duration_seconds")},
                     "summary": _scalar_summary(s.get("summary"))}
                    for s in manifest.get("stages", [])],
