@@ -82,7 +82,19 @@ def derive_canonical_address_features(frame: pd.DataFrame) -> pd.DataFrame:
     addr_timestamps: dict[str, list[float]] = {}
     addr_fee_ratios: dict[str, list[float]] = {}
 
-    for _, row in frame.iterrows():
+    # One chain event per txid. A capture legitimately holds several network
+    # observations of the same transaction (one per vantage point), but the
+    # transaction moved its value once: counting each observation would
+    # multiply sent and received amounts by the number of observers. The
+    # earliest observation supplies the timestamp (first seen). Same rule as
+    # the PS feature engine (leakage audit L7).
+    chain_events = frame
+    if len(frame) and "txid" in frame.columns:
+        order = frame.assign(_ts=pd.to_numeric(frame.get("timestamp"), errors="coerce"))
+        chain_events = (order.sort_values("_ts", kind="stable", na_position="last")
+                        .drop_duplicates("txid", keep="first").drop(columns="_ts"))
+
+    for _, row in chain_events.iterrows():
         txid = str(row.get("txid") or "").strip()
         if not txid:
             continue
