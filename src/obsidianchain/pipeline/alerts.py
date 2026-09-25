@@ -217,6 +217,7 @@ def build_alert_run(
     seed_sources: dict[str, Any] | None = None,
     link_suggestions: Any | None = None,
     stacker: dict[str, Any] | None = None,
+    network_propagation: Any | None = None,
 ) -> AlertRunResult:
     """Fuse multi-source evidence and rank alerts across all entity clusters."""
     alerts: list[AlertItem] = []
@@ -376,18 +377,30 @@ def build_alert_run(
                     if f.country_iso:
                         countries.append(f.country_iso)
 
+            pooled = network_propagation.pooled(total_txs) if network_propagation is not None else None
+            explanation = f"Observed via {obs_count} network announcement(s) across {len(cluster_ips)} peer IP(s)"
+            if pooled:
+                explanation += f" and {pooled['asn_count']} ASN(s)"
+                if pooled.get("median_spread_ms") is not None:
+                    explanation += f"; median propagation spread {pooled['median_spread_ms'] / 1000:.1f} s"
+                if pooled.get("dominant_peer_share") is not None and len(cluster_ips) > 1:
+                    explanation += f"; top peer carried {pooled['dominant_peer_share'] * 100:.0f}% of announcements"
+            explanation += ". A peer is a relay vantage point, not the sender. Context only: not part of the risk score."
             evidence_items.append(EvidenceItem(
                 category=NETWORK_CONTEXT,
                 signal_name="p2p_network_telemetry",
                 status="PRESENT",
                 score=0.30 if len(cluster_ips) > 1 else 0.10,
                 details={
-                    "distinct_ips": list(cluster_ips),
-                    "distinct_asns": list(cluster_asns),
+                    "distinct_ips": sorted(cluster_ips),
+                    "distinct_asns": sorted(cluster_asns),
                     "observation_count": obs_count,
-                    "countries": sorted(list(set(countries))),
+                    # Resolved by the offline GeoIP provider; empty without a database.
+                    "countries": sorted(set(countries)),
+                    "propagation": pooled,
+                    "fused": False,
                 },
-                explanation=f"Observed via {obs_count} network announcement(s) across {len(cluster_ips)} peer IP(s).",
+                explanation=explanation,
             ))
         else:
             evidence_items.append(EvidenceItem(
@@ -410,12 +423,22 @@ def build_alert_run(
                 ml_risk = float(ml_sub["ml_risk_score"].max()) if not ml_sub.empty else 0.0
 
             # Format model explanation
+            # Explain the member the score came from (the highest-scoring
+            # one), not whichever row happens to be first. Explanations are
+            # stored from PsFeatureExplanation, whose name key is
+            # ``feature_name``; ``feature`` is accepted for older payloads.
             exps_text = ""
             if not ml_sub.empty and "ml_explanations" in ml_sub.columns:
-                top_exps = ml_sub.iloc[0].get("ml_explanations")
+                top_row = ml_sub.loc[ml_sub["ml_risk_score"].idxmax()] if "ml_risk_score" in ml_sub.columns else ml_sub.iloc[0]
+                top_exps = top_row.get("ml_explanations")
                 if isinstance(top_exps, list) and top_exps:
-                    exp_strs = [f"{e.get('feature', '')} ({str(e.get('direction', '')).lower().replace('_', ' ')})" for e in top_exps[:3]]
-                    exps_text = f" Key contributing features: {', '.join(exp_strs)}."
+                    exp_strs = [
+                        f"{e.get('feature_name') or e.get('feature') or 'unnamed feature'} "
+                        f"({str(e.get('direction', '')).lower().replace('_', ' ')})"
+                        for e in top_exps[:3]
+                    ]
+                    exps_text = (f" Key contributing features for {top_row.get('address')}: "
+                                 f"{', '.join(exp_strs)}.")
 
             evidence_items.append(EvidenceItem(
                 category=MODEL_SIGNAL,

@@ -38,6 +38,7 @@ from obsidianchain.correlation.engine import CorrelationResult, correlate_blockc
 from obsidianchain.geoip import GeoIPProvider, OfflineCSVProvider
 from obsidianchain.io import ingest
 from obsidianchain.ml.anomaly import AnomalyDetectionResult, detect_address_anomalies
+from obsidianchain.network import propagation as network_propagation
 from obsidianchain.pipeline.alerts import AlertRunResult, build_alert_run
 from obsidianchain.pipeline.blockchain import BlockchainGraph, ClusterResult, build_blockchain_layer
 from obsidianchain.pipeline.features import (
@@ -164,7 +165,11 @@ def run_pipeline(
     # 3. GeoIP / ASN Provider
     t0 = datetime.datetime.now(datetime.timezone.utc)
     if geoip_provider is None:
-        geoip_provider = OfflineCSVProvider()
+        # The runs directory sits in the data root (data/runs), and the
+        # offline database, when one is supplied, at data/reference/. Passing
+        # the root is what lets a supplied database be used at all; without
+        # it the provider was always "uninstalled".
+        geoip_provider = OfflineCSVProvider(base_runs_dir.parent)
     dt3 = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     _add_stage(StageExecutionRecord(
         stage_number=3, stage_name="GeoIP / ASN",
@@ -185,11 +190,13 @@ def run_pipeline(
     # 5. Network Analysis & 6. Blockchain <-> Network Correlation
     t0 = datetime.datetime.now(datetime.timezone.utc)
     corr = correlate_blockchain_and_network(frame, bg)
+    net_propagation = network_propagation.analyse(corr)
     dt_corr = (datetime.datetime.now(datetime.timezone.utc) - t0).total_seconds()
     _add_stage(StageExecutionRecord(
         stage_number=5, stage_name="Network Analysis",
         status="SUCCESS", duration_seconds=dt_corr,
-        summary={"total_observations": len(corr.all_observations)},
+        summary={"total_observations": len(corr.all_observations),
+                 "propagation": net_propagation.summary()},
     ))
     _add_stage(StageExecutionRecord(
         stage_number=6, stage_name="Blockchain ↔ Network Correlation",
@@ -369,6 +376,7 @@ def run_pipeline(
         mixing_result=mix_result,
         geoip_provider=geoip_provider,
         propagation_result=prop_result,
+        network_propagation=net_propagation,
         seed_sources=seed_sources,
         link_suggestions=link_suggestions,
         stacker=_load_stacker(active_model),
@@ -434,6 +442,12 @@ def run_pipeline(
     graph_bytes = json.dumps(inv_graph.as_dict(), indent=2).encode("utf-8")
     graph_file.write_bytes(graph_bytes)
     graph_sha = hashlib.sha256(graph_bytes).hexdigest()
+
+    # Serialize network propagation (evidence only; see network/propagation.py)
+    net_file = run_dir / "network_propagation.json"
+    net_bytes = json.dumps(net_propagation.as_dict(), indent=2).encode("utf-8")
+    net_file.write_bytes(net_bytes)
+    net_sha = hashlib.sha256(net_bytes).hexdigest()
 
     # Serialize validation report
     val_file = run_dir / "validation_report.json"
@@ -514,6 +528,7 @@ def run_pipeline(
             "investigation_graph.json": graph_sha,
             "validation_report.json": val_sha,
             "monitoring.json": mon_sha,
+            "network_propagation.json": net_sha,
             **extra_artifacts,
         },
         "stages": [
