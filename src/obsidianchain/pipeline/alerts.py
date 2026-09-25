@@ -32,6 +32,9 @@ MODEL_SIGNAL = "MODEL_SIGNAL"
 #: watchlists) by personalized PageRank. A claim about the GRAPH around an
 #: entity, never about the entity itself.
 PROPAGATION_CONTEXT = "PROPAGATION_CONTEXT"
+#: Blockchain <-> network coherence: on-chain hops first announced by the
+#: same relay beyond the capture's chance rate (correlation/cross_layer.py).
+CROSS_LAYER_CONTEXT = "CROSS_LAYER_CONTEXT"
 
 
 #: What KIND of claim each evidence category is, so model output, rules,
@@ -43,6 +46,7 @@ EVIDENCE_CLASS = {
     NETWORK_CONTEXT: "NETWORK",         # what observers saw on the P2P layer
     PROPAGATION_CONTEXT: "WATCHLIST",   # graph distance to externally listed wallets
     BLOCKCHAIN_CONTEXT: "CONTEXT",      # descriptive; not risk evidence
+    CROSS_LAYER_CONTEXT: "RULE",        # statistical coherence test across the two layers
 }
 
 EXPLANATION_STATEMENT = (
@@ -150,6 +154,17 @@ FUSION_WEIGHTS = {
     ANOMALY_CONTEXT: 0.5,
 }
 
+#: The cross-layer line's policy weight, and whether it is fused. The
+#: pre-registered exp-net2 (research/network_2026_09_25/RESULT_exp_net2.md)
+#: found fusing it LOWERED alert-ranking nAP in both the SIGNAL and NULL
+#: worlds: relay coherence marks operator-controlled flow, which benign
+#: services produce too. So it is computed, shown and used to link
+#: clusters across layers, and does not move the score.
+CROSS_LAYER_WEIGHT = 0.5
+FUSE_CROSS_LAYER = False
+if FUSE_CROSS_LAYER:
+    FUSION_WEIGHTS[CROSS_LAYER_CONTEXT] = CROSS_LAYER_WEIGHT
+
 #: A line counts as corroborating when PRESENT with at least this score.
 CORROBORATION_MIN = 0.3
 
@@ -218,6 +233,7 @@ def build_alert_run(
     link_suggestions: Any | None = None,
     stacker: dict[str, Any] | None = None,
     network_propagation: Any | None = None,
+    cross_layer: Any | None = None,
 ) -> AlertRunResult:
     """Fuse multi-source evidence and rank alerts across all entity clusters."""
     alerts: list[AlertItem] = []
@@ -235,6 +251,20 @@ def build_alert_run(
     # fitted out-of-fold on Elliptic++ (exp14); otherwise the calibrated
     # model probability is used alone.
     model_line = _model_line(ml_result, propagation_result, stacker)
+
+    # Cross-layer flows: clusters the network layer ties together (ownership
+    # leads, never merged into one entity).
+    links_of: dict[str, list[dict]] = {}
+    if cross_layer is not None:
+        for flow in cross_layer.relay_flows(blockchain_graph, cluster_result.address_to_cluster):
+            for own in flow["clusters"]:
+                links_of.setdefault(own, []).append({
+                    "relay": flow["relay"], "p_value": flow["p_value"],
+                    "relay_coherent_pairs": flow["relay_coherent_pairs"], "expected": flow["expected"],
+                    "relay_parent_hops": flow["relay_parent_hops"],
+                    "linked_clusters": [c for c in flow["clusters"] if c != own][:25],
+                    "flow_size": len(flow["clusters"]),
+                })
 
     # Evaluate each cluster
     for cid, addrs in cluster_result.cluster_to_addresses.items():
@@ -412,6 +442,38 @@ def build_alert_run(
                 explanation="No network telemetry observations were recorded for transactions in this cluster.",
             ))
 
+        # 4b. CROSS-LAYER COHERENCE: do the network and on-chain layers agree?
+        if cross_layer is not None:
+            test = cross_layer.evaluate(total_txs)
+            relay = test["relays"][0]["peer_ip"] if test["relays"] else None
+            if test["status"] == "PRESENT":
+                explanation = (
+                    f"{test['coherent_pairs']} of {test['hop_pairs']} on-chain hop(s) through this cluster were "
+                    f"first announced by the same relay"
+                    + (f" ({relay})" if relay else "")
+                    + f"; chance rate in this capture {test['chance_rate'] * 100:.1f}% "
+                    f"(expected {test['expected_coherent']}), p = {test['p_value']:.2g}. "
+                    "The network layer agrees with the money flow. A relay is a vantage point, not the sender."
+                )
+            elif test["hop_pairs"]:
+                explanation = (
+                    f"{test['coherent_pairs']} of {test['hop_pairs']} on-chain hop(s) shared a first-seen relay; "
+                    f"chance alone predicts {test.get('expected_coherent', 0)}. No cross-layer coherence."
+                )
+            else:
+                explanation = "No observed on-chain hops to compare against the network layer."
+            evidence_items.append(EvidenceItem(
+                category=CROSS_LAYER_CONTEXT,
+                signal_name="cross_layer_relay_coherence",
+                status=test["status"],
+                score=test["score"],
+                details={**test, "fused": FUSE_CROSS_LAYER, "weight": CROSS_LAYER_WEIGHT,
+                         "linked_clusters": links_of.get(cid, [])[:10]},
+                explanation=explanation + ("" if FUSE_CROSS_LAYER else " Not part of the risk score."),
+            ))
+            if FUSE_CROSS_LAYER and test["status"] == "PRESENT":
+                scores_to_fuse.append((test["score"], CROSS_LAYER_WEIGHT))
+
         # 5. SUPERVISED ML CONTEXT
         if ml_result and ml_result.is_available:
             # Score from model if available
@@ -498,6 +560,9 @@ def build_alert_run(
                 "network_observations": obs_count,
                 # Embedding-similar entities in OTHER clusters. Shown, not fused:
                 # similarity is a hint about ownership, not about risk.
+                # Other clusters joined to this one across layers (same relay
+                # first announced the hops between them beyond chance).
+                "cross_layer_links": links_of.get(cid, [])[:10],
                 "suggested_links": (
                     link_suggestions.for_cluster(cid)[:5] if link_suggestions else []
                 ),

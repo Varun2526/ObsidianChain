@@ -145,6 +145,26 @@ def view(conn: sqlite3.Connection, data_root, investigation_id: str,
             "referenced_run": fingerprint, "current_artifact_run": fingerprint,
             "detail": f"Run {run_id} has no alert of rank {rank}.",
         }
+    # The cross-layer line, with every linked cluster resolved to its alert
+    # in this run so the investigator can follow the lead.
+    ranked = _read(run_dir, "alerts.json").get("alerts", [])
+    alert_of = {a["cluster_id"]: a for a in ranked}
+    line = next((e for e in alert.get("evidence", []) if e.get("signal_name") == "cross_layer_relay_coherence"), None)
+    cross = None
+    if line is not None:
+        flows = []
+        for flow in (line.get("details") or {}).get("linked_clusters", []):
+            linked = []
+            for cid in flow.get("linked_clusters", []):
+                other = alert_of.get(cid)
+                linked.append({"cluster_id": cid, "primary_address": other["primary_address"] if other else None,
+                               "rank": other["rank"] if other else None,
+                               "severity": other["severity"] if other else None,
+                               "alert_ref": alert_ref(fingerprint, other["rank"]) if other else None})
+            flows.append({**flow, "linked": sorted(linked, key=lambda x: (x["rank"] is None, x["rank"] or 0))})
+        cross = {"status": line.get("status"), "score": line.get("score"), "explanation": line.get("explanation"),
+                 "details": {k: v for k, v in (line.get("details") or {}).items() if k != "linked_clusters"},
+                 "flows": flows}
     graph = _read(run_dir, "investigation_graph.json")
     sub = _subgraph(graph, f"cluster:{alert['cluster_id']}")
     propagation = _read(run_dir, "network_propagation.json")
@@ -174,5 +194,6 @@ def view(conn: sqlite3.Connection, data_root, investigation_id: str,
                 "meaning": propagation.get("meaning"),
                 "transactions": network_rows,
             },
+            "cross_layer": cross,
         },
     }
