@@ -47,6 +47,16 @@ CANONICAL_COLUMNS = [
     "fee", "script_type", "geo_country", "asn",
 ]
 
+#: Optional fields beyond the PS schema that the network layer needs. The PS
+#: names network fields per observation but no observer identity; a capture
+#: collected from several vantage points needs one to tell "two peers
+#: announced it to one sensor" from "one peer announced it to two sensors".
+#: Kept after the canonical columns, so the canonical order is unchanged.
+#: Accepted aliases map to the one name used downstream.
+EXTENSION_COLUMNS = ["observer_id"]
+EXTENSION_ALIASES = {"observer": "observer_id", "sensor_id": "observer_id"}
+OUTPUT_COLUMNS = CANONICAL_COLUMNS + EXTENSION_COLUMNS
+
 #: Without these a record cannot be correlated at all: there is nothing to
 #: join to the blockchain layer, or nothing to place in time.
 REQUIRED_COLUMNS = ["txid"]
@@ -245,6 +255,9 @@ def ingest(path, declared_format: str | None = None
 
     report = ValidationReport(source_format=source_format, rows_read=int(len(raw)))
     raw.columns = [str(c).strip() for c in raw.columns]
+    for alias, name in EXTENSION_ALIASES.items():
+        if alias in raw.columns and name not in raw.columns:
+            raw = raw.rename(columns={alias: name})
     present = [c for c in CANONICAL_COLUMNS if c in raw.columns]
     report.columns_present = present
     report.columns_missing = [c for c in CANONICAL_COLUMNS if c not in raw.columns]
@@ -255,7 +268,7 @@ def ingest(path, declared_format: str | None = None
             f"required column(s) {report.required_missing} are absent; without "
             f"them a record cannot be joined to the blockchain layer"
         )
-        return pd.DataFrame(columns=CANONICAL_COLUMNS), report
+        return pd.DataFrame(columns=OUTPUT_COLUMNS), report
 
     for name in LIST_COLUMNS:
         if name in report.columns_missing:
@@ -270,7 +283,7 @@ def ingest(path, declared_format: str | None = None
             )
 
     frame = pd.DataFrame(index=raw.index)
-    for column in CANONICAL_COLUMNS:
+    for column in OUTPUT_COLUMNS:
         if column not in raw.columns:
             frame[column] = None
             continue
@@ -304,7 +317,7 @@ def ingest(path, declared_format: str | None = None
         frame, report = _deduplicate(frame, report)
 
     report.rows_valid = int(len(frame))
-    return frame[CANONICAL_COLUMNS], report
+    return frame[OUTPUT_COLUMNS], report
 
 
 def _canonical_tuples(addresses, amounts) -> list[tuple[str, str]]:

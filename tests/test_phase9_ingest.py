@@ -97,7 +97,9 @@ def test_the_normalised_shape_is_identical_across_formats(tmp_path, fmt) -> None
     """The property that makes three parsers one ingestion path."""
     path = WRITERS[fmt](tmp_path / f"sample.{fmt}")
     frame, _ = ingest.ingest(path)
-    assert list(frame.columns) == ingest.CANONICAL_COLUMNS
+    # The PS canonical columns, in their contract order, then the documented
+    # extensions (observer identity for multi-vantage captures).
+    assert list(frame.columns) == ingest.CANONICAL_COLUMNS + ingest.EXTENSION_COLUMNS
     assert frame["txid"].tolist() == ["1076", "1077"]
     assert frame["input_addresses"].iloc[0] == ["1aaa", "1bbb"]
     assert frame["output_addresses"].iloc[1] == ["1eee", "1fff"]
