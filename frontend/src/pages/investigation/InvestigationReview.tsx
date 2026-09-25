@@ -166,7 +166,8 @@ export function InvestigationReview() {
         </div>
       </div>
 
-      {/* Reviewer Action Canvas (Correction 8) */}
+      {/* Reviewer decision: offered only while a decision is pending. */}
+      {inv.status === "SUBMITTED" || inv.status === "IN_REVIEW" ? (<>
       <section className="panel" style={{ 
         borderColor: "var(--border-strong)", 
         background: "linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-raised) 100%)",
@@ -225,6 +226,12 @@ export function InvestigationReview() {
           </div>
         </div>
       </section>
+      </>) : (
+        <div className="banner banner-ok" role="status">
+          <h4>No decision pending</h4>
+          <p>This case is {inv.status}. {inv.status === "APPROVED" || inv.status === "CLOSED" ? "The review decision is recorded in the audit log." : "A decision is possible once the investigator submits it."}</p>
+        </div>
+      )}
 
       {/* Prior Casework Notes & Review History */}
       <section className="panel">

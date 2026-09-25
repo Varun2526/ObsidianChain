@@ -167,6 +167,10 @@ function stylesheet(large: boolean): cytoscape.Stylesheet[] {
       shape: "diamond", width: 13, height: 13, "background-color": c.ground, "border-color": c.network,
       label: large ? "" : "data(label)",
     } },
+    { selector: 'node[kind = "asn"]', style: {
+      shape: "round-hexagon", width: 18, height: 18, "background-color": c.ground, "border-color": c.network,
+      "border-style": "double", "border-width": 3, label: "data(label)",
+    } },
     { selector: 'node[severity = "CRITICAL"]', style: { "border-color": c.critical, "border-width": 2.5 } },
     { selector: 'node[severity = "HIGH"]', style: { "border-color": c.high, "border-width": 2.5 } },
     { selector: 'node[severity = "MEDIUM"]', style: { "border-color": c.medium, "border-width": 2 } },
@@ -185,6 +189,9 @@ function stylesheet(large: boolean): cytoscape.Stylesheet[] {
     } },
     { selector: 'edge[kind = "MEMBER_OF"]', style: {
       "line-style": "dashed", "line-dash-pattern": [3, 3], "target-arrow-shape": "none", opacity: 0.35, width: 0.8,
+    } },
+    { selector: 'edge[kind = "IN_ASN"]', style: {
+      "line-style": "dashed", "line-dash-pattern": [2, 3], "line-color": c.network, "target-arrow-shape": "none", opacity: 0.4, width: 0.8,
     } },
     { selector: 'edge[kind = "ANNOUNCED_BY"]', style: {
       "line-style": "dotted", "line-color": c.network, "target-arrow-color": c.network, opacity: 0.55,
@@ -237,7 +244,7 @@ function layoutOnce(cy: Core, kind: GraphLayout, incremental: boolean) {
     return;
   }
   const flow = cy.nodes('[kind = "address"], [kind = "transaction"]')
-    .union(cy.edges('[kind = "SPENDS"], [kind = "PAYS"]'));
+    .union(cy.edges('[kind = "SPENDS"], [kind = "PAYS"], [kind = "RECEIVES"]'));
   flow.layout(layoutOptions("flow", flow.nodes().length, incremental)).run();
   const bb = flow.nodes().boundingBox({});
   const place = (sel: string, x: number) => {
@@ -247,6 +254,7 @@ function layoutOnce(cy: Core, kind: GraphLayout, incremental: boolean) {
   };
   place('[kind = "cluster"]', bb.x1 - 160);
   place('[kind = "ip"]', bb.x2 + 160);
+  place('[kind = "asn"]', bb.x2 + 320);
   cy.fit(cy.elements(), 32);
   // A wide fan-out ranks into a column far taller than the viewport; fitting
   // it shrinks every node to a dot. Stay readable and centre on the seeds.

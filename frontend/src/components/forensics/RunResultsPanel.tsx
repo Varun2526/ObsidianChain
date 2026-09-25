@@ -15,6 +15,7 @@ import * as api from "../../api/console";
 import type { EvidenceClass, RunResults, RunSeverity } from "../../api/types";
 import { ErrorState } from "../ui/ErrorState";
 import { Address, Skeleton } from "../ui/primitives";
+import { RunGraphPanel, RunNetworkPanel } from "./RunNetworkPanel";
 
 const CLASS_LABEL: Record<EvidenceClass, string> = {
   MODEL: "Model (learned association)",
@@ -28,7 +29,8 @@ function Sev({ severity }: { severity: RunSeverity }) {
   return <span className={`sev sev-${severity}`}>{severity}</span>;
 }
 
-export function RunResultsPanel({ investigationId, runId }: { investigationId: string; runId: string }) {
+export function RunResultsPanel({ investigationId, runId, showNetwork = true }:
+  { investigationId: string; runId: string; showNetwork?: boolean }) {
   const [data, setData] = useState<RunResults | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -120,6 +122,12 @@ export function RunResultsPanel({ investigationId, runId }: { investigationId: s
         </table>
         <p className="small faint">Run {data.run_id} · input sha256 {String(data.input_sha256).slice(0, 16)}…</p>
       </div>
+      {showNetwork && (
+        <div style={{ padding: "0 16px 16px" }}>
+          <RunNetworkPanel investigationId={investigationId} runId={runId} />
+          <RunGraphPanel investigationId={investigationId} runId={runId} />
+        </div>
+      )}
     </section>
   );
 }

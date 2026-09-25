@@ -16,6 +16,7 @@ import type { CaseAlertRow } from "../../api/types";
 import { useAuth } from "../../store/auth";
 import { useCase } from "../../store/investigation";
 import { DispositionBadge, RunStatusChip, StaleRunBanner } from "../../components/layout/CaseChrome";
+import { RunResultsPanel } from "../../components/forensics/RunResultsPanel";
 
 
 export function InvestigationOverview() {
@@ -532,6 +533,11 @@ export function InvestigationOverview() {
           </div>
         </div>
       </section>
+
+      {/* The latest completed dataset run: ranked entities, propagation, run graph */}
+      {dataset?.analysis_run?.status === "COMPLETE" && (
+        <RunResultsPanel investigationId={invId} runId={dataset.analysis_run.id} />
+      )}
 
       {/* Datasets and Analytical Run Details */}
       <section className="panel">
