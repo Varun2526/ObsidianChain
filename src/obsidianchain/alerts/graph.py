@@ -112,8 +112,13 @@ def project_investigation_graph(
     peeling_result: PeelingResult | None = None,
     mixing_result: MixingResult | None = None,
     link_suggestions: Any | None = None,
+    geoip_provider: Any | None = None,
 ) -> InvestigationGraph:
     """Project the complete multi-layer investigation graph.
+
+    ``geoip_provider`` (``geoip.OfflineCSVProvider``), when installed, adds
+    each peer IP's resolved country with its source, next to (never in
+    place of) the capture's own ``geo_country``.
 
     ``link_suggestions`` (``ml.embeddings.LinkSuggestions``) adds
     cluster--[SUGGESTED_LINK]-->cluster edges. They are drawn, never merged.
@@ -212,6 +217,8 @@ def project_investigation_graph(
         ip_node_id = f"ip:{obs.src_ip}"
         if ip_node_id not in nodes:
             facts = _geoip.resolve_ip(obs.src_ip)
+            resolved = (geoip_provider.resolve_ip(obs.src_ip)
+                        if geoip_provider is not None and geoip_provider.version != "uninstalled" else None)
             nodes[ip_node_id] = GraphNode(
                 id=ip_node_id,
                 kind="ip",
@@ -223,6 +230,8 @@ def project_investigation_graph(
                     "geo_country_source": "capture-supplied (unverified)" if obs.geo_country else None,
                     "globally_routable": facts.globally_routable and facts.special_purpose is None,
                     "special_purpose": facts.special_purpose,
+                    "resolved_country": resolved.country_iso if resolved else None,
+                    "resolved_country_source": resolved.country_source if resolved else None,
                 },
             )
         if obs.asn is not None:

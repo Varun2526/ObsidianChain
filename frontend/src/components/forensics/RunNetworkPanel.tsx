@@ -22,6 +22,16 @@ function utc(ms: number | null): string {
   return new Date(ms).toISOString().replace("T", " ").replace(".000Z", "Z");
 }
 
+/** Shown wherever a DB-IP-resolved country appears (CC BY 4.0 requires it). */
+export const DBIP_ATTRIBUTION = "IP geolocation by DB-IP (db-ip.com), CC BY 4.0";
+
+function countryCell(t: TxPropagation): string {
+  const parts: string[] = [];
+  if (t.resolved_countries?.length) parts.push(t.resolved_countries.join(", "));
+  if (t.countries.length) parts.push(`capture: ${t.countries.join(", ")} (unverified)`);
+  return parts.join(" · ") || "—";
+}
+
 function secs(ms: number | null): string {
   return ms == null ? "n/a" : `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
 }
@@ -48,6 +58,8 @@ export function RunNetworkPanel({ investigationId, runId }: { investigationId: s
         <Metric k="Distinct peers" v={s.distinct_peers} d={`${s.distinct_asns} ASNs`} />
         <Metric k="Timed" v={s.with_timing} d={`${s.with_spread} with two or more timed observations`} />
         <Metric k="Median spread" v={secs(s.median_spread_ms)} d="first to last observation, per transaction" />
+        <Metric k="Peer countries" v={s.country_resolution ? (s.distinct_resolved_countries ?? 0) : "n/a"}
+                d={s.country_resolution ? "resolved offline (DB-IP Lite)" : "no GeoIP database installed"} />
         <Metric k="Observer identity" v={observerSources.length === 1 && observerSources[0]![0] === "observer_id" ? "observer_id" : "mixed"}
                 d={observerSources.map(([k, n]) => `${n} via ${k}`).join(" · ")} />
       </div>
@@ -66,7 +78,10 @@ export function RunNetworkPanel({ investigationId, runId }: { investigationId: s
         </table>
       </div>
       <div className="panel-foot">
-        {d.meaning} Countries are the capture&apos;s own <code>geo_country</code> values unless an offline GeoIP database is installed.
+        {d.meaning}{" "}
+        {s.country_resolution
+          ? <>Peer countries are resolved offline from the peer IP ({s.country_resolution.replace(` (${DBIP_ATTRIBUTION})`, "")}); a relay&apos;s country is not the sender&apos;s. {DBIP_ATTRIBUTION}. Capture-supplied <code>geo_country</code> values are shown separately and are unverified.</>
+          : <>Countries are the capture&apos;s own <code>geo_country</code> values (unverified); no offline GeoIP database is installed.</>}
         {d.transactions_total > d.transactions.length && ` Showing ${d.transactions.length} of ${d.transactions_total}.`}
       </div>
     </section>
@@ -86,14 +101,14 @@ function Row({ t, open, onToggle }: { t: TxPropagation; open: boolean; onToggle:
         <td className="num">{t.asn_count}</td>
         <td className="mono small">{t.first_seen_peers.join(", ") || "n/a"}</td>
         <td className="num">{pct(t.dominant_peer_share, 0)}</td>
-        <td className="small">{t.countries.length ? `${t.countries.join(", ")} (unverified)` : "—"}</td>
+        <td className="small">{countryCell(t)}</td>
         <td><button type="button" className="btn btn-sm btn-ghost" aria-expanded={open} onClick={onToggle}>{open ? "Hide" : "Peers"}</button></td>
       </tr>
       {open && (
         <tr>
           <td colSpan={11} style={{ background: "var(--oc-surface-inset)" }}>
             <table>
-              <thead><tr><th>Peer IP</th><th>Class</th><th>First arrival (UTC)</th><th className="num">After first</th><th className="num">Obs.</th><th>Observers</th><th>ASN</th></tr></thead>
+              <thead><tr><th>Peer IP</th><th>Class</th><th>First arrival (UTC)</th><th className="num">After first</th><th className="num">Obs.</th><th>Observers</th><th>ASN</th><th>Country</th></tr></thead>
               <tbody>{t.peers.map((p) => (
                 <tr key={p.peer_ip}>
                   <td className="mono small">{p.peer_ip}</td>
@@ -103,6 +118,7 @@ function Row({ t, open, onToggle }: { t: TxPropagation; open: boolean; onToggle:
                   <td className="num">{p.observations}</td>
                   <td className="mono small">{p.observers.join(", ") || "unknown"}</td>
                   <td className="mono small">{p.asns.map((a) => `AS${a}`).join(", ") || "—"}</td>
+                  <td className="small">{p.country_iso ?? "—"}</td>
                 </tr>
               ))}</tbody>
             </table>

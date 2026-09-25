@@ -71,6 +71,13 @@ PRIVATE_ASN_RANGES = ((64512, 65534), (4200000000, 4294967294))
 #: Format: ``network,country_iso,country_name`` with a header row.
 GEOIP_DATABASE = Path("reference") / "geoip_country.csv"
 
+#: DB-IP "IP to Country Lite" (monthly; https-free text so the offline
+#: source scan stays clean): rows of ``ip_start,ip_end,country_code`` for
+#: IPv4 and IPv6, ``ZZ`` meaning unassigned. Licensed CC BY 4.0: any page
+#: that shows a country from it must credit "IP geolocation by DB-IP".
+DBIP_GLOB = "dbip-country-lite-*.csv*"
+DBIP_ATTRIBUTION = "IP geolocation by DB-IP (db-ip.com), CC BY 4.0"
+
 UNKNOWN = "UNKNOWN"
 NOT_GLOBALLY_ROUTABLE = "NOT_GLOBALLY_ROUTABLE"
 
@@ -122,6 +129,73 @@ _NETWORKS = [
 ]
 
 
+class RangeDatabase:
+    """Sorted IP ranges with binary-search lookup (DB-IP Lite layout).
+
+    717k ranges scanned linearly would cost seconds per address; bisect on
+    the range starts makes a lookup a few microseconds.
+    """
+
+    def __init__(self, rows, *, source: str, version: str) -> None:
+        by_version: dict[int, list[tuple[int, int, str]]] = {4: [], 6: []}
+        for start, end, code in rows:
+            try:
+                a, b = ipaddress.ip_address(start), ipaddress.ip_address(end)
+            except ValueError:
+                continue  # a malformed line is skipped, never guessed at
+            if a.version != b.version:
+                continue
+            by_version[a.version].append((int(a), int(b), code.strip().upper()))
+        self._starts, self._ends, self._codes = {}, {}, {}
+        for v, ranges in by_version.items():
+            ranges.sort()
+            self._starts[v] = [r[0] for r in ranges]
+            self._ends[v] = [r[1] for r in ranges]
+            self._codes[v] = [r[2] for r in ranges]
+        self.source = source
+        self.version = version
+        self.ranges = sum(len(v) for v in by_version.values())
+
+    def __bool__(self) -> bool:
+        return self.ranges > 0
+
+    def lookup(self, address) -> str | None:
+        import bisect
+        v = address.version
+        starts = self._starts.get(v, [])
+        i = bisect.bisect_right(starts, int(address)) - 1
+        if i < 0 or int(address) > self._ends[v][i]:
+            return None
+        code = self._codes[v][i]
+        return None if code in ("", "ZZ") else code
+
+
+_RANGE_CACHE: dict[tuple[str, int, int], RangeDatabase] = {}
+
+
+def _load_dbip(path: Path) -> RangeDatabase:
+    import gzip
+    st = path.stat()
+    key = (str(path), st.st_size, st.st_mtime_ns)
+    if key not in _RANGE_CACHE:
+        opener = gzip.open if path.suffix == ".gz" else open
+        with opener(path, "rt", encoding="utf-8", newline="") as handle:
+            rows = [r[:3] for r in csv.reader(handle) if len(r) >= 3]
+        stem = path.name.split(".csv")[0]
+        _RANGE_CACHE.clear()
+        _RANGE_CACHE[key] = RangeDatabase(rows, source=path.name, version=stem)
+    return _RANGE_CACHE[key]
+
+
+def find_dbip(data_root) -> Path | None:
+    """The newest DB-IP Lite file under data/reference/, if one was placed there."""
+    if data_root is None:
+        return None
+    ref = Path(data_root) / "reference"
+    found = sorted(ref.glob(DBIP_GLOB)) if ref.is_dir() else []
+    return found[-1] if found else None
+
+
 def load_geoip_database(data_root=None) -> list[tuple]:
     """Read a vendored CIDR->country table, if one was placed there.
 
@@ -133,7 +207,8 @@ def load_geoip_database(data_root=None) -> list[tuple]:
         return []
     path = Path(data_root) / GEOIP_DATABASE
     if not path.is_file():
-        return []
+        dbip = find_dbip(data_root)
+        return _load_dbip(dbip) if dbip is not None else []
     entries = []
     with path.open(encoding="utf-8", newline="") as handle:
         for row in csv.DictReader(handle):
@@ -167,7 +242,21 @@ def resolve_ip(ip: str, database: list[tuple] | None = None) -> IpFacts:
                 ),
             )
 
-    for network, iso, country in (database or []):
+    if isinstance(database, RangeDatabase):
+        iso = database.lookup(address)
+        if iso:
+            return IpFacts(
+                ip=str(address), valid=True, special_purpose=None, rfc=None,
+                globally_routable=True, country_iso=iso, country_name=None,
+                country_source=f"geoip_database ({database.version}; {DBIP_ATTRIBUTION})",
+            )
+        if database:
+            return IpFacts(
+                ip=str(address), valid=True, special_purpose=None, rfc=None,
+                globally_routable=True, country_iso=None, country_name=None,
+                country_source=f"not assigned in {database.version}",
+            )
+    for network, iso, country in (database if isinstance(database, list) else []):
         if address.version == network.version and address in network:
             return IpFacts(
                 ip=str(address), valid=True, special_purpose=None, rfc=None,
@@ -232,6 +321,8 @@ class OfflineCSVProvider:
         self.data_root = Path(data_root) if data_root is not None else None
         self._entries = load_geoip_database(self.data_root)
         self._path = (self.data_root / GEOIP_DATABASE) if self.data_root is not None else None
+        if self._path is not None and not self._path.is_file():
+            self._path = find_dbip(self.data_root)
         self._sha256 = "none"
         if self._path is not None and self._path.is_file():
             self._sha256 = hashlib.sha256(self._path.read_bytes()).hexdigest()
@@ -244,7 +335,13 @@ class OfflineCSVProvider:
 
     @property
     def version(self) -> str:
+        if isinstance(self._entries, RangeDatabase) and self._entries:
+            return self._entries.version
         return "offline-csv-1.0" if self._entries else "uninstalled"
+
+    @property
+    def attribution(self) -> str | None:
+        return DBIP_ATTRIBUTION if isinstance(self._entries, RangeDatabase) and self._entries else None
 
     @property
     def sha256(self) -> str:

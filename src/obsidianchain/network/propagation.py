@@ -106,11 +106,13 @@ class PeerArrival:
     asns: list[int]
     ip_class: str
     """``global``, or the IANA special-purpose name (e.g. ``Private-Use``)."""
+    country_iso: str | None = None
+    """Resolved by the offline GeoIP provider, when one is installed."""
 
     def as_dict(self) -> dict:
         return {"peer_ip": self.peer_ip, "first_seen_ms": self.first_seen_ms,
                 "observations": self.observations, "observers": self.observers,
-                "asns": self.asns, "ip_class": self.ip_class}
+                "asns": self.asns, "ip_class": self.ip_class, "country_iso": self.country_iso}
 
 
 @dataclass
@@ -131,6 +133,8 @@ class TxPropagation:
     dominant_peer_ip: str | None = None
     dominant_peer_share: float | None = None
     non_routable_peer_share: float | None = None
+    resolved_countries: list[str] = field(default_factory=list)
+    country_resolution: str | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -154,6 +158,8 @@ class TxPropagation:
             "dominant_peer_ip": self.dominant_peer_ip,
             "dominant_peer_share": self.dominant_peer_share,
             "non_routable_peer_share": self.non_routable_peer_share,
+            "resolved_countries": self.resolved_countries,
+            "country_resolution": self.country_resolution,
         }
 
 
@@ -173,6 +179,12 @@ def _observer_of(obs, source: str) -> str | None:
     return None
 
 
+def _resolved_country(ip: str, provider) -> str | None:
+    if provider is None or getattr(provider, "version", "uninstalled") == "uninstalled":
+        return None
+    return provider.resolve_ip(ip).country_iso
+
+
 def _ip_class(ip: str) -> str:
     facts = _geoip.resolve_ip(ip)
     if not facts.valid:
@@ -180,8 +192,13 @@ def _ip_class(ip: str) -> str:
     return "global" if facts.globally_routable and facts.special_purpose is None else (facts.special_purpose or "not-routable")
 
 
-def analyse_transaction(txid: str, observations: list) -> TxPropagation:
-    """Propagation facts for one transaction's observations."""
+def analyse_transaction(txid: str, observations: list, geoip_provider=None) -> TxPropagation:
+    """Propagation facts for one transaction's observations.
+
+    ``geoip_provider`` (optional) resolves each peer's country offline. Its
+    result is kept apart from the capture's own ``geo_country`` so a reader
+    can see which claim came from where.
+    """
     source = _observer_source(observations)
     timed = [(timestamp_ms(o.timestamp), o) for o in observations]
     times = [t for t, _ in timed if t is not None]
@@ -205,6 +222,7 @@ def analyse_transaction(txid: str, observations: list) -> TxPropagation:
             observers=observers,
             asns=sorted({a for a in (_asn(o.asn) for _, o in rows) if a is not None}),
             ip_class=_ip_class(ip),
+            country_iso=_resolved_country(ip, geoip_provider),
         ))
     peers.sort(key=lambda p: (p.first_seen_ms is None, p.first_seen_ms or 0, p.peer_ip))
 
@@ -218,7 +236,15 @@ def analyse_transaction(txid: str, observations: list) -> TxPropagation:
     with_ip = sum(counts.values())
     non_routable = [p for p in peers if p.ip_class != "global"]
 
+    resolution = None
+    if geoip_provider is not None and getattr(geoip_provider, "version", "uninstalled") != "uninstalled":
+        resolution = f"offline GeoIP {geoip_provider.version}"
+        attribution = getattr(geoip_provider, "attribution", None)
+        if attribution:
+            resolution += f" ({attribution})"
     return TxPropagation(
+        resolved_countries=sorted({p.country_iso for p in peers if p.country_iso}),
+        country_resolution=resolution,
         txid=txid,
         observations=len(observations),
         timed_observations=len(times),
@@ -256,6 +282,8 @@ class PropagationResult:
         observer_known = False
         asns: set[int] = set()
         countries: set[str] = set()
+        resolved: set[str] = set()
+        resolution = None
         classes: dict[str, str] = {}
         for r in rows:
             for p in r.peers:
@@ -268,6 +296,8 @@ class PropagationResult:
                 observers.update(r.observers)
             asns.update(r.asns)
             countries.update(r.countries)
+            resolved.update(r.resolved_countries)
+            resolution = resolution or r.country_resolution
         total = sum(peer_obs.values())
         top_ip, top_n = peer_obs.most_common(1)[0] if peer_obs else (None, 0)
         spreads = sorted(r.spread_ms for r in rows if r.spread_ms is not None)
@@ -281,6 +311,8 @@ class PropagationResult:
             "asns": sorted(asns),
             "countries": sorted(countries),
             "country_source": "capture-supplied geo_country (unverified)" if countries else None,
+            "resolved_countries": sorted(resolved),
+            "country_resolution": resolution,
             "dominant_peer_ip": top_ip,
             "dominant_peer_share": (top_n / total) if total else None,
             "non_routable_peer_share": (sum(1 for c in classes.values() if c != "global") / len(classes)) if classes else None,
@@ -303,6 +335,8 @@ class PropagationResult:
             "distinct_peers": len({p.peer_ip for r in rows for p in r.peers}),
             "distinct_asns": len({a for r in rows for a in r.asns}),
             "observer_source": dict(sources),
+            "distinct_resolved_countries": len({c for r in rows for c in r.resolved_countries}),
+            "country_resolution": next((r.country_resolution for r in rows if r.country_resolution), None),
         }
 
     def as_dict(self) -> dict:
@@ -316,9 +350,10 @@ class PropagationResult:
         }
 
 
-def analyse(correlation_result) -> PropagationResult:
+def analyse(correlation_result, geoip_provider=None) -> PropagationResult:
     """Propagation for every transaction that has observations (correlated or not)."""
     grouped: dict[str, list] = {}
     for obs in correlation_result.all_observations:
         grouped.setdefault(obs.txid, []).append(obs)
-    return PropagationResult({txid: analyse_transaction(txid, obs) for txid, obs in grouped.items()})
+    return PropagationResult({txid: analyse_transaction(txid, obs, geoip_provider)
+                              for txid, obs in grouped.items()})
