@@ -314,13 +314,15 @@ export function InvestigationOverview() {
             {/* 4. Run Fingerprint */}
             <div style={{ padding: "12px 14px", background: "var(--bg)", border: "1px solid var(--hairline)", borderRadius: 6 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                <span className="small muted">Reference alert run</span>
+                <span className="small muted">Bound alert run</span>
                 <RunStatusChip status={run?.status ?? "CURRENT"} />
               </div>
               <strong style={{ display: "block", fontSize: 13 }} className="mono">
                 {run?.bound_run_fingerprint ? `${run.bound_run_fingerprint.slice(0, 14)}…` : "Not bound"}
               </strong>
-              <span className="small faint">{run?.bound_run_fingerprint ? "Fixed for every alert in this case" : "Binds when the first alert is referenced"}</span>
+              <span className="small faint">{run?.bound_run_fingerprint
+                  ? (dataset?.analysis_run?.run_fingerprint?.startsWith(run.bound_run_fingerprint) ? "This case's uploaded-dataset run" : "Elliptic++ reference run")
+                  : "Binds when the first alert is referenced"}</span>
             </div>
           </div>
         </div>

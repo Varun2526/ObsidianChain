@@ -28,7 +28,7 @@ const NAV: NavGroup[] = [
     heading: "Investigate",
     items: [
       { to: "/", icon: "overview", label: "Overview", end: true },
-      { to: "/alerts", icon: "alert", label: "Alerts" },
+      { to: "/alerts", icon: "alert", label: "Reference alerts" },
       { to: "/investigations", icon: "folder", label: "Investigations" },
       { to: "/graph", icon: "graph", label: "Graph explorer" },
     ],
@@ -62,7 +62,7 @@ const FLUSH_ROUTES = [/^\/graph/];
 function pageTitle(path: string): string {
   if (path === "/") return "Overview";
   if (path.startsWith("/alerts/")) return "Alert";
-  if (path.startsWith("/alerts")) return "Alerts";
+  if (path.startsWith("/alerts")) return "Reference alerts";
   if (path.startsWith("/investigations/new")) return "New investigation";
   if (path.startsWith("/investigations")) return "Investigations";
   if (path.startsWith("/graph")) return "Graph explorer";
@@ -187,7 +187,7 @@ export function AppShell() {
               <span>Search address, transaction, alert, case</span>
               <kbd>⌘K</kbd>
             </button>
-            <span className="env-chip" title="Analytical artifacts are read from local, provenance-checked files. No network access.">Elliptic++ · offline</span>
+            <span className="env-chip" title="Runs fully offline. Analytical artifacts, the model and the Elliptic++ reference data are local, provenance-checked files.">Offline</span>
           </header>
 
           {activeInv && <PersistentCaseHeader inv={activeInv} />}

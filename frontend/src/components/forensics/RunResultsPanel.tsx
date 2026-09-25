@@ -10,9 +10,11 @@
  * learned association is never presented as a rule or an observation.
  */
 import { Fragment, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import * as api from "../../api/console";
-import type { EvidenceClass, RunResults, RunSeverity } from "../../api/types";
+import type { DispositionState, EvidenceClass, RunResults, RunSeverity } from "../../api/types";
+import { DispositionBadge } from "../layout/CaseChrome";
 import { ErrorState } from "../ui/ErrorState";
 import { Address, Skeleton } from "../ui/primitives";
 import { RunGraphPanel, RunNetworkPanel } from "./RunNetworkPanel";
@@ -29,8 +31,10 @@ function Sev({ severity }: { severity: RunSeverity }) {
   return <span className={`sev sev-${severity}`}>{severity}</span>;
 }
 
-export function RunResultsPanel({ investigationId, runId, showNetwork = true }:
-  { investigationId: string; runId: string; showNetwork?: boolean }) {
+export function RunResultsPanel({ investigationId, runId, showNetwork = true, decisions, title = "Ranked alerts for this run" }:
+  { investigationId: string; runId: string; showNetwork?: boolean;
+    /** alert_ref -> the investigator's current decision, when the caller has the case's references. */
+    decisions?: Record<string, string>; title?: string }) {
   const [data, setData] = useState<RunResults | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -51,7 +55,7 @@ export function RunResultsPanel({ investigationId, runId, showNetwork = true }:
   const holdout = data.model.holdout_result;
   return (
     <section className="panel" style={{ marginTop: 20 }} aria-label="Run results">
-      <div className="panel-head"><h2>Ranked alerts for this run</h2></div>
+      <div className="panel-head"><h2>{title}</h2></div>
       <div className="panel-body">
         <div className="card-grid-4" style={{ marginBottom: 14 }}>
           <div className="stat-mini">
@@ -86,7 +90,7 @@ export function RunResultsPanel({ investigationId, runId, showNetwork = true }:
 
         <table className="table" style={{ width: "100%" }}>
           <thead>
-            <tr><th>#</th><th>Severity</th><th>Lead address</th><th>Members</th><th>Fused score</th><th>Agreeing lines</th><th></th></tr>
+            <tr><th>#</th><th>Severity</th><th>Lead address</th><th>Members</th><th>Fused score</th><th>Agreeing lines</th>{decisions && <th>Decision</th>}<th></th></tr>
           </thead>
           <tbody>
             {data.alerts.map((a) => (
@@ -98,15 +102,23 @@ export function RunResultsPanel({ investigationId, runId, showNetwork = true }:
                   <td>{a.member_count}</td>
                   <td className="mono">{a.fused_risk_score.toFixed(3)}</td>
                   <td>{a.summary.corroborating_evidence_lines ?? 0}</td>
-                  <td>
-                    <button className="btn btn-sm" onClick={() => setOpen(open === a.alert_id ? null : a.alert_id)}>
+                  {decisions && (
+                    <td className="small">{a.alert_ref && decisions[a.alert_ref]
+                      ? <DispositionBadge state={decisions[a.alert_ref] as DispositionState} />
+                      : <span className="faint">not in case</span>}</td>
+                  )}
+                  <td className="nowrap">
+                    <button className="btn btn-sm btn-ghost" onClick={() => setOpen(open === a.alert_id ? null : a.alert_id)}>
                       {open === a.alert_id ? "Hide" : "Why"}
-                    </button>
+                    </button>{" "}
+                    {a.alert_ref && (
+                      <Link className="btn btn-sm" to={`/inv/${investigationId}/alerts/${encodeURIComponent(a.alert_ref)}`}>Open</Link>
+                    )}
                   </td>
                 </tr>
                 {open === a.alert_id && (
                   <tr>
-                    <td colSpan={7}>
+                    <td colSpan={decisions ? 8 : 7}>
                       <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
                         {a.evidence.filter((e) => e.status !== "NO_EVIDENCE").map((e, i) => (
                           <li key={i}><strong>{CLASS_LABEL[e.evidence_class] ?? e.evidence_class}:</strong> {e.explanation}</li>

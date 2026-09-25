@@ -92,7 +92,7 @@ function Row({ t, open, onToggle }: { t: TxPropagation; open: boolean; onToggle:
   return (
     <>
       <tr>
-        <td className="mono small">{t.txid}</td>
+        <td className="mono small" title={t.txid}>{t.txid.length > 20 ? `${t.txid.slice(0, 10)}…${t.txid.slice(-6)}` : t.txid}</td>
         <td className="mono small nowrap">{utc(t.first_seen_ms)}</td>
         <td className="num">{secs(t.spread_ms)}</td>
         <td className="num">{t.observations}</td>
@@ -140,10 +140,11 @@ export function RunGraphPanel({ investigationId, runId }: { investigationId: str
   const r = g.data!;
   return (
     <FlowPreview
+      hiddenKinds={["cluster"]}
       nodes={r.graph.nodes}
       edges={r.graph.edges}
       truncated={r.truncated}
-      explorerHref="/graph"
+      explorerHref={`/graph?${new URLSearchParams({ case: investigationId, run: runId }).toString()}`}
       title="Run graph: clusters, addresses, transactions, peers, ASNs"
       note={<>{r.meaning} ANNOUNCED_BY edges carry the observation time; IN_ASN links a peer to its autonomous system.</>}
     />

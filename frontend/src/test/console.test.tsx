@@ -496,7 +496,7 @@ describe("InvestigationOverview", () => {
     await waitFor(() =>
       expect(screen.getByText("Alerts in this case")).toBeInTheDocument());
     expect(screen.getByText("Awaiting a decision")).toBeInTheDocument();
-    expect(screen.getByText("Reference alert run")).toBeInTheDocument();
+    expect(screen.getByText("Bound alert run")).toBeInTheDocument();
   });
 });
 
