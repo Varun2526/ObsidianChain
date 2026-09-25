@@ -393,3 +393,19 @@ Effect on the claim lists in section 10:
   propagation and country evidence, not in the model, fused score or
   ranking; the mechanism was shown on synthetic control only.
 - The presentation file itself was not edited.
+
+### Blockchain <-> network correlation (added later the same day)
+
+- Before: the layers were joined by exact TXID match only; network evidence
+  was displayed and never tested against the money flow.
+- Now (`correlation/cross_layer.py`): every alert carries a calibrated
+  coherence test (on-chain hops first announced by one relay, against the
+  capture's chance rate), `SAME_FIRST_RELAY` and `CROSS_LAYER_LINK` graph
+  edges, and relay flows that link alerts across clusters.
+- Pre-registered exp-net2: fusing the test into the risk score **lowered**
+  ranking quality in both synthetic worlds, because benign services
+  broadcast their own flows too. It is an ownership lead, not a risk
+  signal, and is not fused (`research/network_2026_09_25/RESULT_exp_net2.md`).
+- Claim wording: "correlates network observations with the on-chain flow
+  and tests whether they agree; links entities the network layer ties
+  together". Not: "network-informed risk score".

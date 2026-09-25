@@ -860,6 +860,24 @@ export interface RunAlertView {
   transactions: string[];
   graph: { nodes: import("./intel").GraphNode[]; edges: import("./intel").GraphEdge[] };
   network: { meaning: string | null; transactions: import("./intel").TxPropagation[] };
+  cross_layer?: CrossLayerView | null;
+}
+
+/** Blockchain <-> network coherence for one alert (correlation/cross_layer.py). */
+export interface CrossLayerView {
+  status: "PRESENT" | "NO_EVIDENCE";
+  score: number;
+  explanation: string;
+  details: {
+    hop_pairs: number; coherent_pairs: number; chance_rate: number | null; expected_coherent?: number;
+    p_value: number | null; relays: { peer_ip: string; coherent_pairs: number }[];
+    pairs: { parent: string; child: string; via_address: string; shared_peers: string[]; delta_ms: number | null }[];
+    fused: boolean;
+  };
+  flows: {
+    relay: string; p_value: number; relay_coherent_pairs: number; expected: number; flow_size: number;
+    linked: { cluster_id: string; primary_address: string | null; rank: number | null; severity: string | null; alert_ref: string | null }[];
+  }[];
 }
 
 export interface RunAlertAnalytical {

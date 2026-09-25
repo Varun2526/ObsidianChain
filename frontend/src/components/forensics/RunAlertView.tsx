@@ -7,7 +7,9 @@
  * observation (NETWORK); network evidence is shown beside the score and is
  * not part of it.
  */
-import type { RunAlertView as View, RunEvidence } from "../../api/types";
+import { Link } from "react-router-dom";
+
+import type { CrossLayerView, RunAlertView as View, RunEvidence } from "../../api/types";
 import { FlowPreview } from "../graph/FlowPreview";
 import { CopyButton, EvidenceTag, Metric, fixed, int, pct, short } from "../ui/intel";
 import type { EvidenceKind } from "../ui/intel";
@@ -25,6 +27,7 @@ const SIGNAL_LABEL: Record<string, string> = {
   coinjoin_mixing: "CoinJoin / mixing structure",
   cluster_topology: "Cluster structure",
   p2p_network_telemetry: "Network propagation",
+  cross_layer_relay_coherence: "Blockchain ↔ network coherence",
   seed_risk_propagation: "Risk propagated from known seeds",
 };
 
@@ -38,8 +41,9 @@ export function RunAlertAnalytical({ invId, view, actions }: { invId: string; vi
   const model = a.evidence.find((e) => e.signal_name === "supervised_risk_model");
   const scores = (model?.details?.model_scores ?? []) as { address: string; ml_risk_score: number }[];
   const topModel = scores.length ? Math.max(...scores.map((s) => s.ml_risk_score)) : null;
-  const present = a.evidence.filter((e) => e.status === "PRESENT" && e.evidence_class !== "NETWORK");
-  const absent = a.evidence.filter((e) => e.status !== "PRESENT");
+  const shownApart = (e: RunEvidence) => e.evidence_class === "NETWORK" || e.signal_name === "cross_layer_relay_coherence";
+  const present = a.evidence.filter((e) => e.status === "PRESENT" && !shownApart(e));
+  const absent = a.evidence.filter((e) => e.status !== "PRESENT" && !shownApart(e));
   const network = a.evidence.find((e) => e.evidence_class === "NETWORK" && e.status === "PRESENT");
 
   return (
@@ -82,6 +86,8 @@ export function RunAlertAnalytical({ invId, view, actions }: { invId: string; vi
 
         <NetworkEvidence view={view} network={network} />
       </div>
+
+      {view.cross_layer && <CrossLayerPanel invId={invId} x={view.cross_layer} />}
 
       <FlowPreview
         nodes={view.graph.nodes}
@@ -159,6 +165,62 @@ function EvidenceBlock({ e }: { e: RunEvidence }) {
         </ul>
       )}
     </div>
+  );
+}
+
+function CrossLayerPanel({ invId, x }: { invId: string; x: CrossLayerView }) {
+  const d = x.details;
+  const present = x.status === "PRESENT";
+  return (
+    <section className="panel" aria-label="Blockchain and network correlation">
+      <div className="panel-head">
+        <h2>Blockchain ↔ network correlation</h2>
+        <EvidenceTag kind="rule">{present ? "Layers agree" : "No coherence"}</EvidenceTag>
+        <span className="small faint">does the P2P layer follow the money flow?</span>
+      </div>
+      <div className="metric-strip" style={{ border: 0, borderRadius: 0, margin: 0 }}>
+        <Metric k="On-chain hops" v={int(d.hop_pairs)} d="a transaction spending another's output" />
+        <Metric k="Same first relay" v={int(d.coherent_pairs)} d={d.expected_coherent != null ? `chance predicts ${d.expected_coherent}` : "no network data"} />
+        <Metric k="Chance rate" v={d.chance_rate == null ? "n/a" : pct(d.chance_rate, 1)} d="two independent txs, this capture" />
+        <Metric k="p-value" v={d.p_value == null ? "n/a" : d.p_value < 1e-4 ? d.p_value.toExponential(1) : d.p_value.toFixed(4)} d="binomial, one-sided" />
+        <Metric k="Linked clusters" v={int(x.flows.reduce((n, f) => n + f.linked.length, 0))} d="tied together by a relay" />
+      </div>
+      <div className="panel-body">
+        <p className="small" style={{ marginTop: 0 }}>{x.explanation}</p>
+        {d.pairs.length > 0 && (
+          <table>
+            <thead><tr><th>Hop (spent → spender)</th><th>Via address</th><th>First relay (both)</th><th className="num">Δ first seen</th></tr></thead>
+            <tbody>{d.pairs.slice(0, 8).map((p) => (
+              <tr key={`${p.parent}-${p.child}`}>
+                <td className="mono small">{short(p.parent, 8, 4)} → {short(p.child, 8, 4)}</td>
+                <td className="mono small">{short(p.via_address, 8, 4)}</td>
+                <td className="mono small">{p.shared_peers.join(", ")}</td>
+                <td className="num small">{p.delta_ms == null ? "n/a" : `${(p.delta_ms / 1000).toFixed(1)} s`}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        )}
+        {x.flows.map((f) => (
+          <div key={f.relay} style={{ marginTop: 12 }}>
+            <p className="small" style={{ margin: "0 0 6px" }}>
+              <strong>Flow first announced by <span className="mono">{f.relay}</span></strong>: {f.relay_coherent_pairs} hops where chance
+              predicts {f.expected} (p = {f.p_value.toExponential(1)}, Bonferroni-corrected across relays). It ties this cluster to:
+            </p>
+            <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+              {f.linked.slice(0, 12).map((l) => l.alert_ref ? (
+                <Link key={l.cluster_id} className="chip chip-mono" to={`/inv/${invId}/alerts/${encodeURIComponent(l.alert_ref)}`}>
+                  #{l.rank} {short(l.primary_address ?? l.cluster_id, 6, 4)}{l.severity ? ` · ${l.severity}` : ""}
+                </Link>
+              ) : <span key={l.cluster_id} className="chip chip-mono">{short(l.cluster_id, 8, 4)}</span>)}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="panel-foot">
+        An ownership lead, not a risk score: the pre-registered test (exp-net2) found that adding this line to the score made ranking worse,
+        because benign services broadcast their own flows too. A relay is where observers first heard a transaction, never the sender.
+      </div>
+    </section>
   );
 }
 

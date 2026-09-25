@@ -113,6 +113,7 @@ def project_investigation_graph(
     mixing_result: MixingResult | None = None,
     link_suggestions: Any | None = None,
     geoip_provider: Any | None = None,
+    cross_layer: Any | None = None,
 ) -> InvestigationGraph:
     """Project the complete multi-layer investigation graph.
 
@@ -270,6 +271,27 @@ def project_investigation_graph(
                     "address_a": pair["address_a"], "address_b": pair["address_b"],
                     "status": "SUGGESTION_ONLY",
                 })
+
+    # 5. Cross-layer coherence: an on-chain hop whose two transactions were
+    #    first announced by the same relay. Drawn tx -> tx along the flow.
+    if cross_layer is not None:
+        for pair in cross_layer.coherent_pairs:
+            a, b = f"tx:{pair.parent}", f"tx:{pair.child}"
+            if a in nodes and b in nodes:
+                _add_edge(f"same_relay:{pair.parent}:{pair.child}", a, b, "SAME_FIRST_RELAY", {
+                    "relays": list(pair.shared_peers), "delta_ms": pair.delta_ms,
+                    "via_address": pair.via_address,
+                })
+
+        # Cluster -> cluster along a relay-coherent flow: ownership leads
+        # across layers, never merged.
+        for flow in cross_layer.relay_flows(blockchain_graph, cluster_result.address_to_cluster):
+            for ca, cb in flow["cluster_edges"]:
+                a, b = f"cluster:{ca}", f"cluster:{cb}"
+                if a in nodes and b in nodes:
+                    _add_edge(f"xlink:{flow['relay']}:{a}:{b}", a, b, "CROSS_LAYER_LINK", {
+                        "relay": flow["relay"], "p_value": flow["p_value"], "status": "LEAD_ONLY",
+                    })
 
     return InvestigationGraph(nodes=list(nodes.values()), edges=edges)
 

@@ -331,6 +331,7 @@ export function GraphExplorer() {
             <li className="row"><span className="swatch" style={{ width: 8, height: 8, background: "var(--oc-hairline-strong)" }} /> Transaction</li>
             <li className="row"><span style={{ width: 16, borderTop: "1px solid #5a5f69" }} /> SPENDS / PAYS (value flow)</li>
             <li className="row"><span style={{ width: 16, borderTop: "1px dotted var(--oc-ev-network)" }} /> ANNOUNCED_BY (relay)</li>
+            {runMode && <li className="row"><span style={{ width: 16, borderTop: "2px dashed var(--oc-ev-network)" }} /> SAME_FIRST_RELAY (hop first seen from one relay)</li>}
           </ul>
         </section>
       </aside>
