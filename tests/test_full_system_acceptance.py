@@ -152,7 +152,12 @@ class TestComponentAcceptance:
         assert g_dict["edge_count"] > 0
 
         kinds = {n["kind"] for n in g_dict["nodes"]}
-        assert kinds == {"cluster", "address", "transaction", "ip"}
+        # asn: the autonomous system each announcing peer belongs to (IN_ASN).
+        assert kinds == {"cluster", "address", "transaction", "ip", "asn"}
+        edge_kinds = {e["kind"] for e in g_dict["edges"]}
+        assert {"ANNOUNCED_BY", "IN_ASN"} <= edge_kinds
+        announced = [e for e in g_dict["edges"] if e["kind"] == "ANNOUNCED_BY"]
+        assert all("timestamp_ms" in e["data"] for e in announced)
 
 
 # =========================================================================
@@ -363,7 +368,7 @@ class TestCaseworkAcceptance:
 
         # 3. Trigger 17-stage analytical pipeline on the dataset
         run_resp = client.post(
-            f"/api/investigations/{inv_id}/datasets/{ds_id}/run",
+            f"/api/investigations/{inv_id}/datasets/{ds_id}/run?wait=true",
         )
         assert run_resp.status_code == 200
         run_data = run_resp.json()
@@ -392,7 +397,7 @@ class TestCaseworkAcceptance:
             headers={"Content-Type": "application/json"},
         ).json()
         ds_id = upload["dataset"]["id"]
-        run_id = client.post(f"/api/investigations/{inv_id}/datasets/{ds_id}/run").json()["run_id"]
+        run_id = client.post(f"/api/investigations/{inv_id}/datasets/{ds_id}/run?wait=true").json()["run_id"]
 
         resp = client.get(f"/api/investigations/{inv_id}/runs/{run_id}/results?limit=5")
         assert resp.status_code == 200, resp.text

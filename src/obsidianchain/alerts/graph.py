@@ -201,22 +201,40 @@ def project_investigation_graph(
             a_node_id = f"addr:{out_addr}"
             _add_edge(f"receives:{txid}:{out_addr}", t_node_id, a_node_id, "RECEIVES", {"amount": amt})
 
-    # 4. IP nodes and ANNOUNCED_BY edges
+    # 4. Peer IP nodes, their ASN, and ANNOUNCED_BY edges. A peer is the IP
+    #    that relayed the transaction to an observer: never the sender.
+    from obsidianchain import geoip as _geoip
+    from obsidianchain.network.propagation import timestamp_ms
+
     for obs in correlation_result.all_observations:
         if not obs.src_ip:
             continue
         ip_node_id = f"ip:{obs.src_ip}"
         if ip_node_id not in nodes:
+            facts = _geoip.resolve_ip(obs.src_ip)
             nodes[ip_node_id] = GraphNode(
                 id=ip_node_id,
                 kind="ip",
                 label=obs.src_ip,
                 data={
                     "ip": obs.src_ip,
-                    "geo_country": obs.geo_country,
                     "asn": obs.asn,
+                    "geo_country": obs.geo_country,
+                    "geo_country_source": "capture-supplied (unverified)" if obs.geo_country else None,
+                    "globally_routable": facts.globally_routable and facts.special_purpose is None,
+                    "special_purpose": facts.special_purpose,
                 },
             )
+        if obs.asn is not None:
+            asn_node_id = f"asn:{obs.asn}"
+            if asn_node_id not in nodes:
+                asn_facts = _geoip.resolve_asn(obs.asn)
+                nodes[asn_node_id] = GraphNode(
+                    id=asn_node_id, kind="asn", label=f"AS{obs.asn}",
+                    data={"asn": obs.asn, "private_use": asn_facts.private_use,
+                          "description": asn_facts.description},
+                )
+            _add_edge(f"in_asn:{obs.src_ip}:{obs.asn}", ip_node_id, asn_node_id, "IN_ASN", {})
 
         t_node_id = f"tx:{obs.txid}"
         if t_node_id in nodes:
@@ -228,7 +246,9 @@ def project_investigation_graph(
                 {
                     "src_port": obs.src_port,
                     "timestamp": obs.timestamp,
+                    "timestamp_ms": timestamp_ms(obs.timestamp),
                     "observer_id": obs.observer_id,
+                    "dst_ip": obs.dst_ip,
                 },
             )
 

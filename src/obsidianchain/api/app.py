@@ -657,7 +657,74 @@ def create_app(data_root=None) -> FastAPI:
     app.include_router(routes_investigations.router)
     app.include_router(routes_casework.router)
 
+    _mount_web(app)
     return app
+
+
+#: Headers on every response. The page loads nothing from another origin
+#: (tests/test_frontend_offline.py), so the policy can be strict; inline
+#: style attributes are the one allowance React's style props need.
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; "
+        "object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    ),
+}
+
+#: The web console is served only from a directory that holds a built
+#: index.html. Unset and absent in development (Vite serves it there).
+WEB_DIST_ENV = "OBSIDIANCHAIN_WEB_DIST"
+
+
+def _web_dir():
+    import os
+    from pathlib import Path
+    configured = os.environ.get(WEB_DIST_ENV)
+    if not configured:
+        return None
+    c = Path(configured)
+    return c if (c / "index.html").is_file() else None
+
+
+def _mount_web(app: FastAPI) -> None:
+    """Serve the built investigation console from the same origin as the API.
+
+    One origin means the session cookie needs no CORS relaxation. Paths under
+    /api keep a JSON 404; any other unknown path returns index.html so a deep
+    link (/graph?alert=..., /inv/<id>/review) survives a reload. Only files
+    inside the build directory are served. The console itself is static and
+    public; everything it shows comes from session-guarded /api routes.
+    """
+    from fastapi.responses import FileResponse
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class _Headers(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            response = await call_next(request)
+            for k, v in SECURITY_HEADERS.items():
+                response.headers.setdefault(k, v)
+            return response
+
+    app.add_middleware(_Headers)
+    web = _web_dir()
+    if web is None:
+        return
+    root = web.resolve()
+
+    @app.get("/{path:path}", include_in_schema=False)
+    async def web_console(path: str):
+        if path == "api" or path.startswith("api/") or path in ("docs", "openapi.json", "redoc"):
+            return JSONResponse(status_code=404, content={"error": "not_found", "detail": f"no route /{path}"})
+        candidate = (root / path).resolve()
+        if path and candidate.is_file() and candidate.is_relative_to(root):
+            cache = "public, max-age=31536000, immutable" if path.startswith("assets/") else "no-cache"
+            return FileResponse(candidate, headers={"Cache-Control": cache})
+        return FileResponse(root / "index.html", headers={"Cache-Control": "no-cache"})
 
 
 #: Module-level app for ``uvicorn obsidianchain.api.app:app``.

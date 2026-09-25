@@ -340,17 +340,76 @@ def get_dataset(
     return {"dataset": dataset.as_dict(), "analysis_runs": runs}
 
 
+#: One worker: runs are CPU- and memory-heavy (a 40k-row capture peaks at
+#: ~1.3 GB), so they are serialised rather than allowed to compete. Created
+#: on first use so importing the router starts no thread.
+_RUN_EXECUTOR = None
+
+
+def _executor():
+    global _RUN_EXECUTOR
+    if _RUN_EXECUTOR is None:
+        from concurrent.futures import ThreadPoolExecutor
+        _RUN_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="analysis-run")
+    return _RUN_EXECUTOR
+
+
+def _execute_analysis(data_root, run_id: str, investigation_id: str, dataset_id: str,
+                      storage_path: Path, declared_format, actor: User) -> dict:
+    """Run the pipeline and record the outcome, on a connection of its own.
+
+    Called on the worker (or inline with ?wait=true). SQLite connections are
+    not shared across threads, so this opens and closes its own.
+    """
+    conn = db.connect(data_root)
+    try:
+        try:
+            updated_run, outcome = runs_mod.execute_run(
+                conn, run_id, storage_path,
+                runs_dir=Path(data_root) / "runs", declared_format=declared_format,
+            )
+        except Exception as exc:  # recorded as FAILED by execute_run; audited here
+            audit.record_standalone(
+                conn, actor_id=actor.id, action=audit.DATASET_ANALYSIS_RUN,
+                object_type="dataset", object_id=dataset_id, investigation_id=investigation_id,
+                detail={"run_id": run_id, "status": "FAILED", "error": str(exc)[:500]},
+            )
+            raise
+        audit.record_standalone(
+            conn, actor_id=actor.id, action=audit.DATASET_ANALYSIS_RUN,
+            object_type="dataset", object_id=dataset_id, investigation_id=investigation_id,
+            detail={"run_id": run_id, "status": updated_run.status,
+                    "run_fingerprint": updated_run.run_fingerprint,
+                    "alerts_count": outcome.alert_result.total_alerts},
+        )
+        if updated_run.status == "COMPLETE":
+            inv.advance_lifecycle(conn, actor, investigation_id, "ACTIVE",
+                                  reason=f"analysis run {run_id} completed")
+        return {"run_id": run_id, "analysis_run": updated_run.as_dict(),
+                "alerts_count": outcome.alert_result.total_alerts, "manifest": outcome.manifest}
+    finally:
+        conn.close()
+
+
 @router.post(
     "/{investigation_id}/datasets/{dataset_id}/run",
-    summary="Execute the 17-stage analytical pipeline on this dataset",
+    summary="Start the 17-stage analytical pipeline on this dataset",
 )
 async def run_dataset_analysis(
     request: Request,
     investigation_id: str,
     dataset_id: str,
+    wait: bool = Query(default=False, description="Run inline and return the finished run"),
     conn: sqlite3.Connection = Depends(deps.get_connection),
     actor: User = Depends(deps.current_user),
 ) -> dict:
+    """Queue the run and return at once; poll /runs/{run_id}/progress.
+
+    The pipeline used to execute inside this request: a 40k-row capture
+    held the only server process for ~23 s, so every other user and the
+    progress poll itself waited. It now runs on a background worker.
+    ``?wait=true`` keeps the synchronous behaviour for scripts and tests.
+    """
     inv.require_writable(
         conn, actor, investigation_id, Capability.UPLOAD_DATASET
     )
@@ -359,10 +418,11 @@ async def run_dataset_analysis(
         raise errors.NotFound(f"no dataset {dataset_id!r} in this investigation")
 
     latest = runs_mod.latest_for_dataset(conn, dataset_id)
+    if latest is not None and latest.status in ("QUEUED", "RUNNING"):
+        raise errors.Conflict(f"run {latest.id} for this dataset is already {latest.status}")
     if latest is None or latest.status in ("COMPLETE", "FAILED"):
         with db.transaction(conn):
-            latest_dict = runs_mod.create_not_run(conn, dataset_id)
-            run_id = latest_dict["id"]
+            run_id = runs_mod.create_not_run(conn, dataset_id)["id"]
     else:
         run_id = latest.id
 
@@ -371,40 +431,23 @@ async def run_dataset_analysis(
     if not storage_path.is_file():
         raise errors.NotFound(f"stored dataset file {storage_path} not found on disk")
 
-    runs_dir = Path(data_root) / "runs"
     inv.advance_lifecycle(conn, actor, investigation_id, "ANALYZING",
                           reason=f"analysis run {run_id} started")
-    updated_run, outcome = runs_mod.execute_run(
-        conn,
-        run_id,
-        storage_path,
-        runs_dir=runs_dir,
-        declared_format=dataset.format,
-    )
+    job = (data_root, run_id, investigation_id, dataset_id, storage_path, dataset.format, actor)
+    if wait:
+        from starlette.concurrency import run_in_threadpool
+        return await run_in_threadpool(_execute_analysis, *job)
 
-    audit.record_standalone(
-        conn,
-        actor_id=actor.id,
-        action=audit.DATASET_ANALYSIS_RUN,
-        object_type="dataset",
-        object_id=dataset_id,
-        investigation_id=investigation_id,
-        detail={
-            "run_id": run_id,
-            "status": updated_run.status,
-            "run_fingerprint": updated_run.run_fingerprint,
-            "alerts_count": outcome.alert_result.total_alerts,
-        },
-    )
-    if updated_run.status == "COMPLETE":
-        inv.advance_lifecycle(conn, actor, investigation_id, "ACTIVE",
-                              reason=f"analysis run {run_id} completed")
-    return {
-        "run_id": run_id,
-        "analysis_run": updated_run.as_dict(),
-        "alerts_count": outcome.alert_result.total_alerts,
-        "manifest": outcome.manifest,
+    runs_mod.set_status(conn, run_id, "QUEUED")
+    runs_mod.RUN_PROGRESS[run_id] = {
+        "status": "QUEUED", "current_stage": 0, "total_stages": 17,
+        "stage_name": "Queued", "stage_status": "PENDING", "progress_pct": 0,
     }
+    future = _executor().submit(_execute_analysis, *job)
+    future.add_done_callback(lambda f: f.exception())  # failures are recorded, never lost silently
+    return {"run_id": run_id, "status": "QUEUED",
+            "analysis_run": runs_mod.get(conn, run_id).as_dict(),
+            "poll": f"/api/investigations/{investigation_id}/runs/{run_id}/progress"}
 
 
 @router.get(
@@ -535,6 +578,41 @@ def get_run_graph(
         "result_type": "PRODUCTION RUN - performance unverified until labels arrive",
         "meaning": ("Structure the pipeline projected from the uploaded dataset. Cluster membership is "
                     "an entity-resolution heuristic; an announcing peer is a relay, not a sender."),
+    }
+
+
+@router.get(
+    "/{investigation_id}/runs/{run_id}/network",
+    summary="Network propagation computed from the run's own observations",
+)
+def get_run_network(
+    request: Request,
+    investigation_id: str,
+    run_id: str,
+    limit: int = Query(default=500, ge=1, le=5000),
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+    actor: User = Depends(deps.current_user),
+) -> dict:
+    """``network_propagation.json`` for one run, case-scoped like results.
+
+    Runs made before propagation was computed have no such file; that is a
+    404 with the reason, not an empty table that would read as "no network
+    activity".
+    """
+    run, run_dir = _complete_run_dir(request, conn, actor, investigation_id, run_id)
+    path = run_dir / "network_propagation.json"
+    if not path.is_file():
+        raise errors.NotFound(f"run {run_id} predates network propagation; re-run the analysis to compute it")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows = sorted(payload.get("transactions", []),
+                  key=lambda r: (r.get("first_seen_ms") is None, r.get("first_seen_ms") or 0))
+    return {
+        "run_id": run.id,
+        "schema": payload.get("schema"),
+        "meaning": payload.get("meaning"),
+        "summary": payload.get("summary"),
+        "transactions": rows[:limit],
+        "transactions_total": len(rows),
     }
 
 
