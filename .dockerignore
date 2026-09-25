@@ -16,3 +16,6 @@ __pycache__/
 .idea/
 .vscode/
 README.md
+frontend/node_modules/
+frontend/src/
+frontend/fixtures/
