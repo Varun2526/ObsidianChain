@@ -113,3 +113,36 @@ Recording: `docs/design/demo/obsidianchain_walkthrough.mp4`.
   entered, then cuts to the signed-in session.
 - Key frames: `docs/design/demo/screens/`.
 - After recording, the deployed database was reset to clean for a live demo.
+
+---
+
+## Revision 3: blockchain <-> network correlation in the recording
+
+Build: commit `36ca123`, tag `demo-freeze-2026-09-25-v3`, redeployed on a
+fresh database. No UI change or new test was made for this revision; it
+re-records the walkthrough so the network layer and its correlation with
+the chain are visible rather than implied.
+
+Recording (`docs/design/demo/obsidianchain_walkthrough.mp4`): 5:01,
+1440x900, 30 fps, deployed instance, fresh database and browser profile.
+Sequence:
+
+1. **Investigator.**
+   - Login page; case; upload; validation findings.
+   - The 17 analysis stages, including network analysis and blockchain <->
+     network correlation.
+   - Network propagation (peers, ASNs, DB-IP countries).
+   - Graph workspace with relay peers hidden, so the SAME_FIRST_RELAY hop
+     edges stand out, then a 4-transaction money-flow path.
+   - Ranked alerts and why they were flagged.
+   - The **Blockchain <-> network correlation** panel: 5 of 5 hops first
+     seen from one relay, chance 0.44, p = 5.5e-6.
+   - Following the relay flow to linked alert #20: 18 of 18 hops,
+     p = 1.1e-19.
+   - Decision and note; report; submit; sign out.
+2. **Reviewer.** Correlation evidence; sign-off; approval.
+3. **Investigator.** Closes the case.
+4. **Admin.** Overview, users, datasets, audit log, case trail, final report.
+
+The final state is CLOSED with the report FINAL. As before, passwords are
+never typed on screen. The deployed database was reset to clean afterwards.
