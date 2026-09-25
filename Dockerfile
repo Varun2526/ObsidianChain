@@ -76,6 +76,15 @@ COPY research/ /app/research/
 COPY tests/ /app/tests/
 RUN pip install --no-index --no-build-isolation --no-deps /app
 
+# The investigation console, built on the host by `make web` (Node is not in
+# this image and the build has no network). Served by the API process from
+# the same origin; see api/app.py _mount_web.
+COPY frontend/dist/ /app/web/
+ENV OBSIDIANCHAIN_WEB_DIST=/app/web
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4).status == 200 else 1)"
+
 # ---- API port ---------------------------------------------------------
 # Informational only; nothing listens unless `obsidianchain serve` is the
 # command. The CLI binds 127.0.0.1 by default, so reaching it from outside

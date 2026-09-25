@@ -53,7 +53,7 @@ DOCKER_RUN := docker run --rm $(OFFLINE) --platform $(PLATFORM) \
 	-e OBSIDIANCHAIN_DATA=/data
 
 .PHONY: help vendor build run shell test verify isolation arch freeze dirs clean demo serve \
-        clean-vendor clean-vendor-all check-vendor demo-reset
+        clean-vendor clean-vendor-all check-vendor demo-reset web deploy undeploy
 
 help: ## Show this help
 	@echo "obsidianchain - offline Bitcoin forensics prototype"
@@ -116,7 +116,12 @@ check-vendor: ## Assert vendored artifacts exist and match PLATFORM
 	fi
 	@echo ">> vendor OK: $(VENDOR_REL) matches $(PLATFORM) ($(WHEEL_ARCH)/$(DEB_ARCH))"
 
-build: check-vendor ## Build the image offline for PLATFORM
+web: ## Build the investigation console (frontend/dist) on the host
+	npm --prefix frontend ci --no-audit --no-fund
+	npm --prefix frontend run build
+
+build: check-vendor ## Build the image offline for PLATFORM (run `make web` first)
+	@test -f frontend/dist/index.html || { echo "ERROR: frontend/dist missing - run 'make web' first."; exit 1; }
 	docker build \
 		--platform $(PLATFORM) \
 		--network none \
@@ -146,6 +151,23 @@ serve: dirs ## Serve the read-only API on localhost:8000
 		-p 127.0.0.1:8000:8000 \
 		-v $(DATA_DIR):/data -e OBSIDIANCHAIN_DATA=/data \
 		$(IMAGE):$(TAG) serve --host 0.0.0.0 --port 8000
+
+# A long-running deployment: detached, restarted on failure, health-checked,
+# console and API on one origin. BIND defaults to all interfaces so the
+# instance is reachable from other machines on the network; set
+# BIND=127.0.0.1 to keep it local.
+BIND ?= 0.0.0.0
+PORT ?= 8080
+deploy: dirs ## Run the console + API detached on $(BIND):$(PORT)
+	-docker rm -f obsidianchain >/dev/null 2>&1
+	docker run -d --name obsidianchain --restart unless-stopped --platform $(PLATFORM) \
+		-p $(BIND):$(PORT):8000 \
+		-v $(DATA_DIR):/data -e OBSIDIANCHAIN_DATA=/data \
+		$(IMAGE):$(TAG) serve --host 0.0.0.0 --port 8000
+	@echo ">> deployed: http://<this-host>:$(PORT)/  (docker ps; docker logs obsidianchain)"
+
+undeploy: ## Stop and remove the deployment container
+	docker rm -f obsidianchain
 
 demo: dirs ## Run the five DEMO scenarios; writes data/demo/output/index.html
 	$(DOCKER_RUN) $(IMAGE):$(TAG) demo --rebuild
