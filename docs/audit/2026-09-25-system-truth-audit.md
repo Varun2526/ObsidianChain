@@ -345,3 +345,51 @@ CRITICAL alerts.
 4. GeoIP provider is never configured in production (`orchestrator.py:166-167`); the graph shows unverified capture-supplied country.
 5. Stale documentation still names Random Forest as production (`docs/ML_PIPELINE.md:40`, `docs/PRODUCTION_FREEZE.md:48-51`).
 6. Analysis runs execute inside the HTTP request and block the server (`console/routes_investigations.py:347`).
+
+## Resolved since this audit (same day, network-layer plan)
+
+The sections above are the audit as taken at `ccd5c67` and are left as
+written. What changed afterwards, under `docs/plans/2026-09-25-network-layer.md`:
+
+| Defect | Status | Where |
+|---|---|---|
+| 1. Explanations drop feature names | Fixed: reads `feature_name`, and explains the highest-scoring member | `pipeline/alerts.py`; `tests/test_network_propagation.py` |
+| 2. Repeated observations inflate `btc_sent` | Fixed: one chain event per txid | `pipeline/features.py` (`derive_canonical_address_features`) |
+| 3. `observer_id` dropped at ingest | Fixed: kept as an extension column (aliases `observer`, `sensor_id`) | `io/ingest.py` `EXTENSION_COLUMNS` |
+| 4. GeoIP never configured | Fixed: DB-IP "IP to Country Lite" 2026-09 installed offline, resolved per peer, shown with attribution | `geoip.py` `RangeDatabase`; `data/reference/dbip-country-lite-2026-09.csv.gz`; `tests/test_geoip_dbip.py` |
+| 5. Stale docs name Random Forest | Fixed: superseded banners naming `ps_native_v5` LightGBM | `docs/ML_PIPELINE.md`, `docs/PRODUCTION_FREEZE.md` |
+| 6. Runs block the HTTP request | Fixed: background executor, `QUEUED` then polled; `?wait=true` for scripts | `console/routes_investigations.py` |
+
+New since the audit:
+
+- **Propagation from uploaded observations** (`network/propagation.py`):
+  first/last seen, spread, first-seen peers and observers (ties kept),
+  per-peer arrival, ASN diversity, dominant-peer share, non-routable share,
+  pooled per alert cluster. Written to `network_propagation.json` per run,
+  served by `GET /investigations/{id}/runs/{rid}/network`, shown in the
+  run view with a run graph that now includes ASN nodes.
+- **Country resolution**: peer countries come from the DB-IP Lite file
+  (sha256 `a32bb3c3…1d0b`, 717,170 ranges, CC BY 4.0), labelled with the
+  database version and kept apart from the capture's own unverified
+  `geo_country`. Special-purpose ranges and DB-IP `ZZ` get no country. A
+  peer's country is a relay's location, never the sender's.
+- **exp-net1** (pre-registered, `research/network_2026_09_25/`): network
+  features add signal only where a signal was planted (SIGNAL +0.019 nAP,
+  p = 0.0007) and nothing where none was (NULL −0.0025, p = 0.50).
+  MECHANISM_DEMONSTRATED on synthetic control only. **The production model
+  is unchanged** and still has no network features.
+- Network evidence is still not fused into the risk score; a test strips
+  every network field and checks fused scores and severities are identical.
+
+Effect on the claim lists in section 10:
+
+- Moves from C to A: first-seen peer, propagation timing, peer and ASN
+  concentration **computed from an uploaded capture's own observations**;
+  offline country resolution of peer IPs (DB-IP Lite).
+- Still C: any of this on live or standing-collected traffic; network
+  features in the production model or any network-informed score; origin
+  (sender) inference.
+- B row "Network-layer context" now reads: computed and displayed
+  propagation and country evidence, not in the model, fused score or
+  ranking; the mechanism was shown on synthetic control only.
+- The presentation file itself was not edited.

@@ -35,6 +35,11 @@ and the documents say so.
 | 7 | Network-feature experiment (pre-registered) | blockchain-only vs blockchain+network on the synthetic null and signal worlds, protocol-B style folds | result recorded whichever way it goes; production scoring unchanged |
 | 8 | Documentation and claims | audit claim lists updated; PPT wording from the audit's list B | every network claim cites an implementation |
 
+**Status (2026-09-25):** phases 0-7 done. Phase 4 uses DB-IP "IP to
+Country Lite" 2026-09 (CC BY 4.0) from `data/reference/`. Phase 8: the
+audit's "Resolved since this audit" section records the changes and the
+moved claims; the PPT was left unedited on instruction.
+
 Order follows dependency: 0 and 1 first (everything downstream reads the
 ingested frame), then 2-3 (computation), 4-5 (presentation), 6 before any
 heavier processing, 7 last.
