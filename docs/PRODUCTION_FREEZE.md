@@ -1,4 +1,13 @@
 # ObsidianChain — Production Freeze Record
+
+> **Superseded (2026-09-25).** The production model is **`ps_native_v5`,
+> LightGBM** (31 features, schema `ps_native_features/5`, 300 trees), served
+> from `data/models/ps_native/registry.json` (champion) with
+> `ps_native_v5_fallback_no_g` as fallback. The Random Forest described
+> below is the legacy `ps_native_v1`: registered, holding no role, and not
+> used by any production path (`docs/audit/2026-09-25-system-truth-audit.md`
+> section 7). Current record: the Models page, or `obsidianchain model list`.
+
 **Problem Statement 26146: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
 **Repository Layer:** `docs/PRODUCTION_FREEZE.md` (Authoritative Engineering Baseline & State of Record)
 
