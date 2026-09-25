@@ -43,6 +43,7 @@ import { StructuralPatternsPanel } from "../../components/forensics/StructuralPa
 import { AnalysisLayerToggle, useAnalysisLayer } from "../../components/forensics/AnalysisLayerToggle";
 import { Timeline } from "../../components/forensics/Timeline";
 import { WhyFlagged } from "../../components/forensics/WhyFlagged";
+import { RunAlertAnalytical, runAlertWorkspaceHref } from "../../components/forensics/RunAlertView";
 import { Address, RiskBar, SeverityBadge, Skeleton, Value } from "../../components/ui/primitives";
 import { TransactionModal, ClusterCompareModal } from "../../components/modals/InvestigationModals";
 
@@ -222,7 +223,13 @@ function CaseAlertDetailPage({ invId, alertId }: { invId: string; alertId: strin
           Model output, read from the immutable artifact. Not editable.
         </span>
       </h2>
-      {detail.analytical.available ? (
+      {detail.analytical.available && detail.analytical.source === "UPLOADED_RUN" ? (
+        <RunAlertAnalytical invId={invId} view={detail.analytical.run_alert}
+          actions={<>
+            <Link className="btn btn-sm" to={runAlertWorkspaceHref(invId, detail.analytical.run_alert)}>Trace in graph</Link>
+            <a className="btn btn-sm btn-primary" href="#investigator-assessment">Record decision</a>
+          </>} />
+      ) : detail.analytical.available ? (
         <AnalyticalAssessment data={detail.analytical.alert}
           actions={<a className="btn btn-sm" href="#investigator-assessment">Record decision</a>} />
       ) : (
@@ -277,6 +284,19 @@ function NotReferenced({
   const { can } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [preview, setPreview] = useState<Awaited<ReturnType<typeof api.getRunAlert>> | null>(null);
+  const [previewChecked, setPreviewChecked] = useState(false);
+
+  // An alert from this case's own uploaded run can be read before it is
+  // referenced; a reference-run alert is read on its own page.
+  useEffect(() => {
+    const controller = new AbortController();
+    api.getRunAlert(invId, alertId, controller.signal)
+      .then(setPreview)
+      .catch(() => {})
+      .finally(() => { if (!controller.signal.aborted) setPreviewChecked(true); });
+    return () => controller.abort();
+  }, [invId, alertId]);
 
   const add = async () => {
     setBusy(true); setError(null);
@@ -289,6 +309,33 @@ function NotReferenced({
       setBusy(false);
     }
   };
+
+  if (!previewChecked) return <section className="panel"><Skeleton rows={10} /></section>;
+  if (preview) {
+    return (
+      <>
+        <div className="alert-detail-header-bar">
+          <p style={{ margin: 0 }}><Link to={`/inv/${invId}/alerts`}>← Back to the alert queue</Link></p>
+          <span className="mono small faint">{alertId}</span>
+        </div>
+        <h2 className="assessment-heading assessment-heading--analytical">
+          Analytical assessment
+          <span className="assessment-sub">Read from this case&apos;s uploaded-run artifacts. Not editable.</span>
+        </h2>
+        {error ? <ErrorState error={error} /> : null}
+        <RunAlertAnalytical invId={invId} view={preview.run_alert}
+          actions={<>
+            <Link className="btn btn-sm" to={runAlertWorkspaceHref(invId, preview.run_alert)}>Trace in graph</Link>
+            {can("reference_alert") && (
+              <button className="btn btn-sm btn-primary" onClick={add} disabled={busy}>
+                {busy ? "Adding…" : "Add to this investigation"}
+              </button>
+            )}
+          </>} />
+        <p className="note">Add the alert to this investigation to record a decision on it. Reading it does not add it.</p>
+      </>
+    );
+  }
 
   return (
     <>

@@ -61,4 +61,5 @@ export const KIND_LABEL: Record<string, string> = {
   transaction: "Transactions",
   cluster: "Clusters",
   ip: "Relay peers",
+  asn: "ASNs",
 };

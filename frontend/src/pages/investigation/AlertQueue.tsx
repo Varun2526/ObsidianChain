@@ -21,6 +21,8 @@ import { ErrorState } from "../../components/ui/ErrorState";
 import { DispositionBadge, RunStatusChip } from "../../components/layout/CaseChrome";
 import { EmptyState, RiskBar, SeverityBadge, Skeleton } from "../../components/ui/primitives";
 import { CrossAlertModal, ClusterCompareModal } from "../../components/modals/InvestigationModals";
+import { RunResultsPanel } from "../../components/forensics/RunResultsPanel";
+import { useCaseRun } from "../../components/forensics/useCaseRun";
 
 const SEVERITIES: Severity[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 const PAGE_SIZES = [25, 50, 100];
@@ -39,7 +41,9 @@ export function AlertQueue() {
  * regeneration, and removing one would erase a recorded decision.
  */
 function CaseAlertQueue({ invId }: { invId: string }) {
-  const [tab, setTab] = useState<"case" | "reference">("case");
+  const caseRun = useCaseRun(invId);
+  const [picked, setTab] = useState<"run" | "case" | "reference" | null>(null);
+  const tab = picked ?? (caseRun.runId ? "run" : "case");
   const [rows, setRows] = useState<CaseAlertRow[]>([]);
   const [currentRun, setCurrentRun] = useState<string | null>(null);
   const [staleCount, setStaleCount] = useState(0);
@@ -98,13 +102,27 @@ function CaseAlertQueue({ invId }: { invId: string }) {
       </div>
 
       <div className="toggles" role="tablist" style={{ marginBottom: 16 }}>
+        {caseRun.runId && (
+          <button className="toggle" aria-pressed={tab === "run"}
+            onClick={() => setTab("run")}>Uploaded dataset run</button>
+        )}
         <button className="toggle" aria-pressed={tab === "case"}
-          onClick={() => setTab("case")}>This investigation</button>
+          onClick={() => setTab("case")}>In this investigation ({rows.length})</button>
         <button className="toggle" aria-pressed={tab === "reference"}
-          onClick={() => setTab("reference")}>Reference run</button>
+          onClick={() => setTab("reference")}>Reference run (Elliptic++)</button>
       </div>
 
-      {tab === "reference" ? (
+      {tab === "run" && caseRun.runId ? (
+        <>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Ranked by the pipeline from <span className="mono">{caseRun.filename}</span>, uploaded to this investigation.
+            Open an alert to see why it was ranked, then add it to the investigation to record a decision.
+          </p>
+          <RunResultsPanel investigationId={invId} runId={caseRun.runId} showNetwork={false}
+            title="Alerts from the uploaded dataset"
+            decisions={Object.fromEntries(rows.map((r) => [r.alert_id, r.disposition?.state ?? "NEW"]))} />
+        </>
+      ) : tab === "reference" ? (
         <>
           <div className="banner banner-synthetic">
             <h4>These alerts belong to the pipeline, not to this case</h4>

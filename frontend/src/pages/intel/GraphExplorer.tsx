@@ -8,8 +8,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { getAlertGraph, traceGraph } from "../../api/intel";
-import type { AlertGraphResponse, TraceDirection, TraceResponse } from "../../api/intel";
+import { getAlertGraph, getRunGraph, traceGraph } from "../../api/intel";
+import type { AlertGraphResponse, RunGraphResponse, TraceDirection, TraceResponse } from "../../api/intel";
 import { FlowGraph, NO_FILTERS, defaultLayout } from "../../components/graph/FlowGraph";
 import type { FlowGraphHandle, GraphFilters, GraphLayout } from "../../components/graph/FlowGraph";
 import { KIND_LABEL, countKinds, matchNodes, mergeGraph, timestepRange } from "../../components/graph/graphModel";
@@ -24,6 +24,7 @@ const KIND_SWATCH: Record<string, string> = {
   transaction: "var(--oc-hairline-strong)",
   cluster: "transparent",
   ip: "var(--oc-ev-network)",
+  asn: "var(--oc-ev-network)",
 };
 
 type Meta = {
@@ -34,6 +35,7 @@ type Meta = {
   layers?: Record<string, string>;
   seedNote?: string;
   fingerprint?: string;
+  run?: { caseId: string; runId: string; nodesTotal: number };
 };
 
 export function GraphExplorer() {
@@ -41,13 +43,18 @@ export function GraphExplorer() {
   const addresses = params.getAll("address");
   const txids = params.getAll("txid").map(Number).filter(Number.isFinite);
   const alertId = params.get("alert");
+  // Run mode: the whole graph one uploaded-dataset run wrote, read in place.
+  const caseId = params.get("case");
+  const runId = params.get("run");
+  const runMode = Boolean(caseId && runId);
+  const focusId = params.get("focus");
   const direction = (params.get("direction") as TraceDirection) || "both";
   const hops = Number(params.get("hops") || (alertId ? 2 : 1));
   const maxNodes = Number(params.get("max") || 300);
   const minT = params.get("tmin") ? Number(params.get("tmin")) : null;
   const maxT = params.get("tmax") ? Number(params.get("tmax")) : null;
-  const hasSeed = addresses.length > 0 || txids.length > 0 || Boolean(alertId);
-  const seedKey = `${alertId}|${addresses.join(",")}|${txids.join(",")}|${direction}|${hops}|${maxNodes}|${minT}|${maxT}`;
+  const hasSeed = runMode || addresses.length > 0 || txids.length > 0 || Boolean(alertId);
+  const seedKey = `${caseId}|${runId}|${alertId}|${addresses.join(",")}|${txids.join(",")}|${direction}|${hops}|${maxNodes}|${minT}|${maxT}`;
 
   const [graph, setGraph] = useState<GraphData>({ nodes: [], edges: [] });
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -69,6 +76,26 @@ export function GraphExplorer() {
   const load = useCallback((signal?: AbortSignal) => {
     if (!hasSeed) { setGraph({ nodes: [], edges: [] }); setMeta(null); return; }
     setLoading(true); setError(null); setSelected(null); setHighlight(null); setPathStart(null);
+    if (runMode) {
+      getRunGraph(caseId!, runId!, signal).then((r: RunGraphResponse) => {
+        setLayout(defaultLayout(r.graph.nodes.length));
+        setGraph({ nodes: r.graph.nodes, edges: r.graph.edges });
+        // Most run clusters are single addresses; drawn by default they bury
+        // the flow. They stay one click away under Show.
+        setFilters({ ...NO_FILTERS, hiddenKinds: new Set(["cluster"]) });
+        setMeta({ truncated: r.truncated, hubs: [], hubThreshold: 0, meaning: r.meaning,
+                  run: { caseId: caseId!, runId: runId!, nodesTotal: r.nodes_total } });
+        setLoading(false);
+        if (focusId && r.graph.nodes.some((n) => n.id === focusId)) {
+          setSelected(focusId);
+          window.setTimeout(() => canvas.current?.focus(focusId), 900);
+        }
+      }).catch((e: unknown) => {
+        if ((e as Error)?.name === "AbortError") return;
+        setError(e); setLoading(false);
+      });
+      return;
+    }
     const req: Promise<TraceResponse | AlertGraphResponse> = alertId
       ? getAlertGraph(alertId, { hops, direction, maxNodes }, signal)
       : traceGraph({ addresses, txids, direction, hops, maxNodes, minTimestep: minT, maxTimestep: maxT }, signal);
@@ -152,15 +179,19 @@ export function GraphExplorer() {
 
   const reach = (id: string, dir: "upstream" | "downstream") => {
     const ids = canvas.current?.reach(id, dir) ?? [];
+    window.setTimeout(() => canvas.current?.fitTo(ids), 50);
     setHighlight({ ids, label: `${dir === "upstream" ? "Sources of" : "Destinations of"} ${labelOf(id)} in the loaded graph: ${ids.filter((x) => x.startsWith("addr:") && x !== id).length} addresses` });
   };
 
   const pathTo = (id: string) => {
     if (!pathStart) return;
     const r = canvas.current?.shortestPath(pathStart, id);
-    if (!r) { setHighlight({ ids: [pathStart, id], label: "No path between these two in the loaded graph. Expand further and try again." }); return; }
+    if (!r) { setHighlight({ ids: [pathStart, id], label: runMode ? "No path between these two in this run's graph." : "No path between these two in the loaded graph. Expand further and try again." }); return; }
     const hopsN = r.ids.filter((x) => x.startsWith("tx:")).length;
-    setHighlight({ ids: r.ids, label: `${r.directed ? "Directed" : "Undirected (no directed path exists)"} path: ${hopsN} transaction${hopsN === 1 ? "" : "s"}` });
+    const kind = !r.flowOnly ? "Link path (not a money flow; goes through membership or relay links)"
+      : r.directed ? "Money-flow path" : "Money-flow path, ignoring direction (no directed path exists)";
+    setHighlight({ ids: r.ids, label: `${kind}: ${hopsN} transaction${hopsN === 1 ? "" : "s"}` });
+    window.setTimeout(() => canvas.current?.fitTo(r.ids), 50);
   };
 
   const labelOf = (id: string) => {
@@ -170,7 +201,8 @@ export function GraphExplorer() {
 
   const kinds = useMemo(() => countKinds(graph.nodes), [graph.nodes]);
   const range = useMemo(() => timestepRange(graph.nodes), [graph.nodes]);
-  const matches = useMemo(() => matchNodes(graph.nodes, find), [graph.nodes, find]);
+  const matches = useMemo(() => matchNodes(graph.nodes.filter((n) => !filters.hiddenKinds.has(n.kind)), find),
+    [graph.nodes, find, filters.hiddenKinds]);
   const selectedNode = graph.nodes.find((n) => n.id === selected) ?? null;
 
   const toggleKind = (k: string) => setFilters((f) => {
@@ -184,6 +216,15 @@ export function GraphExplorer() {
       {/* ---- left: seeds, trace, filters ---- */}
       <aside className="ws-panel ws-panel-left" aria-label="Trace settings">
         <div className="ws-head"><Icon name="graph" /><h2>Graph explorer</h2></div>
+        {runMode && (
+          <section className="ws-section">
+            <h3>Source</h3>
+            <p className="small" style={{ margin: 0 }}>Uploaded-dataset run <span className="mono">{runId}</span>: every cluster, address, transaction, relay peer and ASN the pipeline projected from the capture.</p>
+            <p className="note">Money flow: select a node, choose <strong>Set path start</strong>, select another, then <strong>Path to here</strong>. <strong>Show sources</strong> and <strong>Show destinations</strong> follow value edges only.</p>
+            <Link className="btn btn-sm" to={`/inv/${caseId}`}><Icon name="arrowLeft" size={14} />Back to the investigation</Link>
+          </section>
+        )}
+        {!runMode && <>
         <section className="ws-section">
           <h3>Seeds</h3>
           <form className="row" style={{ flexWrap: "nowrap" }} onSubmit={(e) => { e.preventDefault(); addSeed(); }}>
@@ -244,6 +285,7 @@ export function GraphExplorer() {
           )}
           <p className="note">Upstream follows value back to its sources; downstream follows it forward. Transactions with more than {meta?.hubThreshold ?? 200} participants are not crossed.</p>
         </section>
+        </>}
 
         <section className="ws-section">
           <h3>Show</h3>
@@ -254,6 +296,7 @@ export function GraphExplorer() {
               {lab}<span className="count">{kinds[k] ?? 0}</span>
             </label>
           ))}
+          {!runMode && <>
           <label className="check-row">
             <input type="checkbox" checked={filters.onlyFlagged} onChange={(e) => setFilters((f) => ({ ...f, onlyFlagged: e.target.checked }))} />
             Only scored or attributed addresses
@@ -263,6 +306,7 @@ export function GraphExplorer() {
             <input type="range" min={0} max={1} step={0.05} value={filters.minRisk}
                    onChange={(e) => setFilters((f) => ({ ...f, minRisk: Number(e.target.value) }))} />
           </label>
+          </>}
           {range && (
             <div className="inline-fields">
               <label className="field"><span className="field-label">Show from</span>
@@ -303,7 +347,7 @@ export function GraphExplorer() {
             selectedId={selected}
             highlightIds={highlight?.ids ?? null}
             onSelect={setSelected}
-            onExpand={(id) => expand(id, "both")}
+            onExpand={runMode ? undefined : (id) => expand(id, "both")}
             onHiddenCount={setHidden}
           />
           {!hasSeed && (
@@ -375,7 +419,7 @@ export function GraphExplorer() {
           <ElementList graph={graph} onPick={(id) => { setSelected(id); canvas.current?.focus(id); setShowList(false); }} />
         ) : selectedNode ? (
           <NodeInspector node={selectedNode} edges={graph.edges} actions={{
-            onExpand: expand, onReach: reach, busy: expanding,
+            onExpand: runMode ? undefined : expand, onReach: reach, busy: expanding, chainIndex: !runMode,
             pathStart, onPathStart: (id) => setPathStart(id), onPathTo: pathTo,
           }} />
         ) : (
@@ -387,6 +431,13 @@ export function GraphExplorer() {
             </div>
             <div className="ws-section">
               <h3>Evidence in this view</h3>
+              {meta?.run ? (
+              <ul className="node-list small" style={{ display: "grid", gap: 6 }}>
+                <li><EvidenceTag kind="chain" /> Addresses, transactions and SPENDS / RECEIVES value edges from the uploaded capture.</li>
+                <li><EvidenceTag kind="heuristic" /> Clusters: common-input ownership. Can merge owners.</li>
+                <li><EvidenceTag kind="network" /> Relay peers and ASNs from the capture&apos;s own observations. A peer is never the sender.</li>
+              </ul>
+              ) : (
               <ul className="node-list small" style={{ display: "grid", gap: 6 }}>
                 <li><EvidenceTag kind="chain" /> Addresses, transactions and flow edges from the Elliptic++ chain index.</li>
                 <li><EvidenceTag kind="model" /> Severity rings: the Phase 7 reference model's association. A lead, not proof.</li>
@@ -394,6 +445,7 @@ export function GraphExplorer() {
                 <li><EvidenceTag kind="heuristic" /> Clusters: common-input ownership. Can merge owners.</li>
                 {meta?.layers && <li><EvidenceTag kind="network" /> Relay peers: synthetic network overlay. Never the sender.</li>}
               </ul>
+              )}
             </div>
             {meta?.seedNote && <div className="ws-section"><p className="note">{meta.seedNote}</p></div>}
             {meta?.fingerprint && <div className="ws-section"><p className="note">Chain index <span className="mono">{meta.fingerprint}</span>. No class labels are served.</p></div>}

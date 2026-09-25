@@ -11,13 +11,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import * as api from "../api/console";
-import { fetchAlerts } from "../api/client";
 import { getModel, listModels } from "../api/intel";
 import { useAuth } from "../store/auth";
 import { RunStatusChip } from "../components/layout/CaseChrome";
 import { InvestigationGuideModal } from "../components/modals/InvestigationGuideModal";
 import { Icon } from "../components/ui/Icon";
-import { Metric, PageHeader, ResultTypeTag, SevTag, fixed, int, pct } from "../components/ui/intel";
+import { Metric, PageHeader, ResultTypeTag, fixed, int } from "../components/ui/intel";
 import { Skeleton } from "../components/ui/primitives";
 import { useApi } from "../lib/useApi";
 
@@ -26,9 +25,6 @@ export function HomePage() {
   const [guideOpen, setGuideOpen] = useState(false);
   const cases = useApi((s) => api.listInvestigations(s), []);
   const activity = useApi((s) => api.recentActivity(10, s), []);
-  const alerts = useApi((s) => fetchAlerts({ limit: 8 }, s), []);
-  const critical = useApi((s) => fetchAlerts({ severity: ["CRITICAL"], limit: 1 }, s), []);
-  const high = useApi((s) => fetchAlerts({ severity: ["HIGH"], limit: 1 }, s), []);
   const registry = useApi((s) => listModels(s), []);
   const champion = registry.data?.roles.champion ?? null;
   const model = useApi(champion ? (s) => getModel(champion, s) : null, [champion]);
@@ -53,7 +49,7 @@ export function HomePage() {
 
       <div className="metric-strip">
         <Metric k="Open investigations" v={cases.loading ? "…" : int(open.length)} d={`${int(investigations.length)} in total`} />
-        <Metric k="Alerts in your cases" v={cases.loading ? "…" : int(referenced)} d="referenced from the alert run" />
+        <Metric k="Alerts in your cases" v={cases.loading ? "…" : int(referenced)} d="referenced into your investigations" />
         <Metric k="Awaiting a decision" v={cases.loading ? "…" : int(outstanding)} d="no disposition recorded yet"
                 tone={outstanding > 0 ? "var(--oc-sev-high)" : undefined} />
         <Metric k="Recent activity" v={activity.loading ? "…" : int(activity.data?.events.length ?? 0)} d="audit events, latest 10" />
@@ -71,7 +67,7 @@ export function HomePage() {
               {cases.loading ? <Skeleton rows={4} /> : open.length === 0 ? (
                 <div className="state">
                   <h3>No open investigations</h3>
-                  <p>Open one from an alert, or create one and upload a dataset for the pipeline to score.</p>
+                  <p>Create an investigation and upload a capture for the offline pipeline to validate, analyse and rank.</p>
                 </div>
               ) : (
                 <table>
@@ -90,42 +86,6 @@ export function HomePage() {
                 </table>
               )}
             </div>
-          </section>
-
-          <section className="panel">
-            <div className="panel-head">
-              <h2>Top of the reference alert run</h2>
-              <span className="small faint">pipeline output, not an investigation</span>
-              <span className="spacer" />
-              <Link to="/alerts" className="btn btn-sm btn-ghost">Alert queue<Icon name="arrowRight" size={14} /></Link>
-            </div>
-            <div className="panel-body flush table-wrap">
-              {alerts.loading ? <Skeleton rows={5} /> : alerts.error ? (
-                <p className="muted small" style={{ padding: 16 }}>The alert run is not available: {(alerts.error as Error).message}</p>
-              ) : (
-                <table>
-                  <thead><tr><th className="num">#</th><th>Severity</th><th className="num">Model risk</th><th>Cluster</th><th className="num">Members</th><th>Active</th></tr></thead>
-                  <tbody>{alerts.data!.alerts.map((a) => (
-                    <tr key={a.alert_id}>
-                      <td className="num">{a.rank}</td>
-                      <td><SevTag severity={a.severity} /></td>
-                      <td className="num">{pct(a.risk_score, 1)}</td>
-                      <td><Link className="mono row-link" to={`/alerts/${encodeURIComponent(a.alert_id)}`}>{a.cluster_id}</Link></td>
-                      <td className="num">{int(a.members_total)}</td>
-                      <td className="mono small">t{a.first_timestep}{a.last_timestep !== a.first_timestep ? `–t${a.last_timestep}` : ""}</td>
-                    </tr>
-                  ))}</tbody>
-                </table>
-              )}
-            </div>
-            {alerts.data && (
-              <div className="panel-foot">
-                {int(alerts.data.alert_count_total)} alerts in run <span className="mono">{alerts.data.run_fingerprint.slice(0, 12)}</span>
-                {critical.data && ` · ${int(critical.data.alert_count_matched)} critical`}
-                {high.data && ` · ${int(high.data.alert_count_matched)} high`}
-                . Model risk ranks clusters for attention; it is not a finding.
-              </div>
-            )}
           </section>
 
           <section className="panel">
@@ -156,9 +116,9 @@ export function HomePage() {
           <section className="panel">
             <div className="panel-head"><h2>Start from</h2></div>
             <div className="panel-body" style={{ display: "grid", gap: 8 }}>
-              <Link className="btn" style={{ justifyContent: "flex-start" }} to="/alerts"><Icon name="alert" />Triage the alert queue</Link>
-              <Link className="btn" style={{ justifyContent: "flex-start" }} to="/graph"><Icon name="graph" />Trace an address or transaction</Link>
-              {canCreate && <Link className="btn" style={{ justifyContent: "flex-start" }} to="/investigations/new"><Icon name="upload" />Upload a dataset to score</Link>}
+              {canCreate && <Link className="btn" style={{ justifyContent: "flex-start" }} to="/investigations/new"><Icon name="upload" />New investigation from a capture</Link>}
+              <Link className="btn" style={{ justifyContent: "flex-start" }} to="/investigations"><Icon name="folder" />Your investigations</Link>
+              <Link className="btn btn-ghost" style={{ justifyContent: "flex-start" }} to="/alerts"><Icon name="alert" />Reference run (Elliptic++)</Link>
               <p className="note">Press <kbd>/</kbd> or <kbd>⌘K</kbd> anywhere to search addresses, transactions, alerts and cases.</p>
             </div>
           </section>

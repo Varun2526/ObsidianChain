@@ -43,11 +43,13 @@ export const NO_FILTERS: GraphFilters = {
 
 export interface FlowGraphHandle {
   fit(): void;
+  /** Zoom to a set of elements (a path, a reach set). */
+  fitTo(ids: string[]): void;
   zoomBy(factor: number): void;
   relayout(): void;
   focus(id: string): void;
   /** Directed path first (the way value moved); undirected only if no directed one exists. */
-  shortestPath(from: string, to: string): { ids: string[]; directed: boolean } | null;
+  shortestPath(from: string, to: string): { ids: string[]; directed: boolean; flowOnly: boolean } | null;
   /** Everything upstream / downstream of a node inside the loaded graph. */
   reach(id: string, direction: "upstream" | "downstream"): string[];
   exportPng(): string | null;
@@ -410,6 +412,12 @@ export const FlowGraph = forwardRef<FlowGraphHandle, FlowGraphProps>(function Fl
 
   useImperativeHandle(ref, () => ({
     fit() { cyRef.current?.fit(cyRef.current.elements(":visible"), 32); },
+    fitTo(ids: string[]) {
+      const cy = cyRef.current;
+      if (!cy || ids.length === 0) return;
+      const eles = cy.collection(ids.map((i) => cy.getElementById(i)).filter((e) => e.nonempty()));
+      if (eles.nonempty()) cy.animate({ fit: { eles, padding: 60 } }, { duration: 450 });
+    },
     zoomBy(factor: number) {
       const cy = cyRef.current;
       if (!cy) return;
@@ -430,19 +438,44 @@ export const FlowGraph = forwardRef<FlowGraphHandle, FlowGraphProps>(function Fl
       const root = cy.getElementById(from);
       const goal = cy.getElementById(to);
       if (root.empty() || goal.empty()) return null;
+      // Money flow first: a path over value edges only. Membership and
+      // relay links are not movement of value, so a path through them is a
+      // last resort and is reported as such.
       const visible = cy.elements().not(".filtered");
+      const flowEdges = visible.edges('[kind = "SPENDS"], [kind = "PAYS"], [kind = "RECEIVES"]');
+      const flow = flowEdges.union(flowEdges.connectedNodes()).union(root).union(goal);
       for (const directed of [true, false]) {
-        const r = visible.aStar({ root, goal, directed });
-        if (r.found) return { ids: r.path.map((e) => e.id()), directed };
+        const r = flow.aStar({ root, goal, directed });
+        if (r.found) return { ids: r.path.map((e) => e.id()), directed, flowOnly: true };
       }
+      const r = visible.aStar({ root, goal, directed: false });
+      if (r.found) return { ids: r.path.map((e) => e.id()), directed: false, flowOnly: false };
       return null;
     },
     reach(id: string, direction: "upstream" | "downstream") {
       const cy = cyRef.current;
       const el = cy?.getElementById(id);
       if (!cy || !el || el.empty()) return [];
-      const set = direction === "upstream" ? el.predecessors() : el.successors();
-      return [id, ...set.not('[kind = "cluster"]').filter((x) => !x.isEdge() || x.data("kind") !== "MEMBER_OF").map((x) => x.id())];
+      // Reach follows value edges only (SPENDS / PAYS / RECEIVES).
+      const flow = cy.elements().edges('[kind = "SPENDS"], [kind = "PAYS"], [kind = "RECEIVES"]');
+      const sub = flow.union(flow.connectedNodes()).union(el);
+      const seen = new Set<string>([id]);
+      const out: string[] = [id];
+      let frontier = [id];
+      while (frontier.length) {
+        const next: string[] = [];
+        for (const nid of frontier) {
+          const n = sub.getElementById(nid);
+          const edges = direction === "upstream" ? n.incomers("edge").intersection(flow) : n.outgoers("edge").intersection(flow);
+          edges.forEach((e) => {
+            const other = direction === "upstream" ? e.source().id() : e.target().id();
+            out.push(e.id());
+            if (!seen.has(other)) { seen.add(other); out.push(other); next.push(other); }
+          });
+        }
+        frontier = next;
+      }
+      return out;
     },
     exportPng() {
       const cy = cyRef.current;
