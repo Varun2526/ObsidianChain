@@ -1,0 +1,11 @@
+{
+ "balanced_point": 0.3,
+ "high_recall_point": 0.15,
+ "bands": {
+  "Critical": 0.6,
+  "High": 0.3,
+  "Medium": 0.15
+ },
+ "band_rule": "Critical: lowest grid t with validation precision >= 0.90; High: balanced (max F1); Medium: lowest grid t with precision >= 0.50; Low: below Medium",
+ "merged_bands": []
+}
