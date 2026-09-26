@@ -1,0 +1,103 @@
+name: Deploy ObsidianChain
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+
+            cd ~/ObsidianChain
+
+            echo "==> Pulling latest main"
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "==> Building Docker image"
+            docker build -t obsidianchain:${{ github.sha }} .
+
+            echo "==> Detecting active deployment"
+
+            if docker ps --format '{{.Names}}' | grep -q '^obsidianchain$'; then
+              ACTIVE_CONTAINER="obsidianchain"
+              ACTIVE_PORT="8080"
+              NEW_CONTAINER="obsidianchain-new"
+              NEW_PORT="8081"
+            else
+              ACTIVE_CONTAINER="obsidianchain-new"
+              ACTIVE_PORT="8081"
+              NEW_CONTAINER="obsidianchain"
+              NEW_PORT="8080"
+            fi
+
+            echo "Active: $ACTIVE_CONTAINER on $ACTIVE_PORT"
+            echo "New:    $NEW_CONTAINER on $NEW_PORT"
+
+            echo "==> Removing stale replacement container"
+            docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
+
+            echo "==> Starting new container"
+            docker run -d \
+              --name "$NEW_CONTAINER" \
+              --restart unless-stopped \
+              -p "127.0.0.1:${NEW_PORT}:8000" \
+              obsidianchain:${{ github.sha }}
+
+            echo "==> Waiting for health check"
+
+            for i in {1..30}; do
+              if curl -fsS "http://127.0.0.1:${NEW_PORT}/api/health" > /dev/null; then
+                echo "Health check passed"
+                break
+              fi
+
+              if [ "$i" -eq 30 ]; then
+                echo "Health check FAILED"
+                docker logs "$NEW_CONTAINER" --tail 100
+                docker rm -f "$NEW_CONTAINER"
+                exit 1
+              fi
+
+              sleep 2
+            done
+
+            echo "==> Switching Nginx to new container"
+
+            sudo sed -i \
+              "s#proxy_pass http://127.0.0.1:${ACTIVE_PORT};#proxy_pass http://127.0.0.1:${NEW_PORT};#" \
+              /etc/nginx/nginx.conf
+
+            sudo nginx -t
+            sudo systemctl reload nginx
+
+            echo "==> Verifying production endpoint"
+
+            sleep 2
+
+            curl -fsS http://127.0.0.1/api/health
+
+            echo
+            echo "==> Removing old container"
+            docker rm -f "$ACTIVE_CONTAINER" 2>/dev/null || true
+
+            echo "==> Removing old image layers"
+            docker image prune -f
+
+            echo "==> Deployment successful"
