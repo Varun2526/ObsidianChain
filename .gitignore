@@ -1,8 +1,6 @@
 # ---- Data (never commit datasets) ----
-data/raw/*
-data/processed/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
+data/raw/
+data/processed/
 
 # Generated demonstration fixtures and their rendered output. Reproducible
 # from a seed (obsidianchain.demo.scenarios.DEMO_SEED), so there is nothing
