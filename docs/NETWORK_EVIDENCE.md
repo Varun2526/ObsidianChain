@@ -16,18 +16,32 @@ ObsidianChain incorporates network observation telemetry (`timestamp_ms`, `src_i
 
 Empirical research on Bitcoin's P2P gossip protocol and controlled network evaluations reveal fundamental dynamics:
 
-```
-[Wallet Client]
-      │
-      ▼ (First Broadcast)
- [Entry Node / VPN / Relay]
-      │
-      ├───────────────────────┬───────────────────────┐
-      ▼                       ▼                       ▼
- [Peer Relay A]          [Peer Relay B]          [Peer Relay C]
-      │                       │                       │
-      ▼                       ▼                       ▼
- [Observer Vantage 1]    [Observer Vantage 2]    [Observer Vantage 3]
+```mermaid
+flowchart TD
+    subgraph S_SRC ["Transaction Origin"]
+        direction TB
+        WALLET["Originating Wallet Client"]
+        ENTRY["First Hop: Entry Node / VPN Relay"]
+        WALLET -->|"P2P Broadcast inv"| ENTRY
+    end
+
+    subgraph S_DIFF ["P2P Gossip Network Diffusion"]
+        direction TB
+        RELAY_A["Peer Relay A (Transit Node)"]
+        RELAY_B["Peer Relay B (Mining Pool)"]
+        RELAY_C["Peer Relay C (Public Node)"]
+        ENTRY --> RELAY_A & RELAY_B & RELAY_C
+    end
+
+    subgraph S_OBS ["Distributed Observer Vantage Points"]
+        direction TB
+        OBS_1["Observer 1 (Frankfurt)<br/>Arrival: t0"]
+        OBS_2["Observer 2 (Singapore)<br/>Arrival: t0 + 45ms"]
+        OBS_3["Observer 3 (Ashburn)<br/>Arrival: t0 + 120ms"]
+        RELAY_A -->|"P2P Relay"| OBS_1
+        RELAY_B -->|"P2P Relay"| OBS_2
+        RELAY_C -->|"P2P Relay"| OBS_3
+    end
 ```
 
 1. **Multi-Peer Announcement Relay:**  
@@ -74,6 +88,36 @@ To prevent miscarriages of justice and erroneous forensic conclusions, ObsidianC
 > - `IP ≠ Wallet Owner`
 > - `Same IP ≠ Same Legal Entity`
 > - `Peer IP ≠ Originating Client`
+
+```mermaid
+flowchart TD
+    subgraph INPUTS ["1. Ingested Evidence Signals"]
+        direction LR
+        TX_ONCHAIN["<b>On-Chain Ledger Data</b><br/>Inputs, Outputs, Scripts, Amounts"]
+        NET_TELEMETRY["<b>P2P Network Telemetry</b><br/>Relaying Peer IPs, ASNs, Arrival Timestamps"]
+    end
+
+    subgraph BOUNDARY ["2. Processing & Evidentiary Barrier"]
+        direction TB
+        ENT_MERGE["<b>Entity Resolution (Union-Find)</b><br/>Multi-Input Co-Spend Cryptographic Clustering"]
+        CTX_EVIDENCE["<b>Network Context Profiler</b><br/>Observer Vantage Spread & Arrival Dispersion"]
+        BARRIER["<b>CANNOT-LINK INVARIANT</b><br/>IP Observation ≠ Private Key Ownership"]
+        
+        TX_ONCHAIN --> ENT_MERGE
+        NET_TELEMETRY --> CTX_EVIDENCE
+        NET_TELEMETRY -.->|"BLOCKED BY RULE"| BARRIER
+        BARRIER -.->|"NO CLUSTERING MERGE"| ENT_MERGE
+    end
+
+    subgraph ADMISSIBLE ["3. Segregated Forensic Output"]
+        direction LR
+        EVID_FACT["<b>Admissible Direct Proof</b><br/>CHAIN_TRANSACTION & CHAIN_CLUSTER"]
+        EVID_SUPP["<b>Circumstantial Context Only</b><br/>NETWORK_CONTEXT (Advisory Marker)"]
+    end
+
+    ENT_MERGE --> EVID_FACT
+    CTX_EVIDENCE --> EVID_SUPP
+```
 
 ### How Telemetry May Be Used (Admissible Context)
 1. **Investigative Context (`NETWORK_CONTEXT`):**  

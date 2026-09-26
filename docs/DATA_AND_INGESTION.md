@@ -8,6 +8,41 @@
 
 ObsidianChain accepts bulk transactional datasets in **CSV, JSON, and XML** formats. Ingestion normalizes diverse input schemas into a unified, canonical tabular format suitable for graph construction and feature extraction.
 
+```mermaid
+flowchart TD
+    subgraph IN_FORMATS ["Multi-Format Ingestion (Upload)"]
+        direction LR
+        F_CSV["CSV Data Stream<br/>(Delimiter / Quoted)"]
+        F_JSON["JSON Data Stream<br/>(Array / NDJSON)"]
+        F_XML["XML Data Stream<br/>(Hierarchical Elements)"]
+    end
+
+    subgraph INGEST_ENGINE ["Normalization & Fingerprint Engine"]
+        direction TB
+        PARSER["Format-Specific Parser<br/>(obsidianchain.io.ingest)"]
+        FINGERPRINT["Raw SHA-256 Digest Calculation<br/>(Dataset Provenance Root)"]
+        PARSER --> FINGERPRINT
+    end
+
+    subgraph VALIDATION ["Schema Validation & Integrity Guard"]
+        direction TB
+        COERCE["Datatype Coercion & Canonical Mapping<br/>(14 CANONICAL_COLUMNS)"]
+        TRUTH_GUARD["Truth Isolation Boundary<br/>assert_no_truth_fields()"]
+        REPORT["ValidationReport Generation<br/>(Accepted, Coerced, Rejected Rows)"]
+        COERCE --> TRUTH_GUARD --> REPORT
+    end
+
+    subgraph OUTPUTS ["Downstream Artifacts"]
+        direction TB
+        CLEAN_FRAMES["Normalized Transaction Frames<br/>(Zero Imputation / NaNs Preserved)"]
+        VAL_JSON["Audit-Ready Validation Report<br/>(Stored in Investigation Record)"]
+    end
+
+    IN_FORMATS --> PARSER
+    FINGERPRINT --> COERCE
+    REPORT --> CLEAN_FRAMES & VAL_JSON
+```
+
 The ingestion engine follows three strict engineering principles:
 1. **Never Silently Impute:** Missing fields are explicitly recorded as absent. Missing values evaluate to `NaN` rather than zero, preserving forensic honesty.
 2. **Deterministic Provenance:** Every uploaded dataset is fingerprinted with its raw SHA-256 digest upon upload.

@@ -50,6 +50,65 @@ stateDiagram-v2
 
 ## 3. The 19-Step Investigative Casework Workflow
 
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Inv as Investigator
+    participant API as FastAPI Boundary
+    participant Engine as 17-Stage Engine
+    actor Rev as Reviewer
+    actor Adm as Administrator
+    participant Ledger as SQLite WAL & Merkle
+
+    Note over Inv,API: Phase I: Authentication & Case Initialization
+    Inv->>API: POST /api/auth/login (scrypt password verification)
+    API-->>Inv: Bearer Token (Role: INVESTIGATOR)
+    Inv->>API: POST /api/console/investigations (Create Case OC-0001)
+    API->>Ledger: Append Audit Record (Event: CASE_CREATED, Status: DRAFT)
+
+    Note over Inv,API: Phase II: Data Ingestion & Validation
+    Inv->>API: POST /api/console/datasets/upload (CSV / JSON / XML)
+    API->>API: Normalize Schema & Compute SHA-256 Dataset Hash
+    API->>Ledger: Store ValidationReport & Fingerprint
+
+    Note over Inv,Engine: Phase II: 17-Stage Analytical Execution
+    Inv->>API: POST /api/console/investigations/{id}/run
+    API->>Ledger: Case State -> VALIDATING -> ANALYZING
+    API->>Engine: Run Pipeline Conductor (orchestrator.py)
+    Engine->>Engine: Stages 1-3: Parsing, Validation & Offline GeoIP
+    Engine->>Engine: Stages 4-6: Blockchain Graph, P2P Telemetry & Correlation
+    Engine->>Engine: Stages 7-8: Bipartite Graph & Union-Find Clustering
+    Engine->>Engine: Stages 9-12: 31 Features as-of-t, LightGBM ps_native_v5, MAD
+    Engine->>Engine: Stages 13-17: Fusion, TreeSHAP, Projections, Merkle Manifest
+    Engine-->>API: Yield AlertRunResult & Artifacts
+    API->>Ledger: Append Audit Record (Event: PIPELINE_COMPLETED, Status: ACTIVE)
+
+    Note over Inv,API: Phase III: Triage & Forensic Examination
+    Inv->>API: GET /api/console/alerts (Prioritized Alert Queue)
+    Inv->>API: GET /api/console/entities/{id} (TreeSHAP Attributions & Flow Canvas)
+    Inv->>API: POST /api/console/casework/{id}/notes (Record Forensic Dossier)
+
+    Note over Inv,Rev: Phase IV: Casework Decisions & Review Sign-Off
+    Inv->>API: POST /api/console/investigations/{id}/submit (Submit for Review)
+    API->>Ledger: Case State -> SUBMITTED (Investigator Locked)
+    Rev->>API: GET /api/console/investigations/{id} (Inspect Case Dossier)
+    Rev->>API: POST /api/console/investigations/{id}/review (Mandatory Rationale)
+    alt Reviewer Approves
+        Rev->>API: Action: APPROVE
+        API->>Ledger: Case State -> APPROVED (Dual Sign-Off Sealed)
+    else Revision Required
+        Rev->>API: Action: RETURN (Feedback Attached)
+        API->>Ledger: Case State -> ACTIVE (Returned to Investigator)
+    end
+
+    Note over Adm,Ledger: Phase V: Closure, Archival & Tamper-Evident Integrity
+    Adm->>API: POST /api/console/investigations/{id}/close
+    API->>Ledger: Case State -> CLOSED
+    Adm->>API: GET /api/console/investigations/{id}/export (Download Bundle)
+    API->>Ledger: Compute Domain-Separated Merkle Tree over Events
+    API-->>Adm: Export Merkle Bundle (Root Hash + Leaf Inclusion Proofs)
+```
+
 ### Phase I: Authentication & Case Initialization
 1. **Login & Session Establishment**  
    The investigator authenticates via `/api/auth/login`. Credentials are verified against standard-library `scrypt` password hashes (`passwords.py`). The server issues an ephemeral bearer session token and verifies the user's role (`INVESTIGATOR`, `REVIEWER`, or `ADMIN`).
@@ -73,8 +132,8 @@ stateDiagram-v2
    - **Stage 6: Blockchain ↔ Network Correlation** — Joins network telemetry with blockchain transactions on `txid`.
    - **Stage 7: Blockchain Transaction Graph** — Constructs directed graph edges between addresses and transactions.
    - **Stage 8: Entity Clustering** — Executes Union-Find multi-input clustering with path compression and union-by-rank.
-   - **Stage 9: Features & Compatibility Check** — Extracts 30 core features as-of timestamp $t$ and validates model compatibility.
-   - **Stage 10: Supervised ML Risk** — Computes risk predictions via the frozen Random Forest model and applies isotonic calibration.
+   - **Stage 9: Features & Compatibility Check** — Extracts 31 core features as-of timestamp $t$ and validates model compatibility.
+   - **Stage 10: Supervised ML Risk** — Computes risk predictions via champion LightGBM (`ps_native_v5`) and applies Platt scaling.
    - **Stage 11: Unsupervised Anomaly Scoring** — Computes Median Absolute Deviation (MAD) robust Z-scores per address.
    - **Stage 12: Peeling & Mixing Patterns** — Identifies rapid peeling chains and equal-output mixing candidates.
    - **Stage 13: Evidence Fusion** — Combines ML risk, MAD anomalies, structural heuristics, and network context into evidence packages.
