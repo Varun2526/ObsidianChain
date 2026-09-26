@@ -17,6 +17,10 @@ data/obsidianchain.sqlite3-wal
 data/obsidianchain.sqlite3-shm
 data/uploads/
 data/runs/
+deploy-data/obsidianchain.sqlite3-wal
+deploy-data/obsidianchain.sqlite3-shm
+deploy-data/uploads/
+deploy-data/runs/
 
 # The controlled synthetic world and the additive structural scan.
 # Both are generated artifacts: reproducible from a seed and a
@@ -35,6 +39,7 @@ vendor/
 # Small synthetic test and sample fixtures ARE source: a clean checkout needs them.
 !tests/data/*.csv
 !data/samples/*.csv
+!deploy-data/samples/*.csv
 *.parquet
 *.pkl
 *.pickle
@@ -79,6 +84,8 @@ env/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+*.tsbuildinfo
+node_modules/
 .coverage
 .coverage.*
 htmlcov/
@@ -101,7 +108,11 @@ htmlcov/
 .LSOverride
 ._*
 
-# ---- Local planning / prompt artifacts ----
+# ---- Internal development history & agent tracking ----
+HANDOFF.md
+research-log.md
+research-state.yaml
+findings.md
 PS26146_claude_code_prompts.md
 PS26146_merged_architecture_v2.md
 

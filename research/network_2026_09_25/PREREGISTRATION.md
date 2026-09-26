@@ -1,7 +1,7 @@
 # exp-net1: do network features add signal? (pre-registered 2026-09-25)
 
 Written and committed before the script was run. Phase 7 of
-`docs/plans/2026-09-25-network-layer.md`.
+`docs/archive/plans/2026-09-25-network-layer.md`.
 
 ## Question
 

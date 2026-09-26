@@ -21,7 +21,7 @@ const CLASS_KIND: Record<string, EvidenceKind> = {
 };
 
 const SIGNAL_LABEL: Record<string, string> = {
-  supervised_risk_model: "Supervised model (ps_native_v5)",
+  supervised_risk_model: "ObsidianChain Risk Model",
   robust_mad_deviation: "Statistical outlier",
   peeling_chain: "Peeling chain",
   coinjoin_mixing: "CoinJoin / mixing structure",

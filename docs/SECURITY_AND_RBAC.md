@@ -43,7 +43,7 @@ Security in ObsidianChain rests on five foundational pillars:
 
 ## 3. Role-Based Access Control (RBAC)
 
-RBAC policies are defined in [`src/obsidianchain/console/rbac.py`](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/rbac.py).
+RBAC policies are defined in [`src/obsidianchain/console/rbac.py`](../src/obsidianchain/console/rbac.py).
 
 ### The Three Institutional Roles
 

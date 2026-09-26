@@ -1,199 +1,276 @@
 # ObsidianChain
 
-**AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
-*SIH 2026 Problem Statement 26146 | Air-Gapped Forensic Platform*
+Offline Bitcoin Transaction Forensics & Risk Intelligence
+
+**Smart India Hackathon (SIH) 2026 — Problem Statement 26146**  
+*National Technical Research Organisation (NTRO)*
+
+[Watch 5-Minute Demo](docs/demo/obsidianchain_walkthrough.mp4) • [Short Technical Write-Up](docs/TECHNICAL_WRITEUP.md) • [Documentation Index](docs/README.md)
 
 ---
 
-## 1. Problem
-
-Cryptocurrency transaction graphs are inherently pseudonymous, high-volume, and cross-jurisdictional. Financial intelligence units and law enforcement agencies face critical bottlenecks when investigating illicit flows (e.g., ransomware, mixing services, darknet markets, money laundering):
-
-- **Transitive Clustering Contamination:** Traditional co-spend heuristics merge addresses transitively. A single incorrect merge welds unrelated entities together into massive, false "super-clusters."
-- **Lack of Evidence Separation:** Existing tools conflate on-chain graph connectivity with real-world identity, asserting ownership without corroborating multi-layer evidence.
-- **Air-Gap & Privacy Requirements:** Operational intelligence environments cannot upload proprietary case evidence or blockchain telemetry to third-party cloud APIs. Analysis must execute 100% offline.
+ObsidianChain is an offline, air-gapped forensic intelligence workbench built for national security analysts, financial intelligence units, and law enforcement. The platform ingests bulk Bitcoin transaction dumps and peer-to-peer (P2P) network broadcast telemetry to uncover money laundering structures, trace high-velocity multi-hop fund flows, correlate transaction announcements across observer nodes, and produce court-admissible, tamper-evident evidence bundles backed by cryptographic Merkle proofs—completely without external network calls or cloud dependencies.
 
 ---
 
-## 2. What ObsidianChain Does
+## 2. SIH Problem Statement & Deliverables Compliance
 
-ObsidianChain is an offline institutional forensic intelligence platform. It transforms raw blockchain transaction streams and network gossip telemetry into prioritized, evidence-backed investigative leads:
+### Official Problem Statement Background
+> *"Bitcoin's pseudonymous, peer-to-peer design lets criminal actors move, layer, and cash out illicit funds — ransomware payments, darknet-market proceeds, extortion, and laundering — while evading traditional financial surveillance.*
+>
+> *The objective of problem statement is to design and build a complete system (offline) that ingests bulk Bitcoin transaction/network metadata (in CSV/JSON/XML), correlates network-layer (IP/port/timing) observations with blockchain-layer (wallet/TXID/amount) data, and applies AI/ML to detect anomalies, cluster entities, and generate prioritized, explainable investigative leads."*
 
-```
-Raw Telemetry (CSV/JSON/XML)
-  ↓
-Ingestion & Normalization
-  ↓
-Common-Input Co-Spend Clustering (Union-Find)
-  ↓
-Behavioural, Graph & Structural Pattern Feature Extraction
-  ↓
-Network Propagation Observation & Context
-  ↓
-Supervised Risk Scoring & Robust Outlier Detection
-  ↓
-Cluster Risk Aggregation & Alert Ranking
-  ↓
-Interactive Investigation Console (Graph, Timeline, Evidence Funnel)
-  ↓
-Independent Review, Disposition Sign-Off & Merkle Integrity Export
-```
+### Challenge Deliverables & Compliance Matrix
+
+| PS Required Deliverable | ObsidianChain Implementation | Evidence & Verification |
+| :--- | :--- | :--- |
+| **1. Workable complete offline solution for Linux platform** | Multi-stage Docker container supporting Linux AMD64 & ARM64; 100% air-gapped runtime with zero outbound network calls, local assets, and embedded offline DB-IP Lite database (~9.7 MB runtime footprint). | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)<br>`Dockerfile`<br>`tests/test_offline.py` |
+| **2. Working prototype (code repo) with ingestion, correlation, and AI/ML model** | Full modular Python/FastAPI engine and React console: deterministic parsers, cross-layer statistical correlation engine ($p = 1.1 \times 10^{-19}$), and 31-feature calibrated LightGBM model. | [`src/obsidianchain/`](src/obsidianchain/)<br>2,148 Passing Automated Tests |
+| **3. Short technical write-up: approach, model choice, and explainability method** | Authoritative 14-section technical report detailing methodology, LightGBM classifier selection, Platt scaling calibration, and local TreeSHAP mathematical explanations. | [`docs/TECHNICAL_WRITEUP.md`](docs/TECHNICAL_WRITEUP.md)<br>[`docs/MODEL_CARD.md`](docs/MODEL_CARD.md) |
+| **4. Dashboard / visualization showing flagged entities and evidence for each flag** | Institutional React single-page console featuring Cytoscape interactive graph canvas, golden path money-flow traversal, ranked alert queue with confidence scores, and segregated evidence panels. | [`docs/screenshots/`](docs/screenshots/)<br>[Walkthrough Video](docs/demo/obsidianchain_walkthrough.mp4) |
+| **5. Ingest & parse bulk metadata (CSV / JSON / XML)** | Multi-format ingestion engine validating canonical fields (`timestamp`, `src_ip`, `dst_ip`, `src_port`, `dst_port`, `txid`, `input_addresses[]`, `output_addresses[]`, `input_amounts[]`, `output_amounts[]`, `fee`, `script_type`, `geo_country`/`asn`). | [`src/obsidianchain/io/`](src/obsidianchain/io/)<br>[`docs/DATA_AND_INGESTION.md`](docs/DATA_AND_INGESTION.md) |
+| **6. Build entity / transaction graph linking IPs, wallets, and transactions** | Bipartite directed multigraph engine, multi-input co-spend clustering (disjoint-set Union-Find with path compression), and peer network announcement mapping. | [`src/obsidianchain/cluster/`](src/obsidianchain/cluster/)<br>[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| **7. AI/ML detection with a working model — not just rules** | Supervised LightGBM classifier (`ps_native_v5`, 300 trees, 31 leaves) operating on 31 temporal/graph features as-of-$t$, paired with Median Absolute Deviation (MAD) heavy-tail anomaly detection. | [`src/obsidianchain/ml/`](src/obsidianchain/ml/)<br>[`docs/ML_PIPELINE.md`](docs/ML_PIPELINE.md) |
+| **8. Ranked, explainable alert list with confidence scores** | Prioritized alert queue with empirical posterior probabilities from Platt calibration and exact directional TreeSHAP attributions ($\pm \Delta$) explaining why each wallet was flagged. | [`frontend/src/`](frontend/src/)<br>[`docs/feature_catalog.md`](docs/feature_catalog.md) |
+
+---
+
+## 3. What We Built
+
+ObsidianChain provides an integrated institutional workbench engineered for end-to-end casework:
+
+- **17-Stage Forensic Pipeline:** Deterministic dataflow orchestrating ingestion, schema normalization, graph building, entity resolution, feature calculation, risk inference, outlier scoring, evidence fusion, and Merkle export.
+- **31-Feature Production Risk Model:** Evaluates temporal transaction dynamics, address history, graph centrality, structural patterns, address roles, and upstream flow metrics strictly as-of event timestamp $t$.
+- **Graph & Transaction Relationship Analysis:** Bipartite graph modeling resolving multi-input co-spend entities via disjoint-set Union-Find and detecting change addresses.
+- **Multi-Hop Money-Flow / Path Analysis:** Golden path traversal tracing the shortest and highest-capacity transmission routes between flagged entities across intermediate peeling hops.
+- **P2P Network Intelligence & Telemetry:** Ingests P2P inventory announcements across observer nodes, resolving Autonomous System Numbers (ASNs) and GeoIP locations via an embedded offline database.
+- **Multimodal Blockchain / Network Correlation:** Cross-layer statistical correlation engine testing transaction broadcast timing against random arrival chance ($p = 1.1 \times 10^{-19}$).
+- **Traceable Evidence & TreeSHAP Explanations:** Exact local feature attributions quantifying directional risk contributions ($\pm \Delta$) partitioned across six segregated evidence classes.
+- **Institutional Casework Governance & RBAC:** Role-based access control (`ADMIN`, `INVESTIGATOR`, `REVIEWER`) enforcing mandatory two-person sign-off and separation of duties.
+- **Tamper-Evident Merkle Audit Trail:** SQLite WAL-mode append-only ledger stamped with domain-separated SHA-256 Merkle root inclusion proofs.
+- **Self-Contained Offline Operation:** Runs 100% offline with zero external network connectivity, zero third-party CDNs, and a minimal ~9.7 MB runtime distribution (`deploy-data/`).
 
 > [!IMPORTANT]
-> **No Absolute Identity or Criminality Claims:** ObsidianChain produces calibrated risk scores, behavioral anomaly flags, and evidentiary trails. It explicitly does **not** claim that an IP address proves wallet ownership, nor does it assert definitive criminal guilt.
+> **Architecture Clarification:** The **17 stages** constitute the end-to-end analytical dataflow pipeline (ingestion $\to$ graph $\to$ ML $\to$ correlation $\to$ reporting), while the **31 features** represent the mathematical inputs evaluated by the supervised risk model.
 
 ---
 
-## 3. Core Design Principle
-
-> **"Do not force an answer when the evidence does not support one."**
-
-- **Evidentiary Abstention:** Where a feature cannot be computed or network observations are unavailable, the platform explicitly stamps `INSUFFICIENT_EVIDENCE` or `UNOBSERVED` rather than fabricating neutral default values (e.g., zeroes) that could be misread as measurements.
-- **Multimodal Signal Separation:** On-chain cospend evidence (`BLOCKCHAIN_CONTEXT`), structural heuristics (`PATTERN_CONTEXT`), anomaly deviations (`ANOMALY_CONTEXT`), supervised predictions (`MODEL_SIGNAL`), and peer announcements (`NETWORK_CONTEXT`) are held in distinct, unmerged evidentiary blocks.
-- **Immutability:** Analytical predictions and investigator decisions are recorded side-by-side. An investigator disposition never mutates an analytical risk score, and an analytical rerun never erases an investigator's notes.
-
----
-
-## 4. Key Capabilities
-
-- **Air-Gapped Operation:** Runs 100% offline with zero external network connectivity, zero external CDN dependencies, and pinned offline wheels.
-- **PS-Native Supervised Risk Model:** Evaluates addresses as-of transaction timestamp $t$ across 30 behavioral, topological, and structural features.
-- **Isotonic Calibration:** Raw classifier probabilities are calibrated to true empirical risk percentiles, eliminating artificial score inflation.
-- **Robust Anomaly Detection:** Utilizes Median Absolute Deviation (MAD) robust Z-scoring to isolate heavy-tailed transaction velocity outliers.
-- **Structural Pattern Detection:** Identifies deterministic transaction topology signatures including peeling chains and Equal-Output CoinJoin mixers.
-- **Network Telemetry Integration:** Maps peer announcement dispersion without making unverified IP-to-wallet ownership claims.
-- **Role-Based Casework & Review:** Full investigator, reviewer, and administrator lifecycle with independent two-person sign-off.
-- **Merkle Tree Integrity:** Exports case bundles with anti-circular Merkle tree verification, inclusion proofs, and immutable audit trails.
-
----
-
-## 5. Production ML
-
-The production analytical engine is **strictly frozen**:
-
-- **Production Supervised Model:** `RandomForestClassifier` (120 estimators, `max_depth=14`, `random_state=42`, `class_weight='balanced_subsample'`).
-- **Probability Calibration:** Monotonic `IsotonicRegression` fit exclusively on the chronological validation split (timesteps 35–41).
-- **Outlier Engine:** Non-parametric Median Absolute Deviation (MAD) anomaly detector.
-- **Model Storage:** `data/models/ps_native/v1/model.joblib` verified at startup via SHA-256 against `manifest.json`.
-- **Model Selection Research (Historical):** During architecture selection, Random Forest (Validation PR-AUC = 0.5702, Precision@100 = 99.0%) decisively outperformed Logistic Regression (0.2654) and LightGBM (0.5228). LightGBM remains strictly research exploration and is not part of production inference.
-
----
-
-## 6. Network Evidence
-
-ObsidianChain models network propagation telemetry to provide investigative context:
-
-- **What Network Evidence Contributes:** Identifies peer observation diversity, announcement dispersion across autonomous systems (ASNs), and temporal clustering of transaction broadcasts.
-- **What Network Evidence Does NOT Establish:**
-  - An IP address does **not** identify a wallet owner.
-  - An announcing peer is **not** assumed to be the transaction sender (due to Bitcoin P2P multi-hop gossip, Tor/VPN relays, and NAT/CGNAT multiplexing).
-  - Identical broadcast origins do **not** imply common entity ownership.
-
-All network data is presented under explicit evidentiary caveats as `NETWORK_CONTEXT`.
-
----
-
-## 7. Security / Offline Design
-
-- **Air-Gap Enforcement:** Docker containers execute with `--network none`. Frontend assets contain zero external Google Fonts, CDNs, or remote scripts.
-- **RBAC & Isolation:** Server-side capability checks enforce strict isolation between `INVESTIGATOR`, `REVIEWER`, and `ADMIN` roles.
-- **Append-Only Audit Ledger:** Every login, case transition, alert view, note addition, and export is recorded immutably in an append-only SQLite log.
-- **Cryptographic Merkle Export:** Exported case packages compute a canonical Merkle tree over all case records, generating verifiable inclusion proofs and anti-circular hash bindings.
-
----
-
-## 8. Repository Structure
+## 4. System Architecture
 
 ```
-obsidianchain/
-├── src/obsidianchain/   # Core Python package: API, console, pipeline, ML, clustering
-├── frontend/            # React 18 / Vite / TypeScript air-gapped web console
-├── research/            # Isolated research experiments, reports, benchmarks & reproduction
-├── scripts/             # Operational dataset verification tooling (make verify)
-├── tests/               # Full test suite: 1,702 backend pytest + 101 frontend Vitest tests
-├── docs/                # System, architectural, security, and operational documentation
-├── data/                # Local data root: raw CSVs, models, SQLite state, run outputs
-└── vendor/              # Vendored offline wheels and system debs (gitignored)
+Data Ingestion (CSV / JSON / XML)
+      ↓
+17-Stage Forensic Analytical Pipeline
+      ├── Ingestion & Offline GeoIP/ASN (Stages 1–3)
+      ├── Blockchain & P2P Network Analysis (Stages 4–6)
+      ├── Entity Graph & Co-Spend Clustering (Stages 7–8)
+      ├── 31-Feature Extraction & ML Risk Scoring (Stages 9–10)
+      ├── Unsupervised MAD Outlier & Structural Heuristics (Stages 11–12)
+      └── Multi-Layer Evidence Fusion & Ranked Alerts (Stages 13–15)
+                ↓
+Investigator Web Console & Visual Path Canvas (Stage 16)
+                ↓
+Two-Person Review Sign-Off & Merkle Audit Trail (Stage 17)
 ```
 
----
+The system operates across three core tiers:
+1. **Analytical Engine (`src/obsidianchain/`):** Executes the 17-stage pipeline deterministically, extracting features as-of-$t$ with zero lookahead leakage, scoring entities with a Platt-calibrated tree ensemble, and joining network telemetry without external API calls.
+2. **FastAPI Backend & Truth Boundary (`src/obsidianchain/api/`):** Exposes authenticated endpoints guarded by a strict truth-isolation boundary (`boundary.py`) that guarantees ground-truth research labels never leak into casework.
+3. **Investigator Console (`frontend/`):** React 18 single-page application featuring an interactive Cytoscape graph canvas, multi-tab forensic inspector, alert triage queue, and independent reviewer oversight modal.
 
-## 9. Quick Start
-
-### Prerequisites
-- Python 3.11+ (or Docker for air-gapped container execution)
-- Node.js 18+ (for frontend console)
-
-### Local Native Execution
-
-1. **Install Backend:**
-   ```bash
-   pip install -e .
-   ```
-
-2. **Verify Dataset (Optional / if raw Elliptic++ files are present):**
-   ```bash
-   python3 scripts/verify_dataset.py --data-root data
-   ```
-   *(Or inside Docker container: `make verify`)*
-
-3. **Reset Database to Clean Demo State:**
-   ```bash
-   make demo-reset
-   ```
-   *(Initializes clean schema v4, creates `admin`, `investigator`, and `reviewer` accounts, and prints temporary passwords.)*
-
-4. **Launch Backend API (Port 8000):**
-   ```bash
-   python3 -m uvicorn obsidianchain.api.app:create_app --factory --port 8000
-   ```
-
-5. **Launch Frontend Console (Port 5173):**
-   ```bash
-   npm --prefix frontend run dev
-   ```
-   Open `http://localhost:5173` in your browser.
+*Complete technical specification:* [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ---
 
-## 10. Demo Workflow
+## 5. Why the System is Technically Substantial
 
-To perform a complete end-to-end demonstration from a clean state:
+### Risk Intelligence
+- **31 Production Features:** Extracted across 6 functional groups (Transaction Behavior, Address History, Graph Topology, Structural Patterns, Address Role, Upstream Flow Dynamics).
+- **Calibrated LightGBM Classifier:** 300 boosting trees calibrated via Platt scaling on out-of-fold validation predictions, yielding true empirical probabilities with an Expected Calibration Error of $0.0096$.
+- **Model Fallback:** Secondary 26-feature model operating without deep flow dynamics when upstream transaction history is unavailable.
 
-1. Run `make demo-reset` and note the temporary credentials.
-2. Sign in at `http://localhost:5173` as `investigator`.
-3. Create a new Investigation (`DRAFT`).
-4. Upload `tests/data/synthetic_acceptance_capture.json` and validate (`VALIDATING`).
-5. Progress case to `ANALYZING` and click **Run 17-Stage Analysis**.
-6. View live pipeline progress across all 17 stages until `COMPLETE`.
-7. Browse the ranked Alert Queue, select an alert, and inspect **Why Flagged**, **Feature Breakdown**, **Transaction Graph**, and **Timeline**.
-8. Record an Investigator Note and submit case for review (`SUBMITTED`).
-9. Log in as `reviewer`, inspect the findings, record an approval disposition, and sign off on the forensic report (`APPROVED`).
-10. Log in as `admin` to verify immutable audit logs and export the case package with Merkle root verification.
+### Graph & Money Flow
+- **Disjoint-Set Union-Find:** High-performance clustering with union-by-rank and path compression clustering addresses into entities in near-linear time $O(N \cdot \alpha(N))$.
+- **Change Address Heuristics:** Evaluates freshness, round-value payments, and script-type matching to distinguish change outputs from payee outputs.
+- **Golden Path Traversal:** Traces multi-hop fund flows across complex peeling chains to expose consolidation wallets and cash-out points.
+
+### Network Intelligence
+- **P2P Gossip Propagation:** Models diffusion delay across geographical observer vantage points.
+- **Statistical Correlation:** Exact binomial hypothesis test verifying whether broadcast timing correlates with on-chain inclusion ($p = 1.1 \times 10^{-19}$).
+- **Evidentiary Safeguard:** Enforces the strict legal boundary that **observing an IP address relaying a transaction does NOT imply ownership of the private key or wallet**.
+
+### Evidence & Explainability
+- **6 Segregated Evidence Classes:** Partitioned into `CHAIN_TRANSACTION`, `CHAIN_CLUSTER`, `ML_RISK`, `UNSUPERVISED_ANOMALY`, `STRUCTURAL_PATTERN`, and `NETWORK_CONTEXT`.
+- **Local TreeSHAP Attribution:** Exact Shapley values explain the mathematical factors behind every risk score without black-box opacity.
+- **100% Traceability:** Every finding links directly to a verifiable transaction hash, block height, or peer observation record.
+
+### Institutional Investigation
+- **Three Strict Roles:** `ADMIN` (user and registry management), `INVESTIGATOR` (ingestion, triage, and drafting), and `REVIEWER` (independent audit and sign-off).
+- **Two-Person Approval:** Mandatory separation of duties prevents an investigator from approving their own casework.
+- **19-Step Casework Lifecycle:** State-machine enforcement from `DRAFT` to `CLOSED` and `ARCHIVED`.
+
+### Auditability & Cryptographic Integrity
+- **Append-Only Ledger:** SQLite WAL-mode audit table recording every user action, timestamp, and entity modification.
+- **Domain-Separated Merkle Trees:** Canonical serialization and binary Merkle trees compute exportable inclusion proofs verifying case integrity for judicial scrutiny.
 
 ---
 
-## 11. Documentation Map
+## 6. Product Screenshots
 
-| Area | Document | Description |
+The interface is an institutional web console designed for intensive investigative analysis. Below are representative views from the production system:
+
+### 1. Casework Dashboard & Alert Triage
+The operational launchpad displaying open investigations, recent dataset ingestions, prioritized alert distribution, and active serving model metrics:
+![Casework Dashboard](docs/screenshots/home.png)
+
+### 2. Multi-Layer Prioritized Alert Queue
+Alerts ranked by calibrated risk scores, structural anomalies, and network correlation with explicit severity banding (`CRITICAL`, `HIGH`, `MEDIUM`):
+![Prioritized Alert Queue](docs/screenshots/alert.png)
+
+### 3. Forensic Entity & Transaction Inspector
+In-depth inspection displaying OFAC sanction attributions, transaction timelines, input/output risk breakdowns, mixing heuristics, and counterparty relationships:
+![Forensic Entity Inspection](docs/screenshots/entity-full.png)
+
+### 4. Interactive Transaction Graph & Golden Path Traversal
+Real-time directed graph visualization and multi-hop money-flow path traversal tracing funds across peeling chains and mixer structures:
+![Transaction Graph Visualization](docs/screenshots/graph.png)
+![Money-Flow Path Traversal](docs/screenshots/path.png)
+
+### 5. P2P Network Telemetry & Multimodal Correlation
+Peer broadcast distribution across Autonomous Systems (ASNs), propagation timing variance, and cross-layer correlation ($p = 1.1 \times 10^{-19}$):
+![P2P Network Telemetry](docs/screenshots/network.png)
+![Multimodal Correlation Panel](docs/screenshots/correlation.png)
+
+### 6. Institutional Two-Person Review, RBAC & Merkle Audit
+Independent reviewer sign-off interface, role-based user management, and tamper-evident append-only audit trail with SHA-256 Merkle proofs:
+![Reviewer Sign-off Oversight](docs/screenshots/review.png)
+![Append-Only Audit Ledger](docs/screenshots/audit.png)
+
+### 7. Production Model Intelligence Dashboard
+Complete model registry inspection showing 12-fold validation curves, 18 automated production gates, calibration reliability curves, and drift baselines:
+![Model Intelligence Dashboard](docs/screenshots/models-full.png)
+
+*Explore the complete set of 13 high-resolution curated screenshots:* [`docs/screenshots/`](docs/screenshots/)
+
+---
+
+## 7. Research & Model Results
+
+Performance was evaluated using our **Time-Ordered Evaluation Protocol (Protocol B)** on the Elliptic++ dataset. Models were trained on historical timesteps 26–41 and evaluated on a **Sealed Holdout Window (Timesteps 42–49)** evaluated once post-freeze with zero future lookahead leakage:
+
+| Metric | Production Holdout (t42–49) | 12-Fold Temporal CV | Target Threshold | Status |
+| :--- | :---: | :---: | :---: | :---: |
+| **Normalized Average Precision (nAP)** | **0.5475** | **0.808** (worst 0.477) | $\ge 0.450$ | **PASSED** |
+| **Precision@100 (P@100)** | **100.0%** | **97.0%** | $\ge 80.0\%$ | **PASSED** |
+| **Precision (Top Severity Band)** | **81.1%** | **78.4%** | $\ge 75.0\%$ | **PASSED** |
+| **Recall** | **25.8%** | **31.2%** | Conservative Triage | **EXPECTED** |
+| **F1 Score** | **39.1%** | **44.6%** | High-Precision Balance | **EXPECTED** |
+| **Expected Calibration Error (ECE)** | **0.0096** | **0.025** | $\le 0.050$ | **PASSED** |
+| **ROC-AUC** | **0.946** | **0.958** | $\ge 0.900$ | **PASSED** |
+
+> [!NOTE]
+> **Methodological Discipline:** Raw classification accuracy is deliberately omitted because extreme class imbalance (<1% illicit activity) renders overall accuracy statistically uninformative. In institutional triage, **Precision@100 (100%)** is the primary operational metric: every single entity in the top 100 prioritized queue is a true positive.
+
+*Deep-dive research references:*
+- Model Architecture & Training: [`docs/ML_PIPELINE.md`](docs/ML_PIPELINE.md)
+- Production Model Card: [`docs/MODEL_CARD.md`](docs/MODEL_CARD.md)
+- Empirical Journey & Decisions: [`docs/RESEARCH_DECISIONS.md`](docs/RESEARCH_DECISIONS.md)
+
+---
+
+## 8. Demonstration Walkthrough
+
+Reviewers can inspect the complete working product through the full demonstration video:
+
+- **[Watch 5-Minute Walkthrough Video](docs/demo/obsidianchain_walkthrough.mp4)**  
+  *Format: 5:01, 1440x900, 30 fps.* Recorded on the live containerized deployment from a clean database. Demonstrates the complete casework flow: investigator triage, 17-stage analytical pipeline execution, P2P network correlation panel ($p = 1.1 \times 10^{-19}$), golden path traversal, reviewer sign-off, and admin Merkle audit export.
+
+---
+
+## 9. Engineering Validation
+
+ObsidianChain is backed by extensive automated verification across every layer of the stack:
+
+```
+========================= FULL AUTOMATED TEST AUDIT =========================
+  Backend Test Suite (pytest):
+    • Total Discovered:             2,038 tests
+    • Passed Natively:              2,034 tests
+    • Skipped (Container-Only):         4 tests (test_offline.py physical air-gap)
+    • Execution Time:               92.41s
+  Frontend Test Suite (vitest):
+    • Test Suites Passed:               6 / 6
+    • Tests Passed:                   114 / 114
+    • Execution Time:                1.79s
+  ─────────────────────────────────────────────────────────────────────────
+  Total Automated Tests:            2,152 tests (2,148 passed, 4 container-only)
+  Model Registry Integrity:         7 registered versions verified (SHA-256 match)
+  Documentation Synchronization:    test_docs_in_sync.py PASSED (0 broken links)
+=============================================================================
+```
+
+- **Zero Broken Links:** Automated repository scan across all 79 markdown documents confirmed **0 broken links**.
+- **Cryptographic Model Verification:** All 7 registered model versions verified via SHA-256 digests (`scripts/check_model_integrity.py`). Champion (`ps_native_v5`) and fallback (`ps_native_v5_fallback_no_g`) intact.
+- **Documentation Synchronization:** Validated via automated test `tests/test_docs_in_sync.py`.
+
+---
+
+## 10. Deployment & Runtime Footprint
+
+ObsidianChain is engineered for rapid deployment on air-gapped infrastructure:
+
+- **Containerization:** Multi-stage Docker build producing a minimal, self-contained Linux container with non-root security execution.
+- **Cross-Platform:** Native support for **Linux AMD64** and **ARM64** (Apple Silicon, AWS Graviton).
+- **Lightweight Runtime Footprint:** Distribution package [`deploy-data/`](deploy-data/) is only **~9.7 MB**, containing model weights, registry manifests, calibration parameters, and the offline DB-IP Lite database.
+- **Offline / Air-Gapped Operation:** Zero external network calls; all dependencies, fonts, and assets are local.
+
+*Complete deployment guide:* [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+
+---
+
+## 11. Known Operational Boundaries & Limitations
+
+In the interest of scientific integrity and operational transparency:
+
+1. **Circumstantial Network Context:** P2P gossip observations capture propagation timing across public nodes. They do **not** prove private key ownership, physical sender location, or device identity.
+2. **Concept Drift & Regime Shifts:** Supervised classifiers degrade when adversaries invent new obfuscation protocols (e.g., cross-chain bridges, taproot scripts). Human triage remains essential.
+3. **Air-Gap Data Latency:** Operating without external network access prevents real-time mempool scraping and live sanction list synchronization. Datasets must be ingested via secure physical media.
+4. **Synthetic Network Fixture Realism:** While the synthetic P2P benchmark accurately models log-normal propagation delays, real-world networks exhibit complex adversarial dynamics (eclipse attacks, sybil nodes) that cannot be fully captured synthetically.
+
+---
+
+## 12. Technical Documentation Map
+
+All project documentation is indexed in [`docs/README.md`](docs/README.md):
+
+| Area | Authoritative Document | Description |
 | :--- | :--- | :--- |
-| **System Overview** | [`docs/README.md`](docs/README.md) | Complete documentation index and reading guide. |
-| **Architecture** | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Pipeline stages, data flows, and package breakdown. |
-| **Workflow** | [`docs/SYSTEM_WORKFLOW.md`](docs/SYSTEM_WORKFLOW.md) | 20-step investigator, reviewer, and admin workflow. |
-| **Intelligence** | [`docs/ML_PIPELINE.md`](docs/ML_PIPELINE.md) | Random Forest model, calibration, features, and ablation. |
-| **Network Context** | [`docs/NETWORK_EVIDENCE.md`](docs/NETWORK_EVIDENCE.md) | Network observation principles, limits, and abstention. |
-| **Security** | [`docs/SECURITY_AND_RBAC.md`](docs/SECURITY_AND_RBAC.md) | RBAC capabilities, case isolation, and Merkle proofs. |
-| **Data Ingestion** | [`docs/DATA_AND_INGESTION.md`](docs/DATA_AND_INGESTION.md) | Ingest formats (JSON/CSV/XML), schema normalisation, and limits. |
-| **Research Decisions** | [`docs/RESEARCH_DECISIONS.md`](docs/RESEARCH_DECISIONS.md) | Why components were chosen, rejected, or safeguarded. |
-| **Production Freeze** | [`docs/PRODUCTION_FREEZE.md`](docs/PRODUCTION_FREEZE.md) | Authoritative SIH 2026 freeze record and SHA-256 hashes. |
-| **Demo Setup** | [`docs/LOCAL_DEMO_SETUP.md`](docs/LOCAL_DEMO_SETUP.md) | Air-gapped deployment and demonstration runbook. |
-| **Research Index** | [`research/README.md`](research/README.md) | Experiments, benchmarks, validation reports, and reproduction. |
+| **Technical Write-Up** | [`docs/TECHNICAL_WRITEUP.md`](docs/TECHNICAL_WRITEUP.md) | Comprehensive 14-section technical report and system reference. |
+| **Documentation Index** | [`docs/README.md`](docs/README.md) | Master navigational index for all documentation and evidence. |
+| **System Architecture** | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 17-stage analytical pipeline, dataflow, and package breakdown. |
+| **Casework Workflow** | [`docs/SYSTEM_WORKFLOW.md`](docs/SYSTEM_WORKFLOW.md) | 19-step casework lifecycle and role-restricted state machine. |
+| **Data Ingestion** | [`docs/DATA_AND_INGESTION.md`](docs/DATA_AND_INGESTION.md) | Ingest formats (CSV/JSON/XML), normalisation, and schema rules. |
+| **ML Pipeline** | [`docs/ML_PIPELINE.md`](docs/ML_PIPELINE.md) | Intelligence stack, feature engineering, and calibration. |
+| **Feature Catalog** | [`docs/feature_catalog.md`](docs/feature_catalog.md) | All 31 model features + 6 network features cataloged. |
+| **Model Card** | [`docs/MODEL_CARD.md`](docs/MODEL_CARD.md) | Authoritative card for champion risk model and fallback. |
+| **Network Evidence** | [`docs/NETWORK_EVIDENCE.md`](docs/NETWORK_EVIDENCE.md) | Network observation principles, limits, and abstention safeguards. |
+| **Security & RBAC** | [`docs/SECURITY_AND_RBAC.md`](docs/SECURITY_AND_RBAC.md) | Role-based access control, scrypt derivation, and Merkle proofs. |
+| **Local Demo Setup** | [`docs/LOCAL_DEMO_SETUP.md`](docs/LOCAL_DEMO_SETUP.md) | Step-by-step clean demo reset and offline execution instructions. |
+| **Deployment** | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Runtime package audit, Docker instructions, and production requirements. |
+| **Research Decisions** | [`docs/RESEARCH_DECISIONS.md`](docs/RESEARCH_DECISIONS.md) | Empirical progression, temporal evaluation protocols, and rejected designs. |
 
 ---
 
-## 12. Current Status
+## 13. Project Status
 
-- **Status:** **FROZEN & VERIFIED** (Target Build Freeze: September 25, 2026).
-- **Backend Verification:** 1,702 / 1,702 unit and integration tests passing (`pytest tests/`).
-- **Frontend Verification:** 101 / 101 unit tests passing (`vitest`); production Vite bundle built offline.
-- **Air-Gap Compliance:** Zero external network calls, zero remote fonts/CDNs, 100% local model loading.
+| Dimension | Verification Status | Evidence / Location |
+| :--- | :---: | :--- |
+| **Current Product Implementation** | **OPERATIONAL** | 17-stage pipeline and web console active |
+| **Production Risk Model** | **FROZEN** | Registered in `data/models/ps_native/registry.json` |
+| **Walkthrough Demonstration** | **AVAILABLE** | [`docs/demo/obsidianchain_walkthrough.mp4`](docs/demo/obsidianchain_walkthrough.mp4) (5:01) |
+| **Technical Documentation** | **CURRENT** | 13 synchronized documents in [`docs/`](docs/) |
+| **Automated Test Suite** | **PASSING** | 2,148 tests passed (0 failures) |
+| **Deployment Footprint** | **CONTAINERIZED** | Multi-stage Docker (AMD64 / ARM64, Air-Gapped) |
+
+---
+*ObsidianChain — Smart India Hackathon 2026 • NTRO Problem Statement 26146*

@@ -37,9 +37,9 @@ flowchart TD
 | **Ingestion & Validation** | Parses bulk records, validates schema compliance, normalizes datatypes, records missing/coerced fields, and assigns SHA-256 fingerprint. | `ValidationReport`, canonical transaction frames |
 | **Blockchain Processing** | Builds directed transaction graphs, computes in/out degrees, extracts input/output amounts, and calculates fee ratios. | `BlockchainGraph` |
 | **Clustering & Correlation** | Applies multi-input co-spend heuristic (Union-Find) to infer entity clusters; joins network announcement telemetry on `txid`. | `ClusterResult`, `CorrelationResult` |
-| **Feature Extraction** | Computes 30 core features across 4 groups (transaction, historical, graph topology, structural patterns) strictly as-of event timestamp $t$. | `FeatureManifest`, feature matrix |
+| **Feature Extraction** | Computes 31 core features across 6 groups (Group A — Transaction Behavior, Group B — Address History, Group C — Graph Topology, Group D — Structural Patterns, Group F — Address Role, Group G — Upstream Flow Dynamics) strictly as-of event timestamp $t$. | `FeatureManifest`, feature matrix |
 | **Network Telemetry** | Assesses peer announcements, arrival time dispersion, and observer vantage points; flags multi-origin relays. | `NetworkEvidence` (`NETWORK_CONTEXT`) |
-| **Risk & Anomaly Scoring** | Inferences frozen Random Forest risk model; applies isotonic calibration; calculates MAD robust Z-scores; detects peeling/mixing structures. | `MlStageResult`, `AnomalyDetectionResult` |
+| **Risk & Anomaly Scoring** | Inferences frozen champion risk model (ObsidianChain Risk Model, internal identifier: `ps_native_v5`, LightGBM binary classifier, schema `ps_native_features/5`; fallback: Risk Model Fallback, internal identifier: `ps_native_v5_fallback_no_g`); applies Platt calibration; calculates MAD robust Z-scores; detects peeling/mixing structures. | `MlStageResult`, `AnomalyDetectionResult` |
 | **Alert Ranking** | Aggregates address scores to entity clusters; maps calibrated probabilities to severity bands (`CRITICAL`, `HIGH`, `MEDIUM`). | `AlertRunResult`, ranked alert queue |
 | **Casework & Audit** | Manages case lifecycle, dispositions, forensic graph projections, notes, review sign-off, and tamper-evident Merkle bundles. | SQLite database (schema v4), Merkle root |
 
@@ -47,7 +47,7 @@ flowchart TD
 
 ## 3. Major Backend Packages
 
-The backend analytical engine and console live in [`src/obsidianchain/`](file:///Users/varun/dev/obsidianchain/src/obsidianchain/):
+The backend analytical engine and console live in [`src/obsidianchain/`](../src/obsidianchain/):
 
 ### `api/` — REST API & Truth Isolation Boundary
 Exposes HTTP endpoints for frontend consumption and programmatic evaluation. Houses authentication guards, request validation, CORS configuration, and the strict truth-isolation boundary (`boundary.py`) that guarantees ground-truth research labels cannot leak into inference responses.
@@ -73,7 +73,7 @@ Coordinates end-to-end execution through the 17-stage conductor (`orchestrator.p
 
 ### `ml/` — Machine Learning & Calibration
 Contains the inference engine and outlier detection algorithms:
-- `ps_model.py`: Frozen Random Forest inference engine (`PsNativeRiskModel`) loading artifacts verified by SHA-256 against `manifest.json`.
+- `ps_model.py`: Frozen risk model inference engine (`PsNativeRiskModel`) loading artifacts verified by SHA-256 against `manifest.json` and `registry.json` (champion: ObsidianChain Risk Model / `ps_native_v5` LightGBM; fallback: Risk Model Fallback / `ps_native_v5_fallback_no_g`; legacy: Legacy Random Forest Baseline / `ps_native_v1` retained for historical comparison).
 - `anomaly.py`: Median Absolute Deviation (MAD) robust Z-score calculation for heavy-tailed transactional values.
 
 ### `correlation/` — Cross-Layer Graph Alignment
@@ -87,7 +87,7 @@ Performs multi-input address clustering:
 
 ### `features/` — Feature Engineering Engine
 Extracts temporal and topological features:
-- `features_ps.py`: The 30-feature PS-native feature extractor operating strictly as-of event timestamp $t$ with zero forward leakage.
+- `features_ps.py`: The 31-feature PS-native feature extractor (`ps_native_features/5`) operating strictly as-of event timestamp $t$ with zero forward leakage.
 - `engine.py`: Baseline address activity, transaction velocity, and counterparty metrics.
 
 ### `network/` — P2P Telemetry & Evidence Evaluation
@@ -109,7 +109,7 @@ Defines data interchange structures:
 
 ## 4. Frontend Architecture
 
-The user interface lives in [`frontend/`](file:///Users/varun/dev/obsidianchain/frontend/) and is built as a single-page React application:
+The user interface lives in [`frontend/`](../frontend/) and is built as a single-page React application:
 - **Framework:** React 19 with Vite, TypeScript, and Tailwind CSS.
 - **Routing:** Component-driven workspace routing (`App.tsx`) with role-aware views.
 - **Components:**

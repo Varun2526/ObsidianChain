@@ -1,12 +1,6 @@
 # ObsidianChain — Machine Learning & Intelligence Pipeline
 
-> **Superseded (2026-09-25).** The production model is **`ps_native_v5`,
-> LightGBM** (31 features, schema `ps_native_features/5`, 300 trees), served
-> from `data/models/ps_native/registry.json` (champion) with
-> `ps_native_v5_fallback_no_g` as fallback. The Random Forest described
-> below is the legacy `ps_native_v1`: registered, holding no role, and not
-> used by any production path (`docs/audit/2026-09-25-system-truth-audit.md`
-> section 7). Current record: the Models page, or `obsidianchain model list`.
+> **Superseded (2026-09-25).** The production model is **ObsidianChain Risk Model (internal identifier: `ps_native_v5`, LightGBM)** (31 features, schema `ps_native_features/5`, 300 trees), served from `data/models/ps_native/registry.json` (champion) with **Risk Model Fallback** (`ps_native_v5_fallback_no_g`) as fallback. The Random Forest described below is the Legacy Random Forest Baseline (`ps_native_v1`): registered, holding no role, and not used by any production path (`docs/archive/audit/2026-09-25-system-truth-audit.md` section 7). Current record: the Models page, or `obsidianchain model list`.
 
 > **Audit note (2026-09-22).** The figures below are single-window point
 > estimates and are superseded as a basis for model selection. Measured
@@ -14,7 +8,7 @@
 > the seed-to-seed spread — so a single validation number cannot rank two
 > models. The canonical protocol is `src/obsidianchain/ml/protocol.py`
 > (12 rolling-origin folds, paired t-test, Holm correction, sealed holdout);
-> see `docs/decisions/0001-two-production-model-paths.md` for scope.
+> see `docs/archive/decisions/0001-two-production-model-paths.md` for scope.
 > The advertised severity-band precision (90/75/50%) is **not delivered**:
 > measured 82.2% on validation and 37.2% on test for CRITICAL, because a
 > rank-derived cutoff is applied as a value threshold under heavy score ties.
