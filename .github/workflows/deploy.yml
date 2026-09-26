@@ -65,10 +65,11 @@ jobs:
 
             echo "==> Starting new container"
             docker run -d \
-              --name "$NEW_CONTAINER" \
-              --restart unless-stopped \
-              -p "127.0.0.1:${NEW_PORT}:8000" \
-              obsidianchain:${{ github.sha }}
+            --name "$NEW_CONTAINER" \
+            --restart unless-stopped \
+            -p "127.0.0.1:${NEW_PORT}:8000" \
+            obsidianchain:${{ github.sha }} \
+            serve --host 0.0.0.0 --port 8000
 
             echo "==> Waiting for health check"
 
