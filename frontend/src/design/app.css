@@ -1,6 +1,6 @@
 /* ObsidianChain application stylesheet.
  *
- * Built on design/tokens.css (see docs/design/design-system.md). This file
+ * Built on design/tokens.css (see docs/archive/design-system.md). This file
  * replaces the retired neon stylesheet. The legacy custom-property names
  * (--cyan, --bg-panel, --text-dim, ...) are kept as ALIASES onto the tokens so
  * the inline styles in older pages inherit the new language instead of each

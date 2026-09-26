@@ -10,16 +10,16 @@ This optimization pass delivers single-buffer deterministic export serialization
 
 | File | Status | Description |
 |---|---|---|
-| [integrity.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/integrity.py) | **NEW** | Deterministic leaf extractors, canonical hashing, Merkle tree construction, inclusion proofs, and historical root verification. Optimized to accept precomputed trees and reuse leaf hashes. |
-| [test_export_integrity.py](file:///Users/varun/dev/obsidianchain/tests/test_export_integrity.py) | **NEW** | 10 comprehensive unit & API integration tests for export hashing, Merkle proofs, tamper detection, and case isolation. |
-| [benchmark_export.py](file:///Users/varun/dev/obsidianchain/research/benchmarks/benchmark_export.py) | **NEW** | Benchmark harness measuring serialization time, endpoint latency, payload size, and peak process memory. |
-| [profile_export.py](file:///Users/varun/dev/obsidianchain/research/benchmarks/profile_export.py) | **NEW** | 9-stage latency breakdown profiler for fine-grained performance analysis. |
-| [db.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/db.py) | **MODIFIED** | Migration `_V3` adding `case_integrity` table for historical root persistence. |
-| [audit.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/audit.py) | **MODIFIED** | Added `INTEGRITY_RECORDED` and `INTEGRITY_VERIFIED` actions to audit ledger. |
-| [routes_investigations.py](file:///Users/varun/dev/obsidianchain/src/obsidianchain/console/routes_investigations.py) | **MODIFIED** | Single-pass Response export with explicit hash contract, `GET /{id}/integrity`, `POST /{id}/integrity/verify`, and `POST /{id}/integrity/snapshot`. |
-| [test_api_boundary.py](file:///Users/varun/dev/obsidianchain/tests/test_api_boundary.py) | **MODIFIED** | Registered `obsidianchain.console.integrity` in the reviewed import graph boundary. |
-| [test_phase6_leakage.py](file:///Users/varun/dev/obsidianchain/tests/test_phase6_leakage.py) | **MODIFIED** | Respected `OBSIDIANCHAIN_DATA` environment variable for dataset path resolution. |
-| [ReportPage.tsx](file:///Users/varun/dev/obsidianchain/frontend/src/components/ReportPage.tsx) | **MODIFIED** | Flexible digest handling (`pkg.export_sha256 || pkg.bundle_sha256`) on exported package download. |
+| [integrity.py](../../src/obsidianchain/console/integrity.py) | **NEW** | Deterministic leaf extractors, canonical hashing, Merkle tree construction, inclusion proofs, and historical root verification. Optimized to accept precomputed trees and reuse leaf hashes. |
+| [test_export_integrity.py](../../tests/test_export_integrity.py) | **NEW** | 10 comprehensive unit & API integration tests for export hashing, Merkle proofs, tamper detection, and case isolation. |
+| [benchmark_export.py](../../research/benchmarks/benchmark_export.py) | **NEW** | Benchmark harness measuring serialization time, endpoint latency, payload size, and peak process memory. |
+| [profile_export.py](../../research/benchmarks/profile_export.py) | **NEW** | 9-stage latency breakdown profiler for fine-grained performance analysis. |
+| [db.py](../../src/obsidianchain/console/db.py) | **MODIFIED** | Migration `_V3` adding `case_integrity` table for historical root persistence. |
+| [audit.py](../../src/obsidianchain/console/audit.py) | **MODIFIED** | Added `INTEGRITY_RECORDED` and `INTEGRITY_VERIFIED` actions to audit ledger. |
+| [routes_investigations.py](../../src/obsidianchain/console/routes_investigations.py) | **MODIFIED** | Single-pass Response export with explicit hash contract, `GET /{id}/integrity`, `POST /{id}/integrity/verify`, and `POST /{id}/integrity/snapshot`. |
+| [test_api_boundary.py](../../tests/test_api_boundary.py) | **MODIFIED** | Registered `obsidianchain.console.integrity` in the reviewed import graph boundary. |
+| [test_phase6_leakage.py](../../tests/test_phase6_leakage.py) | **MODIFIED** | Respected `OBSIDIANCHAIN_DATA` environment variable for dataset path resolution. |
+| [ReportPage.tsx](../../frontend/src/pages/investigation/ReportPage.tsx) | **MODIFIED** | Flexible digest handling (`pkg.export_sha256 || pkg.bundle_sha256`) on exported package download. |
 
 ---
 

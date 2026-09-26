@@ -1,0 +1,547 @@
+{
+  "history": [
+    {
+      "at": "2026-09-23T15:26:54+00:00",
+      "event": "REGISTER",
+      "previous": null,
+      "reason": "registered",
+      "version": "ps_native_v1"
+    },
+    {
+      "at": "2026-09-23T15:26:54+00:00",
+      "event": "REGISTER",
+      "previous": null,
+      "reason": "PRODUCTION_HOLDOUT_PENDING",
+      "version": "ps_native_v2"
+    },
+    {
+      "at": "2026-09-23T15:26:54+00:00",
+      "event": "REGISTER",
+      "previous": null,
+      "reason": "PRODUCTION_HOLDOUT_PENDING",
+      "version": "ps_native_v3"
+    },
+    {
+      "at": "2026-09-23T15:34:36+00:00",
+      "event": "REGISTER",
+      "previous": null,
+      "reason": "FROZEN_PENDING_HOLDOUT",
+      "version": "ps_native_v4"
+    },
+    {
+      "at": "2026-09-23T15:34:36+00:00",
+      "event": "REGISTER",
+      "previous": null,
+      "reason": "FROZEN_PENDING_HOLDOUT",
+      "version": "ps_native_v4_fallback_no_g"
+    },
+    {
+      "at": "2026-09-23T15:37:29+00:00",
+      "event": "ASSIGN_FALLBACK",
+      "previous": null,
+      "reason": "registered same-schema fallback (no group G), ADR 0002/0003",
+      "version": "ps_native_v4_fallback_no_g"
+    },
+    {
+      "at": "2026-09-23T15:37:29+00:00",
+      "event": "ASSIGN_CANDIDATE",
+      "previous": null,
+      "reason": "frozen candidate pending production gate",
+      "version": "ps_native_v4"
+    },
+    {
+      "at": "2026-09-23T15:41:28+00:00",
+      "event": "ASSIGN_CANDIDATE",
+      "previous": "ps_native_v4",
+      "reason": "ps_native_v4 withdrawn as candidate: lineage cannot be attested (training script edited after training); superseded by v5",
+      "version": null
+    },
+    {
+      "at": "2026-09-23T15:41:28+00:00",
+      "event": "ASSIGN_FALLBACK",
+      "previous": "ps_native_v4_fallback_no_g",
+      "reason": "ps_native_v4_fallback_no_g withdrawn with v4; superseded by v5_fallback_no_g",
+      "version": null
+    },
+    {
+      "at": "2026-09-23T17:43:30+00:00",
+      "event": "REGISTER",
+      "previous": null,
+      "reason": "FROZEN_PENDING_HOLDOUT",
+      "version": "ps_native_v5"
+    },
+    {
+      "at": "2026-09-23T17:43:30+00:00",
+      "event": "REGISTER",
+      "previous": null,
+      "reason": "FROZEN_PENDING_HOLDOUT",
+      "version": "ps_native_v5_fallback_no_g"
+    },
+    {
+      "at": "2026-09-23T17:43:30+00:00",
+      "event": "ATTEST_SOURCE",
+      "previous": null,
+      "reason": "code_sha256 of 6 files verified at 5431241a4d2beea200aa71ea685ef779d1f58c68",
+      "version": "ps_native_v5"
+    },
+    {
+      "at": "2026-09-23T17:43:30+00:00",
+      "event": "ATTEST_SOURCE",
+      "previous": null,
+      "reason": "code_sha256 of 6 files verified at 5431241a4d2beea200aa71ea685ef779d1f58c68",
+      "version": "ps_native_v5_fallback_no_g"
+    },
+    {
+      "at": "2026-09-23T17:43:39+00:00",
+      "event": "ASSIGN_FALLBACK",
+      "previous": null,
+      "reason": "same-schema fallback without group G (exp22), attested at 5431241",
+      "version": "ps_native_v5_fallback_no_g"
+    },
+    {
+      "at": "2026-09-23T17:43:39+00:00",
+      "event": "ASSIGN_CANDIDATE",
+      "previous": null,
+      "reason": "frozen candidate, attested at 5431241, pending production gate",
+      "version": "ps_native_v5"
+    },
+    {
+      "at": "2026-09-23T17:48:13+00:00",
+      "event": "RECORD_HOLDOUT",
+      "previous": null,
+      "reason": "holdout result 3e9e2f4b18a7",
+      "version": "ps_native_v5"
+    },
+    {
+      "at": "2026-09-23T17:48:13+00:00",
+      "event": "RECORD_HOLDOUT",
+      "previous": null,
+      "reason": "holdout result a5e8e6b6eff4",
+      "version": "ps_native_v5_fallback_no_g"
+    },
+    {
+      "at": "2026-09-23T17:49:09+00:00",
+      "event": "ASSIGN_CHAMPION",
+      "previous": null,
+      "reason": "Production gate 18/18 PASS (docs/production_gate_spec.json, thresholds committed before the holdout). Holdout t42-49 nAP 0.548, P@100 1.00, ECE 0.010. KNOWN RISK: per-window collapse at t43/t45/t47 (P@100 0.02-0.28) from concept drift that input monitoring cannot detect; deployment requires the delayed-label review loop (docs/runbook.md). [gate ps_native_v5.json: PASS]",
+      "version": "ps_native_v5"
+    }
+  ],
+  "models": {
+    "ps_native_v1": {
+      "artifacts": {
+        "ablation.json": "7536fd6992ee9961de571a8b34f1b1114d70352d4d6ca0ed1d51591962b64bae",
+        "calibration.json": "953a7f9075c16c5ce43ef3dbf2962e6fa6466ef27c2e7b905b909135edc9b810",
+        "feature_schema.json": "8ef0f929e6a7bbf502e1dfc413b0688fb8b836e84bd0198f3c3cf1303f6dab5c",
+        "manifest.json": "6a73b84421ba46938b6c0f55c079376d888dca894dcdfca3e442904fc0e6142b",
+        "metrics.json": "a9dc5055271271049ec2badd3c192018d911c39b94451242951f2d2acf9279da",
+        "model.joblib": "7d9c1b404872fd1b05ecb4ff99648904c89f6f5ee1502e6c2915bc6f4d7ad65d"
+      },
+      "feature_schema_version": "ps_native_features/1",
+      "lineage": {},
+      "notes": "",
+      "path": "v1",
+      "registered_at": "2026-09-23T15:26:54+00:00"
+    },
+    "ps_native_v2": {
+      "artifacts": {
+        "calibration.json": "305322f69138e81bd9075f95a13c2e689f4bed0f493c11ffef67f695e1ea2e8f",
+        "evaluation.json": "d5ffe19814401a7cfb46f0f39a502daff89a24c5aef3143d19ffa75e07f46298",
+        "feature_schema.json": "62d8cd9ec2a983c2af7217f7c1f57af804c100cc99f2b3975e983dbc48a4860a",
+        "manifest.json": "76149b2d75e3ba67b4952604a62948b2462a044471fb04719154495c69b5c8ff",
+        "model.joblib": "e105f256947e115a31c330734e6fc96282121793d05e8b44bcb147f06ea2a46e",
+        "stacker.json": "dff015c814a8246c7d4670db4fc0b1aa55a16c325ab27356bcf584072493b2c9"
+      },
+      "feature_schema_version": "ps_native_features/3",
+      "lineage": {},
+      "notes": "PRODUCTION_HOLDOUT_PENDING",
+      "path": "v2",
+      "registered_at": "2026-09-23T15:26:54+00:00"
+    },
+    "ps_native_v3": {
+      "artifacts": {
+        "calibration.json": "14933aa3815ed61392fcb30b714bf4571d895c1ba1af89f3861e6cf0807d6ed5",
+        "evaluation.json": "9772da18fa0097a74bd15d7da13611f349eed5a4d0ae4c4cd493420e85ee842a",
+        "feature_schema.json": "8202d2f2af1afd92352c0118c7f2f5dcdb8430a64980c206f388980224959b86",
+        "manifest.json": "e5b10e91a0c61ba96cb65ea82c1a112052975c942e1608e73f0df41d8ed14cce",
+        "model.joblib": "46fe8f3d7561f0a2949ed9ca28c64b8bd47459e6188607e55398c6b7db657b68",
+        "stacker.json": "943b87b1a82007f1d60535aa52cb17fb4833ca06387ee2df9e7ffe491f68cc9b"
+      },
+      "feature_schema_version": "ps_native_features/4",
+      "lineage": {},
+      "notes": "PRODUCTION_HOLDOUT_PENDING",
+      "path": "v3",
+      "registered_at": "2026-09-23T15:26:54+00:00"
+    },
+    "ps_native_v4": {
+      "artifacts": {
+        "calibration.json": "52ec1dd6b83ec700dc8633820c316e86a0493078244d3b3a0a17f2c8572432c6",
+        "evaluation.json": "79beb92d9c7dd12a8c6f6ab9403dd411184e870f9687dc300e458890d899f38f",
+        "feature_schema.json": "ea8073f74cae4b32deda44ca587f61afef067fd53b9211c2f533d11ef3acaf72",
+        "manifest.json": "83f41b83ea307ffd36b6a20931a78048928172328e0bb13bb405403d5a8d8f12",
+        "model.joblib": "974d37f22e2f1e7df4e03cb5a13fdb35bf487e43f4d5db3ea3bb7191ebd3e607",
+        "stacker.json": "aaf5ee5c77aecb39af35b6e7dbb42a2a0ba49af58eb1df8d7d4fb9a999d9d1d3"
+      },
+      "feature_schema_version": "ps_native_features/5",
+      "lineage": {
+        "code_sha256": {
+          "research/autoresearch_2026_09_23/scripts/exp22_window_end_protocol.py": "80563740c7ce89bcc4382b28fb2faa9017725fd894f38083048f99536bcb4a1f",
+          "research/reproduction/build_ps_dataset.py": "b4a5dbec7f5d9506024e2a589be06d252372d6e0ff2e55981c6661e1737de9ff",
+          "research/reproduction/train_ps_production_model.py": "4568680f1e939bbda579c051611ff3fca180085fd22b78264f0c6aa51bb6345f",
+          "src/obsidianchain/contracts/features.py": "82b909bf7ab0794e9fc6b55949ea92dca85a1c0f00be60adeda71090e5f140ae",
+          "src/obsidianchain/ml/ps_model.py": "2013209d46f5351e0404a7edde90154cd3edc32d3890de83d5fb70764c95e481",
+          "src/obsidianchain/pipeline/features_ps.py": "90d97ada3e41453e815820ecc3a40c351cf39dad4683983922c3394bb8c9506b"
+        },
+        "config": {
+          "calibration": "Platt on OOF of folds 9-12",
+          "feature_schema_version": "ps_native_features/5",
+          "features": [
+            "input_count",
+            "output_count",
+            "total_input_amount",
+            "fee",
+            "fee_ratio",
+            "input_amount_mean",
+            "output_amount_mean",
+            "input_spread",
+            "output_spread",
+            "n_txs_asof_t",
+            "n_sent_asof_t",
+            "n_recv_asof_t",
+            "btc_recv_total_asof_t",
+            "net_flow_asof_t",
+            "active_duration_seconds",
+            "gap_since_last_tx",
+            "unique_counterparties_asof_t",
+            "cluster_size_asof_t",
+            "is_peeling_candidate",
+            "is_mixing_candidate",
+            "addr_is_sender",
+            "addr_is_self_change",
+            "counterparty_max_n_txs_asof_t",
+            "counterparty_mean_n_txs_asof_t",
+            "upstream_funded_share",
+            "upstream_mean_output_count",
+            "upstream_mean_input_count",
+            "upstream_peel_share",
+            "upstream_mix_share",
+            "upstream_min_hold_seconds",
+            "upstream_chain_depth"
+          ],
+          "hyperparameters": {
+            "colsample_bytree": 0.8,
+            "learning_rate": 0.05,
+            "min_child_samples": 50,
+            "n_estimators": 300,
+            "num_leaves": 31,
+            "subsample": 0.8,
+            "subsample_freq": 1
+          },
+          "protocol": "protocol_B_new_addresses_at_window_end/1",
+          "seed": 20260919,
+          "train_window": 16
+        },
+        "config_sha256": "52d3fd962769616b18e87d867c3b08b85e35f46f8349a5aa378c366757cd2722",
+        "environment": {
+          "lightgbm": "4.7.0",
+          "numpy": "2.4.6",
+          "pandas": "3.0.5",
+          "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+          "python": "3.14.0",
+          "scikit-learn": "1.9.0"
+        },
+        "evaluation_sha256": "79beb92d9c7dd12a8c6f6ab9403dd411184e870f9687dc300e458890d899f38f",
+        "raw_source_sha256": {
+          "AddrTx_edgelist.csv": "f5f903f752387f66a1bccaeff54e293b2e8470fcddf5eb56b88aa06fd23a8f3b",
+          "TxAddr_edgelist.csv": "9f5afbdde7bc3d91fb7a4655be55799d6504cd0063ae55a0753a5a41189932b8",
+          "txs_edgelist.csv": "a35053ba68a98e4382cae2ba65b9d9e36b23b6439e02dff084971b1b72a5156e",
+          "txs_features.csv": "2db326ec8ddb68f1d810c1834e1ff62e0a8300378f0984a1e3b2ca82a439821b",
+          "wallets_classes.csv": "4e5132c99f941666bf1fefd4100a1428d339c9252ec6987909e1adf8eac902f9"
+        },
+        "source_commit": "e6f0afc694c2f69d9bc080e7abaedeac1e1c647e"
+      },
+      "notes": "WITHDRAWN: lineage not attestable (training code not in any commit). Never served, never evaluated on the holdout.",
+      "path": "v4",
+      "registered_at": "2026-09-23T15:34:36+00:00"
+    },
+    "ps_native_v4_fallback_no_g": {
+      "artifacts": {
+        "calibration.json": "a49ebf77d384625d776b9ff8757316d8aea0e3ea69fcb8ece04b69562e3f9def",
+        "evaluation.json": "afd49d8a8d4f9149c49496d415a29339217fb7864b87946480a094d2ed6b1ff2",
+        "feature_schema.json": "318190176407e3b2562b7f73c5f714a6e628af7025cce842afa7c3d167cd885a",
+        "manifest.json": "4637f798885609ba7e30df3e850b0c45b4012f35f207a32dc45c7b7ca071ec82",
+        "model.joblib": "f884db9d804fe7eb00f618ef6dd8af6e3526f8e3d472700129bd4b133615e93b"
+      },
+      "feature_schema_version": "ps_native_features/5",
+      "lineage": {
+        "code_sha256": {
+          "research/autoresearch_2026_09_23/scripts/exp22_window_end_protocol.py": "80563740c7ce89bcc4382b28fb2faa9017725fd894f38083048f99536bcb4a1f",
+          "research/reproduction/build_ps_dataset.py": "b4a5dbec7f5d9506024e2a589be06d252372d6e0ff2e55981c6661e1737de9ff",
+          "research/reproduction/train_ps_production_model.py": "47775ab0c373f23ec6420b150c6a6c45281a1e363108d6d7c121acf9a03d1144",
+          "src/obsidianchain/contracts/features.py": "82b909bf7ab0794e9fc6b55949ea92dca85a1c0f00be60adeda71090e5f140ae",
+          "src/obsidianchain/ml/ps_model.py": "2013209d46f5351e0404a7edde90154cd3edc32d3890de83d5fb70764c95e481",
+          "src/obsidianchain/pipeline/features_ps.py": "90d97ada3e41453e815820ecc3a40c351cf39dad4683983922c3394bb8c9506b"
+        },
+        "config": {
+          "calibration": "Platt on OOF of folds 9-12",
+          "feature_schema_version": "ps_native_features/5",
+          "features": [
+            "input_count",
+            "output_count",
+            "total_input_amount",
+            "fee",
+            "fee_ratio",
+            "input_amount_mean",
+            "output_amount_mean",
+            "input_spread",
+            "output_spread",
+            "n_txs_asof_t",
+            "n_sent_asof_t",
+            "n_recv_asof_t",
+            "btc_recv_total_asof_t",
+            "net_flow_asof_t",
+            "active_duration_seconds",
+            "gap_since_last_tx",
+            "unique_counterparties_asof_t",
+            "cluster_size_asof_t",
+            "is_peeling_candidate",
+            "is_mixing_candidate",
+            "addr_is_sender",
+            "addr_is_self_change",
+            "counterparty_max_n_txs_asof_t",
+            "counterparty_mean_n_txs_asof_t"
+          ],
+          "hyperparameters": {
+            "colsample_bytree": 0.8,
+            "learning_rate": 0.05,
+            "min_child_samples": 50,
+            "n_estimators": 300,
+            "num_leaves": 31,
+            "subsample": 0.8,
+            "subsample_freq": 1
+          },
+          "protocol": "protocol_B_new_addresses_at_window_end/1",
+          "seed": 20260919,
+          "train_window": 16
+        },
+        "config_sha256": "17bd7a39301876241c76b8bc0eb8f76e7d2faad252e738d0f4db9b779a9ab446",
+        "environment": {
+          "lightgbm": "4.7.0",
+          "numpy": "2.4.6",
+          "pandas": "3.0.5",
+          "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+          "python": "3.14.0",
+          "scikit-learn": "1.9.0"
+        },
+        "evaluation_sha256": "afd49d8a8d4f9149c49496d415a29339217fb7864b87946480a094d2ed6b1ff2",
+        "raw_source_sha256": {
+          "AddrTx_edgelist.csv": "f5f903f752387f66a1bccaeff54e293b2e8470fcddf5eb56b88aa06fd23a8f3b",
+          "TxAddr_edgelist.csv": "9f5afbdde7bc3d91fb7a4655be55799d6504cd0063ae55a0753a5a41189932b8",
+          "txs_edgelist.csv": "a35053ba68a98e4382cae2ba65b9d9e36b23b6439e02dff084971b1b72a5156e",
+          "txs_features.csv": "2db326ec8ddb68f1d810c1834e1ff62e0a8300378f0984a1e3b2ca82a439821b",
+          "wallets_classes.csv": "4e5132c99f941666bf1fefd4100a1428d339c9252ec6987909e1adf8eac902f9"
+        },
+        "source_commit": "e6f0afc694c2f69d9bc080e7abaedeac1e1c647e"
+      },
+      "notes": "WITHDRAWN: lineage not attestable (training code not in any commit). Never served, never evaluated on the holdout.",
+      "path": "v4_fallback_no_g",
+      "registered_at": "2026-09-23T15:34:36+00:00"
+    },
+    "ps_native_v5": {
+      "artifacts": {
+        "calibration.json": "ebd7e2cb3bcfd2e6aa9082a6f0bd5a2f1b87cc52b5e5c6c9e1b617f15ed1d7c5",
+        "evaluation.json": "4a5c6adcd25eb6876a3fadd128a462d508ced601c07fe78182cb84096c687a36",
+        "feature_schema.json": "ea8073f74cae4b32deda44ca587f61afef067fd53b9211c2f533d11ef3acaf72",
+        "manifest.json": "6e26aefeb6159cf73255d7cf0d2f49332894047e2ce1d03820b67e9060e3ed82",
+        "model.joblib": "974d37f22e2f1e7df4e03cb5a13fdb35bf487e43f4d5db3ea3bb7191ebd3e607",
+        "stacker.json": "4d21288636db23d387eecff3b778b292461275ca06e476cf921290b4d8b0b24f"
+      },
+      "attested_source_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68",
+      "feature_schema_version": "ps_native_features/5",
+      "holdout": {
+        "P@100": 1.0,
+        "ece": 0.009584306662005796,
+        "nap": 0.5475262986138172,
+        "result": "holdout/ps_native_v5.json",
+        "sha256": "3e9e2f4b18a7a7adc03b7aef17e0d3e46d52a0f10593be8549f19984b028df93"
+      },
+      "lineage": {
+        "code_sha256": {
+          "research/autoresearch_2026_09_23/scripts/exp22_window_end_protocol.py": "80563740c7ce89bcc4382b28fb2faa9017725fd894f38083048f99536bcb4a1f",
+          "research/reproduction/build_ps_dataset.py": "b4a5dbec7f5d9506024e2a589be06d252372d6e0ff2e55981c6661e1737de9ff",
+          "research/reproduction/train_ps_production_model.py": "2524212aa774a87c0a097cd85c9dff8dae416f4626394886ef0a341be6b9c4be",
+          "src/obsidianchain/contracts/features.py": "82b909bf7ab0794e9fc6b55949ea92dca85a1c0f00be60adeda71090e5f140ae",
+          "src/obsidianchain/ml/ps_model.py": "d5016ec6cd8246ff11f74604ea47f75b221e44d7ba9fb479294cbe946a07c46d",
+          "src/obsidianchain/pipeline/features_ps.py": "90d97ada3e41453e815820ecc3a40c351cf39dad4683983922c3394bb8c9506b"
+        },
+        "config": {
+          "calibration": "Platt on OOF of folds 9-12",
+          "feature_schema_version": "ps_native_features/5",
+          "features": [
+            "input_count",
+            "output_count",
+            "total_input_amount",
+            "fee",
+            "fee_ratio",
+            "input_amount_mean",
+            "output_amount_mean",
+            "input_spread",
+            "output_spread",
+            "n_txs_asof_t",
+            "n_sent_asof_t",
+            "n_recv_asof_t",
+            "btc_recv_total_asof_t",
+            "net_flow_asof_t",
+            "active_duration_seconds",
+            "gap_since_last_tx",
+            "unique_counterparties_asof_t",
+            "cluster_size_asof_t",
+            "is_peeling_candidate",
+            "is_mixing_candidate",
+            "addr_is_sender",
+            "addr_is_self_change",
+            "counterparty_max_n_txs_asof_t",
+            "counterparty_mean_n_txs_asof_t",
+            "upstream_funded_share",
+            "upstream_mean_output_count",
+            "upstream_mean_input_count",
+            "upstream_peel_share",
+            "upstream_mix_share",
+            "upstream_min_hold_seconds",
+            "upstream_chain_depth"
+          ],
+          "hyperparameters": {
+            "colsample_bytree": 0.8,
+            "learning_rate": 0.05,
+            "min_child_samples": 50,
+            "n_estimators": 300,
+            "num_leaves": 31,
+            "subsample": 0.8,
+            "subsample_freq": 1
+          },
+          "protocol": "protocol_B_new_addresses_at_window_end/1",
+          "seed": 20260919,
+          "train_window": 16
+        },
+        "config_sha256": "52d3fd962769616b18e87d867c3b08b85e35f46f8349a5aa378c366757cd2722",
+        "environment": {
+          "lightgbm": "4.7.0",
+          "numpy": "2.4.6",
+          "pandas": "3.0.5",
+          "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+          "python": "3.14.0",
+          "scikit-learn": "1.9.0"
+        },
+        "evaluation_sha256": "4a5c6adcd25eb6876a3fadd128a462d508ced601c07fe78182cb84096c687a36",
+        "raw_source_sha256": {
+          "AddrTx_edgelist.csv": "f5f903f752387f66a1bccaeff54e293b2e8470fcddf5eb56b88aa06fd23a8f3b",
+          "TxAddr_edgelist.csv": "9f5afbdde7bc3d91fb7a4655be55799d6504cd0063ae55a0753a5a41189932b8",
+          "txs_edgelist.csv": "a35053ba68a98e4382cae2ba65b9d9e36b23b6439e02dff084971b1b72a5156e",
+          "txs_features.csv": "2db326ec8ddb68f1d810c1834e1ff62e0a8300378f0984a1e3b2ca82a439821b",
+          "wallets_classes.csv": "4e5132c99f941666bf1fefd4100a1428d339c9252ec6987909e1adf8eac902f9"
+        },
+        "source_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68"
+      },
+      "notes": "FROZEN_PENDING_HOLDOUT",
+      "path": "v5",
+      "registered_at": "2026-09-23T17:43:30+00:00"
+    },
+    "ps_native_v5_fallback_no_g": {
+      "artifacts": {
+        "calibration.json": "cb950e99a21316bd3e31df605394270471dec56ed7a5c0ad1c56dfb3651841f6",
+        "evaluation.json": "e5ea255d442de07a0b893a717fefc10222ba1736a8de5d694e20141bd296b569",
+        "feature_schema.json": "318190176407e3b2562b7f73c5f714a6e628af7025cce842afa7c3d167cd885a",
+        "manifest.json": "fe6a5d4782db13c2882b0d2d4151c91bf2d689d03098b5dcdf3508f7f71c1ad3",
+        "model.joblib": "f884db9d804fe7eb00f618ef6dd8af6e3526f8e3d472700129bd4b133615e93b"
+      },
+      "attested_source_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68",
+      "feature_schema_version": "ps_native_features/5",
+      "holdout": {
+        "P@100": 1.0,
+        "ece": 0.008297569501895181,
+        "nap": 0.5214155261558738,
+        "result": "holdout/ps_native_v5_fallback_no_g.json",
+        "sha256": "a5e8e6b6eff4fe62a8716d78af9d9e91095c6ee5fe7b92c3cdce8f1d16d3e527"
+      },
+      "lineage": {
+        "code_sha256": {
+          "research/autoresearch_2026_09_23/scripts/exp22_window_end_protocol.py": "80563740c7ce89bcc4382b28fb2faa9017725fd894f38083048f99536bcb4a1f",
+          "research/reproduction/build_ps_dataset.py": "b4a5dbec7f5d9506024e2a589be06d252372d6e0ff2e55981c6661e1737de9ff",
+          "research/reproduction/train_ps_production_model.py": "2524212aa774a87c0a097cd85c9dff8dae416f4626394886ef0a341be6b9c4be",
+          "src/obsidianchain/contracts/features.py": "82b909bf7ab0794e9fc6b55949ea92dca85a1c0f00be60adeda71090e5f140ae",
+          "src/obsidianchain/ml/ps_model.py": "d5016ec6cd8246ff11f74604ea47f75b221e44d7ba9fb479294cbe946a07c46d",
+          "src/obsidianchain/pipeline/features_ps.py": "90d97ada3e41453e815820ecc3a40c351cf39dad4683983922c3394bb8c9506b"
+        },
+        "config": {
+          "calibration": "Platt on OOF of folds 9-12",
+          "feature_schema_version": "ps_native_features/5",
+          "features": [
+            "input_count",
+            "output_count",
+            "total_input_amount",
+            "fee",
+            "fee_ratio",
+            "input_amount_mean",
+            "output_amount_mean",
+            "input_spread",
+            "output_spread",
+            "n_txs_asof_t",
+            "n_sent_asof_t",
+            "n_recv_asof_t",
+            "btc_recv_total_asof_t",
+            "net_flow_asof_t",
+            "active_duration_seconds",
+            "gap_since_last_tx",
+            "unique_counterparties_asof_t",
+            "cluster_size_asof_t",
+            "is_peeling_candidate",
+            "is_mixing_candidate",
+            "addr_is_sender",
+            "addr_is_self_change",
+            "counterparty_max_n_txs_asof_t",
+            "counterparty_mean_n_txs_asof_t"
+          ],
+          "hyperparameters": {
+            "colsample_bytree": 0.8,
+            "learning_rate": 0.05,
+            "min_child_samples": 50,
+            "n_estimators": 300,
+            "num_leaves": 31,
+            "subsample": 0.8,
+            "subsample_freq": 1
+          },
+          "protocol": "protocol_B_new_addresses_at_window_end/1",
+          "seed": 20260919,
+          "train_window": 16
+        },
+        "config_sha256": "17bd7a39301876241c76b8bc0eb8f76e7d2faad252e738d0f4db9b779a9ab446",
+        "environment": {
+          "lightgbm": "4.7.0",
+          "numpy": "2.4.6",
+          "pandas": "3.0.5",
+          "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+          "python": "3.14.0",
+          "scikit-learn": "1.9.0"
+        },
+        "evaluation_sha256": "e5ea255d442de07a0b893a717fefc10222ba1736a8de5d694e20141bd296b569",
+        "raw_source_sha256": {
+          "AddrTx_edgelist.csv": "f5f903f752387f66a1bccaeff54e293b2e8470fcddf5eb56b88aa06fd23a8f3b",
+          "TxAddr_edgelist.csv": "9f5afbdde7bc3d91fb7a4655be55799d6504cd0063ae55a0753a5a41189932b8",
+          "txs_edgelist.csv": "a35053ba68a98e4382cae2ba65b9d9e36b23b6439e02dff084971b1b72a5156e",
+          "txs_features.csv": "2db326ec8ddb68f1d810c1834e1ff62e0a8300378f0984a1e3b2ca82a439821b",
+          "wallets_classes.csv": "4e5132c99f941666bf1fefd4100a1428d339c9252ec6987909e1adf8eac902f9"
+        },
+        "source_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68"
+      },
+      "notes": "FROZEN_PENDING_HOLDOUT",
+      "path": "v5_fallback_no_g",
+      "registered_at": "2026-09-23T17:43:30+00:00"
+    }
+  },
+  "roles": {
+    "candidate": "ps_native_v5",
+    "champion": "ps_native_v5",
+    "fallback": "ps_native_v5_fallback_no_g"
+  },
+  "schema": "obsidianchain.model_registry/1"
+}

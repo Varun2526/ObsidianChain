@@ -471,6 +471,7 @@ def network_generate(
     if limit > 0:
         txids = txids[:limit]
 
+    # pyrefly: ignore [bad-unpacking]
     observations, nodes, observer_table, ground_truth = synthetic.generate(
         txids, config
     )

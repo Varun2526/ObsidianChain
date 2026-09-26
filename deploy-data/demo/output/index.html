@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>SYNTHETIC DEMONSTRATION - NOT A MEASUREMENT - ObsidianChain constraint mechanism</title>
+<style>
+:root {
+  --ink: #1a202c; --muted: #4a5568; --line: #cbd5e0; --page: #f7fafc;
+  --card: #ffffff; --warn-bg: #742a2a; --warn-ink: #fffaf0;
+  --stripe-a: #7b341e; --stripe-b: #9c4221;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e2e8f0; --muted: #a0aec0; --line: #2d3748; --page: #12161d;
+    --card: #1a202c; --warn-bg: #822727; --warn-ink: #fffaf0;
+    --stripe-a: #742a2a; --stripe-b: #9c4221;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font: 15px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.hazard {
+  position: sticky; top: 0; z-index: 20;
+  background: repeating-linear-gradient(45deg,
+    var(--stripe-a) 0 18px, var(--stripe-b) 18px 36px);
+  color: var(--warn-ink); text-align: center;
+  padding: 11px 16px; font-weight: 800; letter-spacing: .11em;
+  font-size: 13px; text-transform: uppercase;
+  border-bottom: 3px solid var(--warn-bg);
+}
+.hazard small {
+  display: block; font-weight: 600; letter-spacing: .04em;
+  text-transform: none; opacity: .92; margin-top: 3px; font-size: 12px;
+}
+.wrap { max-width: 1000px; margin: 0 auto; padding: 26px 20px 60px; }
+h1 { font-size: 25px; margin: 12px 0 4px; letter-spacing: -.01em; }
+h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .09em;
+     color: var(--muted); margin: 34px 0 12px; }
+.sub { color: var(--muted); margin: 0 0 22px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+.panel { background: var(--card); border: 1px solid var(--line);
+         border-radius: 9px; padding: 15px 17px; }
+.panel h3 { margin: 0 0 7px; font-size: 13px; text-transform: uppercase;
+            letter-spacing: .08em; }
+.panel p { margin: 0; color: var(--muted); font-size: 14px; }
+.panel.does h3 { color: #2b6cb0; }
+.panel.doesnot { border-color: var(--warn-bg); border-width: 2px; }
+.panel.doesnot h3 { color: var(--warn-bg); }
+.panel.doesnot p { color: var(--ink); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.scroll { overflow-x: auto; }
+th, td { text-align: left; padding: 7px 10px;
+         border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+     color: var(--muted); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace;
+              font-size: 12.5px; }
+.card { background: var(--card); border: 1px solid var(--line);
+        border-radius: 11px; margin: 16px 0; overflow: hidden; }
+.card > header { display: flex; align-items: center; gap: 12px;
+                 padding: 13px 17px; border-bottom: 1px solid var(--line);
+                 flex-wrap: wrap; }
+.key { width: 32px; height: 32px; border-radius: 8px; flex: none;
+       display: grid; place-items: center; font-weight: 800;
+       background: var(--warn-bg); color: var(--warn-ink); }
+.card h3 { margin: 0; font-size: 16px; flex: 1 1 240px; }
+.pill { font-size: 11px; font-weight: 800; letter-spacing: .09em;
+        padding: 4px 10px; border-radius: 999px; }
+.badge { font-size: 10px; font-weight: 800; letter-spacing: .1em;
+         padding: 4px 8px; border-radius: 4px;
+         background: var(--warn-bg); color: var(--warn-ink); }
+.body { padding: 15px 17px; }
+dl { display: grid; grid-template-columns: 124px 1fr; gap: 5px 14px;
+     margin: 0 0 14px; font-size: 14px; }
+dt { color: var(--muted); font-size: 11px; text-transform: uppercase;
+     letter-spacing: .07em; padding-top: 3px; padding-right: 8px; }
+@media (max-width: 620px) { dl { grid-template-columns: 1fr; gap: 2px; }
+  dt { padding-top: 8px; } }
+dd { margin: 0; }
+.reads { margin: 14px 0 0; padding: 11px 14px; border-left: 3px solid var(--warn-bg);
+         background: rgba(128,128,128,.07); font-size: 14px; }
+.contra { margin-top: 14px; border: 2px solid var(--warn-bg);
+          border-radius: 8px; padding: 12px 14px; }
+.contra h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .08em;
+             text-transform: uppercase; color: var(--warn-bg); }
+.refused { color: var(--warn-bg); font-weight: 700; }
+footer { margin-top: 40px; padding-top: 18px; border-top: 2px solid var(--warn-bg);
+         color: var(--muted); font-size: 13px; }
+.stamp { display: inline-block; border: 2px solid var(--warn-bg);
+         color: var(--warn-bg); border-radius: 6px; padding: 3px 9px;
+         font-weight: 800; letter-spacing: .1em; font-size: 11px;
+         transform: rotate(-1.5deg); }
+</style></head>
+<body>
+<div class="hazard">SYNTHETIC DEMONSTRATION - NOT A MEASUREMENT
+  <small>Generated fixture, deterministic from seed 26146.
+  Every figure below is synthetic. None of it is a measurement of Bitcoin.</small>
+</div>
+<main class="wrap">
+  <h1>The constraint mechanism, end to end</h1>
+  <p class="sub">Five scenarios, one engine run, one chain.
+    Provenance <code>SYNTHETIC_DEMONSTRATION</code> &middot; namespace
+    <code>/data/demo</code></p>
+
+  <div class="two">
+    <section class="panel does"><h3>What this shows</h3>
+      <p>These five scenarios exercise the constraint engine end to end: a network cannot-link can veto a co-spend merge before it happens, and a contradiction found after a merge is recorded as CONTESTED rather than silently kept.</p></section>
+    <section class="panel doesnot"><h3>What this does not show</h3>
+      <p>The frozen Elliptic++ dataset does not trigger any of this. Of 253,429 proposed unions, 40 reached the pooled minimum of 25 and none of them separated; the median component pools zero usable observations. Both statements are true and both are part of the result.</p></section>
+  </div>
+
+  <h2>Summary</h2>
+  <div class="panel scroll"><table><thead><tr>
+    <th></th><th>scenario</th><th>outcome</th><th>verdict</th>
+    <th class="num">pooled</th><th class="num">p</th><th class="num">effect</th>
+  </tr></thead><tbody><tr><td class='mono'><strong>A</strong></td><td>Blockchain evidence proposes a merge</td><td class='mono'>CANDIDATE</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>0/0</td><td class='num mono'>1.0e+00</td><td class='num mono'>0.0000</td></tr><tr><td class='mono'><strong>B</strong></td><td>Network evidence present but insufficient</td><td class='mono'>MERGED</td><td class='mono'>NOT_SEPARATED</td><td class='num mono'>321/320</td><td class='num mono'>3.0e-01</td><td class='num mono'>0.0281</td></tr><tr><td class='mono'><strong>C</strong></td><td>Network evidence strong and separating</td><td class='mono'>BLOCKED</td><td class='mono'>SEPARATED</td><td class='num mono'>321/320</td><td class='num mono'>4.5e-11</td><td class='num mono'>0.0768</td></tr><tr><td class='mono'><strong>D</strong></td><td>Contradiction appears after transitive clustering</td><td class='mono'>CONTESTED</td><td class='mono'>SEPARATED</td><td class='num mono'>321/256</td><td class='num mono'>6.3e-11</td><td class='num mono'>0.0804</td></tr><tr><td class='mono'><strong>E</strong></td><td>No usable network evidence</td><td class='mono'>ABSTAINED</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>0/0</td><td class='num mono'>1.0e+00</td><td class='num mono'>0.0000</td></tr></tbody></table></div>
+
+  <h2>Scenarios</h2>
+  
+<article class="card">
+  <header>
+    <div class="key">A</div>
+    <h3>Blockchain evidence proposes a merge</h3>
+    <span class='badge'>SYNTHETIC DEMONSTRATION</span>
+    <span class="pill" style="background:#e2e8f0;color:#4a5568">CANDIDATE</span>
+  </header>
+  <div class="body">
+    <dl>
+      <dt>situation</dt><dd>A co-spend transaction spends two addresses together.</dd>
+      <dt>chain</dt><dd>3 transactions spend both addresses as inputs. Common-input-ownership proposes the merge.</dd>
+      <dt>network</dt><dd>No announcement record covers these transactions. The capture never saw them, so the network layer is not consulted at all.</dd>
+      <dt>meaning</dt><dd>co-spend proposed it; the network layer was never consulted</dd>
+      <dt>announcements</dt><dd class="mono">0 seen,
+        0 usable &nbsp;|&nbsp; pooled: DEMO-A-00 0, DEMO-A-01 0</dd>
+      <dt>components</dt><dd class="mono">chain-only
+        1 &rarr; fused
+        1</dd>
+    </dl>
+    <div class='scroll'><table><thead><tr><th>side A</th><th>side B</th><th>verdict</th><th class='num'>pooled</th><th class='num'>p</th><th class='num'>effect</th><th>action</th></tr></thead><tbody><tr><td class='mono'>DEMO-A-00</td><td class='mono'>DEMO-A-01</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>0/0</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr></tbody></table></div>
+    
+    <p class="reads">This is where every decision starts. Plain co-spend clustering stops here and merges - permanently.</p>
+  </div>
+</article>
+<article class="card">
+  <header>
+    <div class="key">B</div>
+    <h3>Network evidence present but insufficient</h3>
+    <span class='badge'>SYNTHETIC DEMONSTRATION</span>
+    <span class="pill" style="background:#bee3f8;color:#2c5282">MERGED</span>
+  </header>
+  <div class="body">
+    <dl>
+      <dt>situation</dt><dd>Both sides broadcast from the same origin.</dd>
+      <dt>chain</dt><dd>One co-spend transaction proposes the merge.</dd>
+      <dt>network</dt><dd>320 usable announcements pooled on each side, well past the minimum of 25. The two arrival centroids differ by less than their own standard error.</dd>
+      <dt>meaning</dt><dd>the rule looked and found no separation</dd>
+      <dt>announcements</dt><dd class="mono">641 seen,
+        641 usable &nbsp;|&nbsp; pooled: DEMO-B-00 321, DEMO-B-01 320</dd>
+      <dt>components</dt><dd class="mono">chain-only
+        1 &rarr; fused
+        1</dd>
+    </dl>
+    <div class='scroll'><table><thead><tr><th>side A</th><th>side B</th><th>verdict</th><th class='num'>pooled</th><th class='num'>p</th><th class='num'>effect</th><th>action</th></tr></thead><tbody><tr><td class='mono'>DEMO-B-00</td><td class='mono'>DEMO-B-01</td><td class='mono'>NOT_SEPARATED</td><td class='num mono'>321/320</td><td class='num mono'>3.00e-01</td><td class='num mono'>0.0281</td><td>merged</td></tr></tbody></table></div>
+    
+    <p class="reads">Having enough evidence is not the same as having evidence that says something. The merge proceeds.</p>
+  </div>
+</article>
+<article class="card">
+  <header>
+    <div class="key">C</div>
+    <h3>Network evidence strong and separating</h3>
+    <span class='badge'>SYNTHETIC DEMONSTRATION</span>
+    <span class="pill" style="background:#fed7d7;color:#822727">BLOCKED</span>
+  </header>
+  <div class="body">
+    <dl>
+      <dt>situation</dt><dd>The two sides broadcast from different origins.</dd>
+      <dt>chain</dt><dd>One co-spend transaction proposes the merge.</dd>
+      <dt>network</dt><dd>320 usable announcements pooled on each side - the same volume as B. The centroids differ by more than the measurement precision allows, past both gates.</dd>
+      <dt>meaning</dt><dd>the cannot-link fired and the merge was refused</dd>
+      <dt>announcements</dt><dd class="mono">641 seen,
+        641 usable &nbsp;|&nbsp; pooled: DEMO-C-00 321, DEMO-C-01 320</dd>
+      <dt>components</dt><dd class="mono">chain-only
+        1 &rarr; fused
+        2</dd>
+    </dl>
+    <div class='scroll'><table><thead><tr><th>side A</th><th>side B</th><th>verdict</th><th class='num'>pooled</th><th class='num'>p</th><th class='num'>effect</th><th>action</th></tr></thead><tbody><tr><td class='mono'>DEMO-C-00</td><td class='mono'>DEMO-C-01</td><td class='mono'>SEPARATED</td><td class='num mono'>321/320</td><td class='num mono'>4.50e-11</td><td class='num mono'>0.0768</td><td><span class='refused'>REFUSED</span></td></tr></tbody></table></div>
+    
+    <p class="reads">The differentiator. A wrong co-spend merge is prevented rather than cleaned up afterwards, because union-find has no undo.</p>
+  </div>
+</article>
+<article class="card">
+  <header>
+    <div class="key">D</div>
+    <h3>Contradiction appears after transitive clustering</h3>
+    <span class='badge'>SYNTHETIC DEMONSTRATION</span>
+    <span class="pill" style="background:#fefcbf;color:#744210">CONTESTED</span>
+  </header>
+  <div class="body">
+    <dl>
+      <dt>situation</dt><dd>A hub and 12 arms, joined one at a time through a thin link.</dd>
+      <dt>chain</dt><dd>13 co-spend transactions build one component. Every single decision has one side below the pooled minimum.</dd>
+      <dt>network</dt><dd>The hub pools 320 announcements from one origin; the arms pool 240 from another, but never more than 20 at a time. The two pools only exist as pools once clustering has finished.</dd>
+      <dt>meaning</dt><dd>contradiction found after the merge; recorded, not resolved</dd>
+      <dt>announcements</dt><dd class="mono">577 seen,
+        577 usable &nbsp;|&nbsp; pooled: DEMO-D-hub-00 321, DEMO-D-link-00 16, DEMO-D-arm-00 20, DEMO-D-arm-01 20, DEMO-D-arm-02 20, DEMO-D-arm-03 20, DEMO-D-arm-04 20, DEMO-D-arm-05 20, DEMO-D-arm-06 20, DEMO-D-arm-07 20, DEMO-D-arm-08 20, DEMO-D-arm-09 20, DEMO-D-arm-10 20, DEMO-D-arm-11 20</dd>
+      <dt>components</dt><dd class="mono">chain-only
+        1 &rarr; fused
+        1</dd>
+    </dl>
+    <div class='scroll'><table><thead><tr><th>side A</th><th>side B</th><th>verdict</th><th class='num'>pooled</th><th class='num'>p</th><th class='num'>effect</th><th>action</th></tr></thead><tbody><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-hub-00</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>16/321</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-00</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>337/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-01</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>357/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-02</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>377/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-03</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>397/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-04</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>417/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-05</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>437/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-06</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>457/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-07</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>477/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-08</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>497/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-09</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>517/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-10</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>537/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr><tr><td class='mono'>DEMO-D-link-00</td><td class='mono'>DEMO-D-arm-11</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>557/20</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr></tbody></table></div>
+    <div class='contra'><h4>contradiction found after clustering</h4><div class='scroll'><table><tbody><tr><td>one member against the other 13 in its component</td><td class='mono'>SEPARATED</td><td class='num mono'>pooled 321/256</td><td class='num mono'>p=6.33e-11</td><td class='num mono'>effect=0.0804</td></tr></tbody></table></div><p style='margin:9px 0 0'><strong>found by</strong> leave-one-out audit, after clustering finished<br><strong>action</strong> recorded as CONTESTED; union-find has no split</p></div>
+    <p class="reads">The veto acts before a union; this contradiction only becomes visible after one. It is recorded, not resolved - unmerging would mean discarding a cryptographically-backed co-spend edge.</p>
+  </div>
+</article>
+<article class="card">
+  <header>
+    <div class="key">E</div>
+    <h3>No usable network evidence</h3>
+    <span class='badge'>SYNTHETIC DEMONSTRATION</span>
+    <span class="pill" style="background:#e2e8f0;color:#2d3748">ABSTAINED</span>
+  </header>
+  <div class="body">
+    <dl>
+      <dt>situation</dt><dd>Every announcement is relayed by a known broadcaster.</dd>
+      <dt>chain</dt><dd>One co-spend transaction proposes the merge.</dd>
+      <dt>network</dt><dd>320 announcements per side exist and every one is discarded before any statistic is computed: a broadcaster is heard directly by every observer, so the arrival order carries no information about who sent it.</dd>
+      <dt>meaning</dt><dd>observations existed and none of them were usable</dd>
+      <dt>announcements</dt><dd class="mono">641 seen,
+        0 usable &nbsp;|&nbsp; pooled: DEMO-E-00 0, DEMO-E-01 0</dd>
+      <dt>components</dt><dd class="mono">chain-only
+        1 &rarr; fused
+        1</dd>
+    </dl>
+    <div class='scroll'><table><thead><tr><th>side A</th><th>side B</th><th>verdict</th><th class='num'>pooled</th><th class='num'>p</th><th class='num'>effect</th><th>action</th></tr></thead><tbody><tr><td class='mono'>DEMO-E-00</td><td class='mono'>DEMO-E-01</td><td class='mono'>NO_EVIDENCE</td><td class='num mono'>0/0</td><td class='num mono'>1.00e+00</td><td class='num mono'>0.0000</td><td>merged</td></tr></tbody></table></div>
+    
+    <p class="reads">Abstention, not weak evidence. One Electrum server broadcasts for tens of thousands of users; a link drawn from that would be manufactured.</p>
+  </div>
+</article>
+
+  <h2>The rule, and the fixture it ran on</h2>
+  <div class="two">
+    <section class="panel"><h3>Rule (production, unchanged)</h3>
+      <div class="scroll"><table><tbody><tr><td>min pooled observations per side</td><td class='num mono'>25</td></tr><tr><td>min per-observer observations</td><td class='num mono'>5</td></tr><tr><td>alpha</td><td class='num mono'>1e-04</td></tr><tr><td>min effect</td><td class='num mono'>0.05</td></tr><tr><td>unchanged from production</td><td class='num mono'>yes</td></tr></tbody></table></div>
+      <p style="margin-top:10px">The threshold is not lowered for the demonstration. The fixture raises the evidence to meet it.</p>
+      <p style="margin-top:8px">The network layer emits cannot-link only. A shared origin never implies a shared entity: one Electrum server broadcasts for tens of thousands of unrelated users.</p>
+    </section>
+    <section class="panel"><h3>Fixture</h3>
+      <div class="scroll"><table><tbody><tr><td>addresses</td><td class='num mono'>22</td></tr><tr><td>co-spend edges</td><td class='num mono'>19</td></tr><tr><td>chain transactions</td><td class='num mono'>2,503</td></tr><tr><td>announced</td><td class='num mono'>2,500</td></tr><tr><td>never announced (scenario A)</td><td class='num mono'>3</td></tr><tr><td>announcement records</td><td class='num mono'>19,600</td></tr><tr><td>usable after classification</td><td class='num mono'>1,859</td></tr><tr><td>discarded NO_EVIDENCE</td><td class='num mono'>641</td></tr><tr><td>observers</td><td class='num mono'>8</td></tr><tr><td>sigma</td><td class='num mono'>1.1506 (Decker &amp; Wattenhofer 2013)</td></tr><tr><td>seed</td><td class='num mono'>26146</td></tr><tr><td>observations sha256</td><td class='num mono'>56c19e5f5bc5d2a25322ba8b...</td></tr></tbody></table></div>
+    </section>
+  </div>
+
+  <h2>Totals</h2>
+  <div class="panel scroll"><table><tbody>
+    <tr><td>clusters, chain-only</td>
+        <td class="num mono">5</td></tr>
+    <tr><td>clusters, fused (veto enabled)</td>
+        <td class="num mono">6</td></tr>
+    <tr><td>merges blocked</td>
+        <td class="num mono">1</td></tr>
+    <tr><td>components contested</td>
+        <td class="num mono">1</td></tr>
+    <tr><td>decisions evaluated</td>
+        <td class="num mono">4</td></tr>
+    <tr><td>decisions abstained</td>
+        <td class="num mono">30</td></tr>
+    <tr><td>every scenario behaved as described</td>
+        <td class="num mono">
+        yes</td></tr>
+  </tbody></table></div>
+
+  <footer>
+    <p><span class="stamp">SYNTHETIC DEMONSTRATION - NOT A MEASUREMENT</span></p>
+    <p>Fixtures and outputs live under <code>/data/demo</code>
+      and nowhere else. The frozen production dataset, its hash and every
+      Phase&nbsp;1&ndash;3 number are untouched by this page; a test asserts
+      it.</p>
+    <p>All network data in this project is synthetic. It demonstrates the
+      mechanism and validates nothing. Real validation needs mainnet capture
+      with controlled ground truth.</p>
+  </footer>
+</main>
+</body></html>

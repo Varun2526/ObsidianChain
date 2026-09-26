@@ -1,0 +1,141 @@
+{
+  "schema": "obsidianchain.production_gate_report/1",
+  "model_version": "ps_native_v5",
+  "spec": "docs/production_gate_spec.json",
+  "evaluated_at": "2026-09-23T17:48:55.219032+00:00",
+  "decision": "PASS",
+  "criteria": {
+    "1_leakage_safety": {
+      "status": "PASS",
+      "evidence": "11 passed in 15.43s"
+    },
+    "2_temporal_validity": {
+      "status": "PASS",
+      "evidence": {
+        "max_eval_step": 40,
+        "selection_record": "exp22_window_end_protocol.json",
+        "protocol": "protocol_B_new_addresses_at_window_end/1"
+      }
+    },
+    "3_data_quality": {
+      "status": "PASS",
+      "evidence": "2 passed in 1.00s; feature contract enforced on every set by the training script"
+    },
+    "4_ranking_quality": {
+      "status": "PASS",
+      "evidence": {
+        "nap": 0.7960520797970817,
+        "P@100": 0.96,
+        "nR@500": 0.8296666666666667
+      }
+    },
+    "5_calibration": {
+      "status": "PASS",
+      "evidence": {
+        "ece_mean": 0.024871877091539492,
+        "ece_max": 0.040132184032451446,
+        "folds": 8
+      }
+    },
+    "6_stability": {
+      "status": "PASS",
+      "evidence": {
+        "nap_sd": 0.17571860658873964,
+        "trend": {
+          "slope_per_fold": 0.0031295306533106527,
+          "p_value": 0.842837737815155
+        }
+      }
+    },
+    "7_worst_fold": {
+      "status": "PASS",
+      "evidence": {
+        "worst_nap": 0.47712433215409505,
+        "worst_P@100": 0.76
+      }
+    },
+    "8_slice_performance": {
+      "status": "PASS",
+      "evidence": {
+        "first_seen": 0.5629480946449078,
+        "receiver_only": 0.5644793828140414,
+        "warnings_below_0.30": {},
+        "all_slices": {
+          "first_seen": 0.5629480946449078,
+          "known_address": 0.8879099097915658,
+          "high_history": 0.9135329457426714,
+          "low_volume_q1": 0.8034148678546976,
+          "high_volume_q4": 0.33514101061939755,
+          "no_upstream_funding": 0.610433782832637,
+          "has_upstream_funding": 0.8236350245102865,
+          "sender": 0.8589808536980094,
+          "receiver_only": 0.5644793828140414
+        }
+      }
+    },
+    "9_reproducibility": {
+      "status": "PASS",
+      "evidence": {
+        "max_abs_diff_vs_exp22": 0.0
+      }
+    },
+    "10_inference_determinism": {
+      "status": "PASS",
+      "evidence": "3 passed in 9.87s"
+    },
+    "11_latency": {
+      "status": "PASS",
+      "evidence": {
+        "p95_ms": 0.594,
+        "rows_per_s": 463074.0
+      }
+    },
+    "12_reliability": {
+      "status": "PASS",
+      "evidence": "17 passed in 2.05s"
+    },
+    "13_security": {
+      "status": "PASS",
+      "evidence": {
+        "registry_verify": true,
+        "auth_tests": "107 passed, 2 warnings in 8.36s"
+      }
+    },
+    "14_monitoring": {
+      "status": "PASS",
+      "evidence": {
+        "reference_profile": true,
+        "tests": "1 passed in 0.21s"
+      }
+    },
+    "15_rollback": {
+      "status": "PASS",
+      "evidence": {
+        "fallback": "ps_native_v5_fallback_no_g",
+        "same_schema": true
+      }
+    },
+    "16_artifact_lineage": {
+      "status": "PASS",
+      "evidence": {
+        "missing": [],
+        "source_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68",
+        "attested_commit": "5431241a4d2beea200aa71ea685ef779d1f58c68"
+      }
+    },
+    "17_auditability": {
+      "status": "PASS",
+      "evidence": "8 passed in 1.74s"
+    },
+    "18_holdout": {
+      "status": "PASS",
+      "evidence": {
+        "nap": 0.5475262986138172,
+        "P@100": 1.0,
+        "nR@500": 0.9500000000000001,
+        "ece": 0.009584306662005796,
+        "worst_confirmation_nap": 0.5533572489951036
+      }
+    }
+  }
+}

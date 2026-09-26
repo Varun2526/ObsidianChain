@@ -1,0 +1,629 @@
+{
+  "demo": true,
+  "provenance": "SYNTHETIC_DEMONSTRATION",
+  "schema": "obsidianchain.demo/1",
+  "banner": "SYNTHETIC DEMONSTRATION - NOT A MEASUREMENT",
+  "provenance_type": "DEMO",
+  "not_a_measurement": true,
+  "seed": 26146,
+  "namespace": "/data/demo",
+  "statements": {
+    "demo": true,
+    "provenance": "SYNTHETIC_DEMONSTRATION",
+    "mechanism": "These five scenarios exercise the constraint engine end to end: a network cannot-link can veto a co-spend merge before it happens, and a contradiction found after a merge is recorded as CONTESTED rather than silently kept.",
+    "frozen_dataset": "The frozen Elliptic++ dataset does not trigger any of this. Of 253,429 proposed unions, 40 reached the pooled minimum of 25 and none of them separated; the median component pools zero usable observations. Both statements are true and both are part of the result."
+  },
+  "fixture": {
+    "demo": true,
+    "provenance": "SYNTHETIC_DEMONSTRATION",
+    "seed": 26146,
+    "fixture_version": "1.0.0",
+    "dataset_sha256": "56c19e5f5bc5d2a25322ba8be29a1a328b355c874f5780b7f7ec4430a5f7ae74",
+    "addresses": 22,
+    "cospend_edges": 19,
+    "chain_transactions": 2503,
+    "announced_transactions": 2500,
+    "unannounced_transactions": 3,
+    "announcement_records": 19600,
+    "observers": 8,
+    "usable_transactions": 1859,
+    "discarded_no_evidence": 641,
+    "sigma": 1.1505604174104382,
+    "sigma_source": "Decker & Wattenhofer 2013"
+  },
+  "rule": {
+    "demo": true,
+    "provenance": "SYNTHETIC_DEMONSTRATION",
+    "min_pooled_observations": 25,
+    "min_observer_observations": 5,
+    "alpha": 0.0001,
+    "min_effect": 0.05,
+    "unchanged_from_production": true,
+    "note": "The threshold is not lowered for the demonstration. The fixture raises the evidence to meet it.",
+    "cannot_link_only": "The network layer emits cannot-link only. A shared origin never implies a shared entity: one Electrum server broadcasts for tens of thousands of unrelated users."
+  },
+  "totals": {
+    "demo": true,
+    "provenance": "SYNTHETIC_DEMONSTRATION",
+    "scenarios": 5,
+    "chain_only_clusters": 5,
+    "fused_clusters": 6,
+    "merges_blocked": 1,
+    "components_contested": 1,
+    "decisions_evaluated": 4,
+    "decisions_abstained": 30,
+    "all_scenarios_as_described": true
+  },
+  "scenarios": [
+    {
+      "demo": true,
+      "provenance": "SYNTHETIC_DEMONSTRATION",
+      "key": "A",
+      "title": "Blockchain evidence proposes a merge",
+      "situation": "A co-spend transaction spends two addresses together.",
+      "chain_story": "3 transactions spend both addresses as inputs. Common-input-ownership proposes the merge.",
+      "network_story": "No announcement record covers these transactions. The capture never saw them, so the network layer is not consulted at all.",
+      "reads": "This is where every decision starts. Plain co-spend clustering stops here and merges - permanently.",
+      "outcome": "CANDIDATE",
+      "expected_outcome": "CANDIDATE",
+      "matches_expectation": true,
+      "verdict": "NO_EVIDENCE",
+      "addresses": [
+        "DEMO-A-00",
+        "DEMO-A-01"
+      ],
+      "pooled": [
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-A-00",
+          "observations": 0
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-A-01",
+          "observations": 0
+        }
+      ],
+      "announcements_seen": 0,
+      "usable_observations": 0,
+      "chain_only_components": 1,
+      "fused_components": 1,
+      "contested": false,
+      "decisions": [
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-A-00",
+          "address_b": "DEMO-A-01",
+          "members_a": 1,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 0,
+          "pooled_b": 0,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        }
+      ],
+      "contradiction": null
+    },
+    {
+      "demo": true,
+      "provenance": "SYNTHETIC_DEMONSTRATION",
+      "key": "B",
+      "title": "Network evidence present but insufficient",
+      "situation": "Both sides broadcast from the same origin.",
+      "chain_story": "One co-spend transaction proposes the merge.",
+      "network_story": "320 usable announcements pooled on each side, well past the minimum of 25. The two arrival centroids differ by less than their own standard error.",
+      "reads": "Having enough evidence is not the same as having evidence that says something. The merge proceeds.",
+      "outcome": "MERGED",
+      "expected_outcome": "MERGED",
+      "matches_expectation": true,
+      "verdict": "NOT_SEPARATED",
+      "addresses": [
+        "DEMO-B-00",
+        "DEMO-B-01"
+      ],
+      "pooled": [
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-B-00",
+          "observations": 321
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-B-01",
+          "observations": 320
+        }
+      ],
+      "announcements_seen": 641,
+      "usable_observations": 641,
+      "chain_only_components": 1,
+      "fused_components": 1,
+      "contested": false,
+      "decisions": [
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-B-00",
+          "address_b": "DEMO-B-01",
+          "members_a": 1,
+          "members_b": 1,
+          "verdict": "NOT_SEPARATED",
+          "pooled_a": 321,
+          "pooled_b": 320,
+          "chi2": 9.5266,
+          "p_value": 0.29983906086627327,
+          "effect": 0.028098,
+          "reason": "not significant",
+          "merged": true
+        }
+      ],
+      "contradiction": null
+    },
+    {
+      "demo": true,
+      "provenance": "SYNTHETIC_DEMONSTRATION",
+      "key": "C",
+      "title": "Network evidence strong and separating",
+      "situation": "The two sides broadcast from different origins.",
+      "chain_story": "One co-spend transaction proposes the merge.",
+      "network_story": "320 usable announcements pooled on each side - the same volume as B. The centroids differ by more than the measurement precision allows, past both gates.",
+      "reads": "The differentiator. A wrong co-spend merge is prevented rather than cleaned up afterwards, because union-find has no undo.",
+      "outcome": "BLOCKED",
+      "expected_outcome": "BLOCKED",
+      "matches_expectation": true,
+      "verdict": "SEPARATED",
+      "addresses": [
+        "DEMO-C-00",
+        "DEMO-C-01"
+      ],
+      "pooled": [
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-C-00",
+          "observations": 321
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-C-01",
+          "observations": 320
+        }
+      ],
+      "announcements_seen": 641,
+      "usable_observations": 641,
+      "chain_only_components": 1,
+      "fused_components": 2,
+      "contested": false,
+      "decisions": [
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-C-00",
+          "address_b": "DEMO-C-01",
+          "members_a": 1,
+          "members_b": 1,
+          "verdict": "SEPARATED",
+          "pooled_a": 321,
+          "pooled_b": 320,
+          "chi2": 65.1556,
+          "p_value": 4.496069723623372e-11,
+          "effect": 0.076834,
+          "reason": "",
+          "merged": false
+        }
+      ],
+      "contradiction": null
+    },
+    {
+      "demo": true,
+      "provenance": "SYNTHETIC_DEMONSTRATION",
+      "key": "D",
+      "title": "Contradiction appears after transitive clustering",
+      "situation": "A hub and 12 arms, joined one at a time through a thin link.",
+      "chain_story": "13 co-spend transactions build one component. Every single decision has one side below the pooled minimum.",
+      "network_story": "The hub pools 320 announcements from one origin; the arms pool 240 from another, but never more than 20 at a time. The two pools only exist as pools once clustering has finished.",
+      "reads": "The veto acts before a union; this contradiction only becomes visible after one. It is recorded, not resolved - unmerging would mean discarding a cryptographically-backed co-spend edge.",
+      "outcome": "CONTESTED",
+      "expected_outcome": "CONTESTED",
+      "matches_expectation": true,
+      "verdict": "SEPARATED",
+      "addresses": [
+        "DEMO-D-hub-00",
+        "DEMO-D-link-00",
+        "DEMO-D-arm-00",
+        "DEMO-D-arm-01",
+        "DEMO-D-arm-02",
+        "DEMO-D-arm-03",
+        "DEMO-D-arm-04",
+        "DEMO-D-arm-05",
+        "DEMO-D-arm-06",
+        "DEMO-D-arm-07",
+        "DEMO-D-arm-08",
+        "DEMO-D-arm-09",
+        "DEMO-D-arm-10",
+        "DEMO-D-arm-11"
+      ],
+      "pooled": [
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-hub-00",
+          "observations": 321
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-link-00",
+          "observations": 16
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-00",
+          "observations": 20
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-01",
+          "observations": 20
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-02",
+          "observations": 20
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-03",
+          "observations": 20
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-04",
+          "observations": 20
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-05",
+          "observations": 20
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-06",
+          "observations": 20
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-07",
+          "observations": 20
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-08",
+          "observations": 20
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-09",
+          "observations": 20
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-10",
+          "observations": 20
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-D-arm-11",
+          "observations": 20
+        }
+      ],
+      "announcements_seen": 577,
+      "usable_observations": 577,
+      "chain_only_components": 1,
+      "fused_components": 1,
+      "contested": true,
+      "decisions": [
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-hub-00",
+          "members_a": 1,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 16,
+          "pooled_b": 321,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-00",
+          "members_a": 2,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 337,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-01",
+          "members_a": 3,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 357,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-02",
+          "members_a": 4,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 377,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-03",
+          "members_a": 5,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 397,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-04",
+          "members_a": 6,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 417,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-05",
+          "members_a": 7,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 437,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-06",
+          "members_a": 8,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 457,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-07",
+          "members_a": 9,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 477,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-08",
+          "members_a": 10,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 497,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-09",
+          "members_a": 11,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 517,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-10",
+          "members_a": 12,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 537,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-D-link-00",
+          "address_b": "DEMO-D-arm-11",
+          "members_a": 13,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 557,
+          "pooled_b": 20,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        }
+      ],
+      "contradiction": {
+        "demo": true,
+        "provenance": "SYNTHETIC_DEMONSTRATION",
+        "member_code": 6,
+        "counterpart_code": 8,
+        "component_size": 14,
+        "verdict": "SEPARATED",
+        "pooled_member": 321,
+        "pooled_rest": 256,
+        "chi2": 64.4055,
+        "p_value": 6.325573254238758e-11,
+        "effect": 0.080416,
+        "found_by": "leave-one-out audit, after clustering finished",
+        "resolution": "recorded as CONTESTED; union-find has no split"
+      }
+    },
+    {
+      "demo": true,
+      "provenance": "SYNTHETIC_DEMONSTRATION",
+      "key": "E",
+      "title": "No usable network evidence",
+      "situation": "Every announcement is relayed by a known broadcaster.",
+      "chain_story": "One co-spend transaction proposes the merge.",
+      "network_story": "320 announcements per side exist and every one is discarded before any statistic is computed: a broadcaster is heard directly by every observer, so the arrival order carries no information about who sent it.",
+      "reads": "Abstention, not weak evidence. One Electrum server broadcasts for tens of thousands of users; a link drawn from that would be manufactured.",
+      "outcome": "ABSTAINED",
+      "expected_outcome": "ABSTAINED",
+      "matches_expectation": true,
+      "verdict": "NO_EVIDENCE",
+      "addresses": [
+        "DEMO-E-00",
+        "DEMO-E-01"
+      ],
+      "pooled": [
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-E-00",
+          "observations": 0
+        },
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address": "DEMO-E-01",
+          "observations": 0
+        }
+      ],
+      "announcements_seen": 641,
+      "usable_observations": 0,
+      "chain_only_components": 1,
+      "fused_components": 1,
+      "contested": false,
+      "decisions": [
+        {
+          "demo": true,
+          "provenance": "SYNTHETIC_DEMONSTRATION",
+          "address_a": "DEMO-E-00",
+          "address_b": "DEMO-E-01",
+          "members_a": 1,
+          "members_b": 1,
+          "verdict": "NO_EVIDENCE",
+          "pooled_a": 0,
+          "pooled_b": 0,
+          "chi2": 0.0,
+          "p_value": 1.0,
+          "effect": 0.0,
+          "reason": "pooled observations below minimum 25",
+          "merged": true
+        }
+      ],
+      "contradiction": null
+    }
+  ]
+}
