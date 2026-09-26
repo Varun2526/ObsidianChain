@@ -1,6 +1,6 @@
 name: Deploy ObsidianChain
 
-on:
+"on":
   push:
     branches:
       - main
@@ -29,22 +29,40 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            echo "==> Preparing AMD64 vendor dependencies"
+            echo "==> Detecting host architecture"
+            ARCH=$(uname -m)
+            case "$ARCH" in
+              x86_64|amd64)
+                PLATFORM="linux/amd64"
+                VENDOR_PATH="vendor/linux-amd64"
+                ;;
+              aarch64|arm64)
+                PLATFORM="linux/arm64"
+                VENDOR_PATH="vendor/linux-arm64"
+                ;;
+              *)
+                echo "ERROR: Unsupported host architecture: $ARCH" >&2
+                exit 1
+                ;;
+            esac
 
-            if ! make check-vendor PLATFORM=linux/amd64; then
+            echo "Host architecture: $ARCH -> Platform: $PLATFORM"
+            echo "Vendor path:       $VENDOR_PATH"
+
+            echo "==> Preparing vendor dependencies for $PLATFORM"
+            if ! make check-vendor PLATFORM="$PLATFORM"; then
               echo "==> Vendor dependencies missing; generating them"
-              make vendor PLATFORM=linux/amd64
+              make vendor PLATFORM="$PLATFORM"
             fi
 
             echo "==> Building Docker image"
             docker build \
-              --platform linux/amd64 \
+              --platform "$PLATFORM" \
               --network none \
-              --build-arg VENDOR_PATH=vendor/linux-amd64 \
+              --build-arg VENDOR_PATH="$VENDOR_PATH" \
               -t obsidianchain:${{ github.sha }} .
 
             echo "==> Detecting active deployment"
-
             if docker ps --format '{{.Names}}' | grep -q '^obsidianchain$'; then
               ACTIVE_CONTAINER="obsidianchain"
               ACTIVE_PORT="8080"
@@ -65,46 +83,75 @@ jobs:
 
             echo "==> Starting new container"
             docker run -d \
-            --name "$NEW_CONTAINER" \
-            --restart unless-stopped \
-            -p "127.0.0.1:${NEW_PORT}:8000" \
-            obsidianchain:${{ github.sha }} \
-            serve --host 0.0.0.0 --port 8000
+              --platform "$PLATFORM" \
+              --name "$NEW_CONTAINER" \
+              --restart unless-stopped \
+              -p "127.0.0.1:${NEW_PORT}:8000" \
+              obsidianchain:${{ github.sha }} \
+              serve --host 0.0.0.0 --port 8000
 
             echo "==> Waiting for health check"
-
-            for i in {1..30}; do
-              if curl -fsS "http://127.0.0.1:${NEW_PORT}/api/health" > /dev/null; then
-                echo "Health check passed"
+            HEALTH_PASSED=0
+            for i in $(seq 1 30); do
+              if curl -fsS "http://127.0.0.1:${NEW_PORT}/api/health" > /dev/null 2>&1; then
+                echo "Health check passed on attempt $i"
+                HEALTH_PASSED=1
                 break
               fi
-
-              if [ "$i" -eq 30 ]; then
-                echo "Health check FAILED"
-                docker logs "$NEW_CONTAINER" --tail 100
-                docker rm -f "$NEW_CONTAINER"
-                exit 1
-              fi
-
               sleep 2
             done
 
+            if [ "$HEALTH_PASSED" -ne 1 ]; then
+              echo "Health check FAILED after 30 attempts (60s)"
+              docker logs "$NEW_CONTAINER" --tail 100 || true
+              docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
+              exit 1
+            fi
+
             echo "==> Switching Nginx to new container"
+            sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
 
             sudo sed -i \
               "s#proxy_pass http://127.0.0.1:${ACTIVE_PORT};#proxy_pass http://127.0.0.1:${NEW_PORT};#" \
               /etc/nginx/nginx.conf
 
-            sudo nginx -t
+            if ! sudo nginx -t; then
+              echo "ERROR: Nginx configuration test failed. Restoring previous config." >&2
+              sudo cp /etc/nginx/nginx.conf.bak /etc/nginx/nginx.conf
+              sudo rm -f /etc/nginx/nginx.conf.bak
+              docker logs "$NEW_CONTAINER" --tail 100 || true
+              docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
+              exit 1
+            fi
+
             sudo systemctl reload nginx
+            sudo rm -f /etc/nginx/nginx.conf.bak
 
             echo "==> Verifying production endpoint"
+            PROD_PASSED=0
+            for i in $(seq 1 15); do
+              if curl -fsS http://127.0.0.1/api/health > /dev/null 2>&1; then
+                PROD_PASSED=1
+                break
+              fi
+              sleep 1
+            done
 
-            sleep 2
+            if [ "$PROD_PASSED" -ne 1 ]; then
+              echo "ERROR: Production endpoint verification failed after Nginx switch. Rolling back." >&2
+              sudo sed -i \
+                "s#proxy_pass http://127.0.0.1:${NEW_PORT};#proxy_pass http://127.0.0.1:${ACTIVE_PORT};#" \
+                /etc/nginx/nginx.conf
+              sudo nginx -t && sudo systemctl reload nginx || true
+              docker logs "$NEW_CONTAINER" --tail 100 || true
+              docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
+              exit 1
+            fi
 
+            echo "Production endpoint verified:"
             curl -fsS http://127.0.0.1/api/health
-
             echo
+
             echo "==> Removing old container"
             docker rm -f "$ACTIVE_CONTAINER" 2>/dev/null || true
 
