@@ -1,0 +1,65 @@
+{
+ "result_type": "REUSED_HOLDOUT (t42-49 is SEEN under ADR 0004; a check, not an estimate)",
+ "model_sha256": "974d37f22e2f1e7df4e03cb5a13fdb35bf487e43f4d5db3ea3bb7191ebd3e607",
+ "n": 54335,
+ "positives": 2518,
+ "prevalence": 0.04634213674427165,
+ "nap": 0.5475262986138172,
+ "top_k": {
+  "P@100": 1.0,
+  "R@100": 0.03971405877680699,
+  "P@500": 0.95,
+  "R@500": 0.18864177918983321,
+  "P@1000": 0.693,
+  "R@1000": 0.27521842732327245
+ },
+ "points": {
+  "current_0_50": {
+   "threshold": 0.5,
+   "precision": 0.81125,
+   "recall": 0.25774424146147734,
+   "f1": 0.3911995177817962,
+   "balanced_accuracy": 0.6274150699558965,
+   "fpr": 0.0029141015496844665,
+   "accuracy": 0.9628232262814024,
+   "predicted_positive": 800,
+   "tp": 649,
+   "fp": 151,
+   "fn": 1869,
+   "tn": 51666
+  },
+  "balanced": {
+   "threshold": 0.3,
+   "precision": 0.5478325859491778,
+   "recall": 0.2911040508339952,
+   "f1": 0.3801867219917012,
+   "balanced_accuracy": 0.639714172974749,
+   "fpr": 0.011675704884497366,
+   "accuracy": 0.9560136192141345,
+   "predicted_positive": 1338,
+   "tp": 733,
+   "fp": 605,
+   "fn": 1785,
+   "tn": 51212
+  },
+  "high_recall": {
+   "threshold": 0.15,
+   "precision": 0.45712613403570385,
+   "recall": 0.6203335980937251,
+   "f1": 0.52636899747262,
+   "balanced_accuracy": 0.7922672680049265,
+   "fpr": 0.03579906208387209,
+   "accuracy": 0.9482653906321892,
+   "predicted_positive": 3417,
+   "tp": 1562,
+   "fp": 1855,
+   "fn": 956,
+   "tn": 49962
+  }
+ },
+ "band_counts": {
+  "Critical": 719,
+  "High": 1338,
+  "Medium": 3417
+ }
+}
