@@ -84,6 +84,14 @@ jobs:
             echo "==> Removing stale replacement container"
             docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
 
+            echo "==> Ensuring target port ${NEW_PORT} is free"
+            CONFLICTING_CONTAINERS=$(docker ps -q --filter "publish=${NEW_PORT}")
+            if [ -n "$CONFLICTING_CONTAINERS" ]; then
+              echo "Removing container(s) holding port ${NEW_PORT}:"
+              docker ps --filter "publish=${NEW_PORT}" --format "  - {{.Names}} ({{.ID}})"
+              docker rm -f $CONFLICTING_CONTAINERS
+            fi
+
             echo "==> Starting new container"
             docker run -d \
               --platform "$PLATFORM" \
