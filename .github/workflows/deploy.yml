@@ -7,7 +7,7 @@ name: Deploy ObsidianChain
 
 concurrency:
   group: production-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -62,17 +62,20 @@ jobs:
               --build-arg VENDOR_PATH="$VENDOR_PATH" \
               -t obsidianchain:${{ github.sha }} .
 
-            echo "==> Detecting active deployment"
-            if docker ps --format '{{.Names}}' | grep -q '^obsidianchain$'; then
-              ACTIVE_CONTAINER="obsidianchain"
+            echo "==> Detecting active deployment from Nginx"
+            if grep -E '^[[:space:]]*proxy_pass[[:space:]]+http://127\.0\.0\.1:8080;' /etc/nginx/nginx.conf > /dev/null 2>&1; then
               ACTIVE_PORT="8080"
-              NEW_CONTAINER="obsidianchain-new"
+              ACTIVE_CONTAINER="obsidianchain"
               NEW_PORT="8081"
-            else
-              ACTIVE_CONTAINER="obsidianchain-new"
+              NEW_CONTAINER="obsidianchain-new"
+            elif grep -E '^[[:space:]]*proxy_pass[[:space:]]+http://127\.0\.0\.1:8081;' /etc/nginx/nginx.conf > /dev/null 2>&1; then
               ACTIVE_PORT="8081"
-              NEW_CONTAINER="obsidianchain"
+              ACTIVE_CONTAINER="obsidianchain-new"
               NEW_PORT="8080"
+              NEW_CONTAINER="obsidianchain"
+            else
+              echo "ERROR: Unable to determine active upstream port from /etc/nginx/nginx.conf (expected 8080 or 8081)" >&2
+              exit 1
             fi
 
             echo "Active: $ACTIVE_CONTAINER on $ACTIVE_PORT"
@@ -115,17 +118,39 @@ jobs:
               "s#proxy_pass http://127.0.0.1:${ACTIVE_PORT};#proxy_pass http://127.0.0.1:${NEW_PORT};#" \
               /etc/nginx/nginx.conf
 
-            if ! sudo nginx -t; then
-              echo "ERROR: Nginx configuration test failed. Restoring previous config." >&2
+            if ! grep -E "^[[:space:]]*proxy_pass[[:space:]]+http://127\.0\.0\.1:${NEW_PORT};" /etc/nginx/nginx.conf > /dev/null 2>&1 || \
+               grep -E "^[[:space:]]*proxy_pass[[:space:]]+http://127\.0\.0\.1:${ACTIVE_PORT};" /etc/nginx/nginx.conf > /dev/null 2>&1; then
+              echo "ERROR: Nginx configuration replacement failed or unexpected upstream state detected." >&2
               sudo cp /etc/nginx/nginx.conf.bak /etc/nginx/nginx.conf
-              sudo rm -f /etc/nginx/nginx.conf.bak
+              sudo rm -f /etc/nginx/nginx.conf.bak || true
               docker logs "$NEW_CONTAINER" --tail 100 || true
               docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
               exit 1
             fi
 
-            sudo systemctl reload nginx
-            sudo rm -f /etc/nginx/nginx.conf.bak
+            if ! sudo nginx -t; then
+              echo "ERROR: Nginx configuration test failed. Restoring previous config." >&2
+              sudo cp /etc/nginx/nginx.conf.bak /etc/nginx/nginx.conf
+              sudo rm -f /etc/nginx/nginx.conf.bak || true
+              docker logs "$NEW_CONTAINER" --tail 100 || true
+              docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
+              exit 1
+            fi
+
+            if ! sudo systemctl reload nginx; then
+              echo "ERROR: Failed to reload Nginx with new configuration. Restoring previous config." >&2
+              sudo cp /etc/nginx/nginx.conf.bak /etc/nginx/nginx.conf
+              if sudo nginx -t && sudo systemctl reload nginx; then
+                echo "Successfully restored and reloaded previous Nginx configuration." >&2
+                sudo rm -f /etc/nginx/nginx.conf.bak || true
+                docker logs "$NEW_CONTAINER" --tail 100 || true
+                docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
+                exit 1
+              else
+                echo "CRITICAL: Rollback reload failed! Preserving /etc/nginx/nginx.conf.bak and container '$NEW_CONTAINER' for manual recovery." >&2
+                exit 1
+              fi
+            fi
 
             echo "==> Verifying production endpoint"
             PROD_PASSED=0
@@ -139,23 +164,30 @@ jobs:
 
             if [ "$PROD_PASSED" -ne 1 ]; then
               echo "ERROR: Production endpoint verification failed after Nginx switch. Rolling back." >&2
-              sudo sed -i \
-                "s#proxy_pass http://127.0.0.1:${NEW_PORT};#proxy_pass http://127.0.0.1:${ACTIVE_PORT};#" \
-                /etc/nginx/nginx.conf
-              sudo nginx -t && sudo systemctl reload nginx || true
-              docker logs "$NEW_CONTAINER" --tail 100 || true
-              docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
-              exit 1
+              sudo cp /etc/nginx/nginx.conf.bak /etc/nginx/nginx.conf
+              if sudo nginx -t && sudo systemctl reload nginx; then
+                echo "Successfully restored and reloaded previous Nginx configuration." >&2
+                sudo rm -f /etc/nginx/nginx.conf.bak || true
+                docker logs "$NEW_CONTAINER" --tail 100 || true
+                docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
+                exit 1
+              else
+                echo "CRITICAL: Rollback reload failed after production verification failure! Preserving /etc/nginx/nginx.conf.bak and container '$NEW_CONTAINER' for manual recovery." >&2
+                exit 1
+              fi
             fi
 
-            echo "Production endpoint verified:"
-            curl -fsS http://127.0.0.1/api/health
-            echo
+            echo "==> Production endpoint verified successfully"
 
-            echo "==> Removing old container"
-            docker rm -f "$ACTIVE_CONTAINER" 2>/dev/null || true
+            echo "==> Removing old container: $ACTIVE_CONTAINER"
+            if ! docker rm -f "$ACTIVE_CONTAINER"; then
+              echo "WARNING: Failed to remove old container '$ACTIVE_CONTAINER'. Production traffic is healthy on new container, but manual container cleanup may be required." >&2
+            fi
+
+            echo "==> Cleaning up Nginx configuration backup"
+            sudo rm -f /etc/nginx/nginx.conf.bak || true
 
             echo "==> Removing old image layers"
-            docker image prune -f
+            docker image prune -f || true
 
             echo "==> Deployment successful"
