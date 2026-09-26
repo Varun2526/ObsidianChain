@@ -6,7 +6,7 @@ name: Deploy ObsidianChain
       - main
 
 concurrency:
-  group: production-deploy
+  group: production-deployment
   cancel-in-progress: false
 
 jobs:
