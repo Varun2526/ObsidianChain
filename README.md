@@ -57,20 +57,73 @@ ObsidianChain provides an integrated institutional workbench engineered for end-
 
 ## 4. System Architecture
 
-```
-Data Ingestion (CSV / JSON / XML)
-      ↓
-17-Stage Forensic Analytical Pipeline
-      ├── Ingestion & Offline GeoIP/ASN (Stages 1–3)
-      ├── Blockchain & P2P Network Analysis (Stages 4–6)
-      ├── Entity Graph & Co-Spend Clustering (Stages 7–8)
-      ├── 31-Feature Extraction & ML Risk Scoring (Stages 9–10)
-      ├── Unsupervised MAD Outlier & Structural Heuristics (Stages 11–12)
-      └── Multi-Layer Evidence Fusion & Ranked Alerts (Stages 13–15)
-                ↓
-Investigator Web Console & Visual Path Canvas (Stage 16)
-                ↓
-Two-Person Review Sign-Off & Merkle Audit Trail (Stage 17)
+```mermaid
+flowchart TD
+    subgraph TIER1 ["Tier 1: Multi-Format Ingestion & Normalization"]
+        direction LR
+        RAW["<b>Bulk Input Ingestion</b><br/>CSV / JSON / XML Formats"]
+        PARSE["<b>Parser & Fingerprint</b><br/>SHA-256 Dataset Digest"]
+        VAL["<b>Validation & Deduplication</b><br/>Zero Imputation / Canonical Schema"]
+        GEO["<b>Offline GeoIP / ASN</b><br/>Local DB-IP Lite Resolution"]
+        RAW --> PARSE --> VAL --> GEO
+    end
+
+    subgraph TIER2 ["Tier 2: 17-Stage Deterministic Analytical Pipeline"]
+        direction TB
+        subgraph P_GRAPH ["1. Graph & Network Correlation"]
+            direction LR
+            CHAIN["<b>Blockchain Ledger Graph</b><br/>Degrees, Fees, Volumes"]
+            NET["<b>P2P Network Telemetry</b><br/>Gossip Diffusion Latency"]
+            CORR["<b>Cross-Layer Correlation</b><br/>Exact Binomial Test (p = 1.1e-19)"]
+            CHAIN & NET --> CORR
+        end
+
+        subgraph P_ENTITY ["2. Entity Resolution & Features"]
+            direction LR
+            BIPARTITE["<b>Bipartite Ledger Graph</b><br/>Transactions & Addresses"]
+            UF["<b>Union-Find Clustering</b><br/>Multi-Input Co-Spend Heuristic"]
+            FEAT["<b>31 Features as-of-t</b><br/>Zero Forward Temporal Leakage"]
+            BIPARTITE --> UF --> FEAT
+        end
+
+        subgraph P_INTEL ["3. Intelligence & Detection"]
+            direction LR
+            ML["<b>LightGBM Risk Model</b><br/>ps_native_v5 (Platt Scaled)"]
+            MAD["<b>MAD Anomaly Scorer</b><br/>Heavy-Tail Robust Z-Score"]
+            STRUCT["<b>Structural Scanners</b><br/>Peel Chains & CoinJoin Mixers"]
+        end
+
+        subgraph P_FUSION ["4. Evidence Fusion & Attribution"]
+            direction LR
+            FUSE["<b>Multi-Layer Evidence Fusion</b><br/>Unified Severity Banding"]
+            SHAP["<b>Local TreeSHAP Explanations</b><br/>(+/-) Directional Risk Breakdown"]
+            PROJ["<b>Forensic Subgraph Projection</b><br/>Golden Path Flow Extraction"]
+            FUSE --> SHAP --> PROJ
+        end
+
+        CORR --> BIPARTITE
+        FEAT --> ML & MAD
+        BIPARTITE --> STRUCT
+        ML & MAD & STRUCT --> FUSE
+    end
+
+    subgraph TIER3 ["Tier 3: Air-Gapped Web Console"]
+        direction LR
+        UI_DASH["<b>Investigator Dashboard</b><br/>Ranked Alert Worklist"]
+        UI_CANVAS["<b>Cytoscape Visual Canvas</b><br/>Multi-Hop Money Flows"]
+    end
+
+    subgraph TIER4 ["Tier 4: Casework Governance & Audit"]
+        direction LR
+        GOV["<b>Two-Person Review Sign-Off</b><br/>Investigator -> Reviewer"]
+        AUDIT["<b>Append-Only Audit Ledger</b><br/>SHA-256 Merkle Inclusion Proofs"]
+        GOV --> AUDIT
+    end
+
+    GEO --> CHAIN
+    GEO --> NET
+    PROJ --> UI_DASH & UI_CANVAS
+    UI_DASH & UI_CANVAS --> GOV
 ```
 
 The system operates across three core tiers:
@@ -83,6 +136,66 @@ The system operates across three core tiers:
 ---
 
 ## 5. Why the System is Technically Substantial
+
+```mermaid
+flowchart TD
+    subgraph S_INGEST ["Tier 1: Multi-Layer Data Ingestion"]
+        direction LR
+        D_CHAIN["<b>On-Chain Ledger Stream</b><br/>Transactions, UTXOs, Fees, Scripts"]
+        D_NET["<b>P2P Network Telemetry</b><br/>Observer Timestamps, IPs, ASNs"]
+    end
+
+    subgraph S_ENGINEERING ["Tier 2: Graph Topology & Feature Engineering"]
+        direction LR
+        ENG_GRAPH["<b>Bipartite Ledger Graph</b><br/>Disjoint-Set Union-Find Clustering"]
+        ENG_FEAT["<b>Temporal Feature Engine</b><br/>31 Core Features strictly as-of-t"]
+    end
+
+    subgraph S_DETECTION ["Tier 3: Parallel Detection & Intelligence Engines"]
+        direction TB
+        subgraph G_ML ["Machine Learning Layer"]
+            direction LR
+            ENG_ML["<b>Supervised Risk Classifier</b><br/>LightGBM ps_native_v5 (Platt Scaled)"]
+            ENG_MAD["<b>Unsupervised Anomaly Model</b><br/>MAD Robust Z-Score (Heavy-Tail Safe)"]
+        end
+        subgraph G_HEUR ["Forensic Intelligence Layer"]
+            direction LR
+            ENG_STRUCT["<b>Structural Pattern Scanners</b><br/>Peel Chains & Equal-Output Mixers"]
+            ENG_CORR["<b>Cross-Layer Correlator</b><br/>Binomial Arrival Test (p = 1.1e-19)"]
+        end
+    end
+
+    subgraph S_FUSION ["Tier 4: Evidence Fusion & Safeguards"]
+        direction TB
+        FUSE["<b>Multimodal Evidence Fusion Engine</b><br/>Synthesizes ML Risk, Anomalies & Structural Heuristics"]
+        SAFE["<b>Cannot-Link Evidentiary Boundary</b><br/>Network Context Strictly Segregated (IP ≠ Private Key)"]
+        SHAP["<b>Local TreeSHAP Explanations</b><br/>Exact Directional (+/-) Feature Attributions"]
+        FUSE --- SAFE
+        FUSE --> SHAP
+    end
+
+    subgraph S_TRIAGE ["Tier 5: Operational Alert Queue & Casework"]
+        direction LR
+        ALERT_CRIT["<b>CRITICAL Severity</b><br/>P >= 0.67 • High-Risk Triage"]
+        ALERT_HIGH["<b>HIGH Severity</b><br/>P >= 0.21 • Priority Queue"]
+        ALERT_MED["<b>MEDIUM Severity</b><br/>P >= 0.11 • Active Watch"]
+    end
+
+    D_CHAIN --> ENG_GRAPH
+    D_CHAIN --> ENG_FEAT
+    D_NET --> ENG_CORR
+
+    ENG_FEAT --> ENG_ML
+    ENG_FEAT --> ENG_MAD
+    ENG_GRAPH --> ENG_STRUCT
+
+    ENG_ML --> FUSE
+    ENG_MAD --> FUSE
+    ENG_STRUCT --> FUSE
+    ENG_CORR -->|"Circumstantial Context"| FUSE
+
+    SHAP --> ALERT_CRIT & ALERT_HIGH & ALERT_MED
+```
 
 ### Risk Intelligence
 - **31 Production Features:** Extracted across 6 functional groups (Transaction Behavior, Address History, Graph Topology, Structural Patterns, Address Role, Upstream Flow Dynamics).

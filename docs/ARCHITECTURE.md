@@ -19,15 +19,42 @@ The core architecture follows a strict dataflow model:
 
 ```mermaid
 flowchart TD
-    DS[Data Sources: CSV / JSON / XML] --> IV[1. Ingestion & Schema Validation]
-    IV --> BP[2. Blockchain Processing & Edgelists]
-    BP --> CC[3. Multi-Input Clustering & Network Correlation]
-    CC --> FP[4. Feature Extraction & Structural Patterns]
-    FP --> NE[5. Network Telemetry & Propagation Context]
-    NE --> RA[6. ML Risk Scoring & MAD Anomaly Detection]
-    RA --> AR[7. Alert Ranking & Severity Banding]
-    AR --> IC[8. Investigation Console & Case Management]
-    IC --> RR[9. Reviewer Sign-Off, Reporting & Merkle Audit]
+    subgraph P1 ["Phase 1: Ingestion & Normalization"]
+        direction TB
+        RAW["Bulk Input Files<br/>(CSV / JSON / XML)"] --> S1["Stage 1: Multi-Format Ingest<br/>(SHA-256 Dataset Hash)"]
+        S1 --> S2["Stage 2: Validation & Deduplication<br/>(Produces: ValidationReport)"]
+        S2 --> S3["Stage 3: Offline GeoIP & ASN Provider<br/>(Produces: EnrichedFrames)"]
+    end
+
+    subgraph P2 ["Phase 2: Blockchain & Network Analysis"]
+        direction TB
+        S3 --> S4["Stage 4: Blockchain Ledger Analysis<br/>(Produces: BlockchainGraph)"]
+        S3 --> S5["Stage 5: P2P Network Telemetry Analysis<br/>(Produces: NetworkTelemetry)"]
+        S4 & S5 --> S6["Stage 6: Cross-Layer Correlation Engine<br/>(Produces: CorrelationResult, p = 1.1e-19)"]
+    end
+
+    subgraph P3 ["Phase 3: Graph Topology & Entity Resolution"]
+        direction TB
+        S6 --> S7["Stage 7: Global Bipartite Graph Construction<br/>(Produces: BipartiteGraph)"]
+        S7 --> S8["Stage 8: Multi-Input Co-Spend Clustering<br/>(Union-Find: ClusterResult)"]
+        S8 --> S9["Stage 9: Temporal Feature Engine (as-of-t)<br/>(Produces: FeatureManifest, 31 Features)"]
+    end
+
+    subgraph P4 ["Phase 4: Risk Intelligence & Structural Profiling"]
+        direction TB
+        S9 --> S10["Stage 10: Supervised ML Risk Scoring<br/>(LightGBM ps_native_v5: MlStageResult)"]
+        S9 --> S11["Stage 11: Unsupervised Anomaly Scoring<br/>(MAD Robust Z-Score: AnomalyResult)"]
+        S7 --> S12["Stage 12: Peeling & Mixing Heuristic Scanners<br/>(Produces: PatternResult)"]
+    end
+
+    subgraph P5 ["Phase 5: Synthesis, Explanation & Cryptographic Provenance"]
+        direction TB
+        S10 & S11 & S12 & S6 --> S13["Stage 13: Multi-Layer Evidence Fusion<br/>(Produces: EvidencePackage)"]
+        S13 --> S14["Stage 14: Alert Ranking & Severity Banding<br/>(Produces: AlertRunResult)"]
+        S14 --> S15["Stage 15: Local TreeSHAP Explanations<br/>(Produces: ShapAttributions)"]
+        S15 --> S16["Stage 16: Forensic Subgraph Projection<br/>(Produces: GraphProjection)"]
+        S16 --> S17["Stage 17: Reporting & Merkle Integrity Export<br/>(Produces: MerkleBundle & Root Hash)"]
+    end
 ```
 
 ### Analytical Dataflow Stages

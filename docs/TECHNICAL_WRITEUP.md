@@ -63,25 +63,52 @@ The platform delivers six core architectural innovations:
 
 ObsidianChain is engineered as a zero-external-network, self-contained modular architecture divided into distinct operational boundaries:
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        INVESTIGATOR CONSOLE (UI)                       │
-│  React 18 / TypeScript SPA  •  Cytoscape Graph Engine  •  Vanilla CSS  │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ HTTP / REST (Bearer Auth)
-┌───────────────────────────────────▼────────────────────────────────────┐
-│                    FASTAPI BACKEND & TRUTH BOUNDARY                     │
-│  Request Guards  •  CORS  •  Truth Isolation Boundary (boundary.py)   │
-└──────────────────┬─────────────────┬───────────────────┬───────────────┘
-                   │                 │                   │
-┌──────────────────▼──────┐ ┌────────▼─────────┐ ┌──────▼────────────────┐
-│   CASEWORK & GOVERNANCE │ │  17-STAGE FLOW   │ │    MACHINE LEARNING    │
-│  • SQLite v4 (WAL Mode) │ │  • Ingestion     │ │  • LightGBM Champion  │
-│  • RBAC (3 Roles)       │ │  • Co-Spend Graph│ │  • 31 Features (as-of) │
-│  • Two-Person Sign-Off  │ │  • Clustering    │ │  • Platt Calibration  │
-│  • Append-Only Audit    │ │  • P2P Correlate │ │  • TreeSHAP Values    │
-│  • Merkle Tree Proofs   │ │  • Alert Ranking │ │  • MAD Anomaly Scorer │
-└─────────────────────────┘ └──────────────────┘ └───────────────────────┘
+```mermaid
+flowchart TD
+    subgraph UI_TIER ["Investigator Web Console (Client Layer)"]
+        direction TB
+        SPA["React 18 / TypeScript SPA<br/>(Air-Gapped Institutional Workbench)"]
+        CYTO["Cytoscape Forensic Canvas<br/>(Bipartite Graph & Golden Path)"]
+        VIEWS["Specialized Views<br/>(Alert Queue, Entity Deep-Dive, Models, Audit)"]
+        SPA --- CYTO
+        SPA --- VIEWS
+    end
+
+    subgraph API_TIER ["FastAPI Application & Truth Boundary"]
+        direction TB
+        GATE["HTTP REST Router (Bearer Auth / scrypt)"]
+        TRUTH["Truth-Isolation Barrier (boundary.py)<br/>assert_no_truth_fields()"]
+        GATE --> TRUTH
+    end
+
+    subgraph CORE_TIER ["Analytical Engines & Casework Services"]
+        direction TB
+        subgraph CASE_SRV ["Casework & Governance"]
+            DB["SQLite v4 (WAL Mode)"]
+            RBAC["Role-Based Access (Admin / Inv / Rev)"]
+            MERKLE["Domain-Separated Merkle Trees"]
+            DB --- RBAC --- MERKLE
+        end
+        subgraph PIPE_SRV ["17-Stage Conductor"]
+            ING["Multi-Format Parser (CSV / JSON / XML)"]
+            GRAPH["Bipartite Ledger Graph & Union-Find"]
+            CORR["P2P Network Telemetry Correlation"]
+            FUSE["Multimodal Evidence Fusion"]
+            ING --> GRAPH --> CORR --> FUSE
+        end
+        subgraph ML_SRV ["Risk & Anomaly Engine"]
+            FEAT["31 Features as-of-t (Zero Leakage)"]
+            LGBM["LightGBM ps_native_v5 (Platt Scaled)"]
+            MAD["MAD Outlier Z-Score & Heuristics"]
+            SHAP["Local TreeSHAP Attributions"]
+            FEAT --> LGBM & MAD --> SHAP
+        end
+    end
+
+    UI_TIER -->|"HTTP / REST API (JSON)"| GATE
+    TRUTH --> CASE_SRV
+    TRUTH --> PIPE_SRV
+    PIPE_SRV <--> ML_SRV
 ```
 
 ### 3.1. Frontend Architecture
@@ -109,31 +136,41 @@ Analytical execution is orchestrated deterministically by the 17-stage pipeline 
 
 ```mermaid
 flowchart TD
-    subgraph P1 [Phase 1: Ingestion & Normalization]
-        S1[Stage 1: Ingest] --> S2[Stage 2: Validate & Deduplicate]
-        S2 --> S3[Stage 3: GeoIP / ASN Mapping]
+    subgraph P1 ["Phase 1: Ingestion & Normalization"]
+        direction TB
+        RAW["Bulk Input Files (CSV / JSON / XML)"] --> S1["Stage 1: Multi-Format Ingest<br/><b>SHA-256 Dataset Hash</b>"]
+        S1 --> S2["Stage 2: Validation & Deduplication<br/><b>Produces: ValidationReport</b>"]
+        S2 --> S3["Stage 3: Offline GeoIP & ASN Provider<br/><b>Produces: EnrichedFrames</b>"]
     end
-    subgraph P2 [Phase 2: Blockchain & Network Analysis]
-        S3 --> S4[Stage 4: Blockchain Analysis]
-        S4 --> S5[Stage 5: Network Telemetry Analysis]
-        S5 --> S6[Stage 6: Blockchain ↔ Network Correlation]
+
+    subgraph P2 ["Phase 2: Blockchain & Network Analysis"]
+        direction TB
+        S3 --> S4["Stage 4: Blockchain Ledger Analysis<br/><b>Produces: BlockchainGraph</b>"]
+        S3 --> S5["Stage 5: P2P Network Telemetry Analysis<br/><b>Produces: NetworkTelemetry</b>"]
+        S4 & S5 --> S6["Stage 6: Cross-Layer Correlation Engine<br/><b>Produces: CorrelationResult (p = 1.1e-19)</b>"]
     end
-    subgraph P3 [Phase 3: Graph Topology & Entity Resolution]
-        S6 --> S7[Stage 7: Entity & Transaction Graph]
-        S7 --> S8[Stage 8: Entity Co-Spend Clustering]
-        S8 --> S9[Stage 9: Temporal Feature Extraction]
+
+    subgraph P3 ["Phase 3: Graph Topology & Entity Resolution"]
+        direction TB
+        S6 --> S7["Stage 7: Global Bipartite Graph Construction<br/><b>Produces: BipartiteGraph</b>"]
+        S7 --> S8["Stage 8: Multi-Input Co-Spend Clustering<br/><b>Union-Find: ClusterResult</b>"]
+        S8 --> S9["Stage 9: Temporal Feature Engine (as-of-t)<br/><b>Produces: FeatureManifest (31 Features)</b>"]
     end
-    subgraph P4 [Phase 4: Risk Intelligence & Structural Profiling]
-        S9 --> S10[Stage 10: Supervised ML Risk Scoring]
-        S10 --> S11[Stage 11: Unsupervised MAD Anomaly Detection]
-        S11 --> S12[Stage 12: Peeling & Mixing Structural Patterns]
+
+    subgraph P4 ["Phase 4: Risk Intelligence & Structural Profiling"]
+        direction TB
+        S9 --> S10["Stage 10: Supervised ML Risk Scoring<br/><b>LightGBM ps_native_v5: MlStageResult</b>"]
+        S9 --> S11["Stage 11: Unsupervised Anomaly Scoring<br/><b>MAD Robust Z-Score: AnomalyResult</b>"]
+        S7 --> S12["Stage 12: Peeling & Mixing Heuristic Scanners<br/><b>Produces: PatternResult</b>"]
     end
-    subgraph P5 [Phase 5: Synthesis, Explanation & Integrity]
-        S12 --> S13[Stage 13: Multi-Layer Evidence Fusion]
-        S13 --> S14[Stage 14: Alert Ranking & Severity Banding]
-        S14 --> S15[Stage 15: TreeSHAP Model Explanation]
-        S15 --> S16[Stage 16: Interactive Investigation Graph]
-        S16 --> S17[Stage 17: Reporting & Merkle Integrity Export]
+
+    subgraph P5 ["Phase 5: Synthesis, Explanation & Cryptographic Provenance"]
+        direction TB
+        S10 & S11 & S12 & S6 --> S13["Stage 13: Multi-Layer Evidence Fusion<br/><b>Produces: EvidencePackage</b>"]
+        S13 --> S14["Stage 14: Alert Ranking & Severity Banding<br/><b>Produces: AlertRunResult</b>"]
+        S14 --> S15["Stage 15: Local TreeSHAP Explanations<br/><b>Produces: ShapAttributions</b>"]
+        S15 --> S16["Stage 16: Forensic Subgraph Projection<br/><b>Produces: GraphProjection</b>"]
+        S16 --> S17["Stage 17: Reporting & Merkle Integrity Export<br/><b>Produces: MerkleBundle & Root Hash</b>"]
     end
 ```
 
@@ -191,6 +228,38 @@ The supervised model evaluates 31 engineered features across six functional doma
 
 ## 6. Graph & Money-Flow Analysis
 
+```mermaid
+flowchart TD
+    subgraph S_UNIONFIND ["1. Entity Resolution via Multi-Input Clustering"]
+        direction TB
+        TX_IN["Transaction Inputs:<br/>Input 0: Addr_A<br/>Input 1: Addr_B<br/>Input 2: Addr_C"]
+        UF["Disjoint-Set Union-Find<br/>(Union-by-Rank & Path Compression)"]
+        ENT["Unified Entity Cluster:<br/>Entity_42 = {Addr_A, Addr_B, Addr_C}"]
+        TX_IN -->|"Common-Ownership Heuristic"| UF --> ENT
+    end
+
+    subgraph S_CHANGE ["2. Change Address Inference"]
+        direction TB
+        TX_2OUT["2-Output Transaction:<br/>Out 0: Merchant Addr (Known, Round Satoshis)<br/>Out 1: Candidate Addr (Fresh, Fractional Satoshis)"]
+        RULE1["Heuristic 1: Address Freshness (First Seen)"]
+        RULE2["Heuristic 2: Value Roundness (Fractional Remainder)"]
+        RULE3["Heuristic 3: Script-Type Matching (P2WPKH -> P2WPKH)"]
+        CH_DEC["Inferred Role:<br/>Out 0 = Payment Recipient<br/>Out 1 = Self-Change Address"]
+        TX_2OUT --> RULE1 & RULE2 & RULE3 --> CH_DEC
+    end
+
+    subgraph S_GOLDEN ["3. Golden Path Multi-Hop Money-Flow Traversal"]
+        direction TB
+        SRC["Illicit Source<br/>(e.g., Ransomware Wallet)"]
+        HOP1["Hop 1: Peeling Split<br/>(Change -> Fresh Addr)"]
+        HOP2["Hop 2: Intermediate Relay<br/>(Multi-Input Consolidation)"]
+        DST["Cash-Out Destination<br/>(Exchange / OTC Desk)"]
+        SRC -->|"Primary Value Transfer"| HOP1
+        HOP1 -->|"Peel Value Retention"| HOP2
+        HOP2 -->|"Deposit Flow"| DST
+    end
+```
+
 ### 6.1. Entity Resolution via Multi-Input Clustering
 Bitcoin transactions frequently consume multiple UTXOs as inputs. Under standard Bitcoin Core client behavior, all private keys signing inputs for a single transaction must be controlled by the same wallet software. ObsidianChain implements this common-ownership heuristic using a disjoint-set **Union-Find** data structure with union-by-rank and path-compression optimizations, clustering disparate alphanumeric addresses into unified entity representations in $O(N \cdot \alpha(N))$ nearly-linear time.
 
@@ -209,6 +278,44 @@ When tracing stolen funds or ransom payments across intermediate hops to cash-ou
 ---
 
 ## 7. Network Intelligence
+
+```mermaid
+flowchart TD
+    subgraph GOSSIP ["P2P Gossip Diffusion Topology"]
+        direction TB
+        CLIENT["Originating Client / Wallet"]
+        ENTRY["First-Hop Relay / Public Node"]
+        RELAY_A["Peer Relay Node A (ASN 15169)"]
+        RELAY_B["Peer Relay Node B (ASN 13335)"]
+        RELAY_C["Peer Relay Node C (ASN 16509)"]
+        OBS1["Observer Vantage 1 (Frankfurt)"]
+        OBS2["Observer Vantage 2 (Singapore)"]
+        OBS3["Observer Vantage 3 (Ashburn)"]
+
+        CLIENT -->|"Broadcast inv"| ENTRY
+        ENTRY --> RELAY_A & RELAY_B & RELAY_C
+        RELAY_A -->|"Arrival t0"| OBS1
+        RELAY_B -->|"Arrival t0 + 42ms"| OBS2
+        RELAY_C -->|"Arrival t0 + 118ms"| OBS3
+    end
+
+    subgraph STATS ["Multimodal Correlation Engine"]
+        direction TB
+        TIMES["Observer Arrival Dispersion<br/>(Delta-t Variance & ASN Spread)"]
+        BINOM["Exact Binomial Test<br/>(P2P Timing vs Chance: p = 1.1e-19)"]
+        TIMES --> BINOM
+    end
+
+    subgraph SAFEGUARD ["Evidentiary Boundary (Strict Cannot-Link Rule)"]
+        direction TB
+        CTX["NETWORK_CONTEXT Evidence<br/>- Observer Diversity Count<br/>- Propagation Speed & ASN Routing"]
+        NO_LINK["Cannot-Link Invariant:<br/>IP Relay != Private Key Ownership<br/>Shared IP != Same Legal Identity"]
+        CTX --- NO_LINK
+    end
+
+    GOSSIP --> STATS
+    STATS --> SAFEGUARD
+```
 
 ### 7.1. P2P Telemetry & Observer Topology
 A major requirement of NTRO Problem Statement 26146 is the incorporation of P2P network telemetry. When a Bitcoin transaction is broadcast, it propagates via a gossip protocol across thousands of nodes. ObsidianChain ingests timestamped inventory (`inv`) announcement telemetry captured across geographically distributed observer vantage points.
@@ -270,6 +377,55 @@ Institutional integrity requires that no single individual can unilaterally init
 - An investigator cannot approve their own case.
 - A reviewer cannot alter investigative notes or bypass required evidence thresholds.
 - Rejection returns the case to `ACTIVE` with mandatory reviewer feedback.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Inv as Investigator
+    participant API as FastAPI Boundary
+    participant Engine as 17-Stage Engine
+    actor Rev as Reviewer
+    actor Adm as Administrator
+    participant Ledger as SQLite WAL & Merkle
+
+    Note over Inv,API: Phase I: Case Setup & Data Ingestion
+    Inv->>API: POST /api/console/investigations (Create Case OC-0001)
+    API->>Ledger: Append Audit Record (Event: CASE_CREATED)
+    Inv->>API: POST /api/console/datasets/upload (CSV / JSON / XML)
+    API->>API: Normalize Schema & Compute SHA-256 Dataset Hash
+    API->>Ledger: Store ValidationReport & Fingerprint
+
+    Note over Inv,Engine: Phase II: Analytical Execution
+    Inv->>API: POST /api/console/investigations/{id}/run
+    API->>Engine: Trigger 17-Stage Deterministic Pipeline
+    Engine->>Engine: Stages 1-3: Parsing & Offline GeoIP
+    Engine->>Engine: Stages 4-8: Bipartite Graph & Union-Find
+    Engine->>Engine: Stages 9-12: 31 Features as-of-t, LightGBM, MAD
+    Engine->>Engine: Stages 13-17: TreeSHAP, Ranked Alerts, Projections
+    Engine-->>API: Store AlertRunResult & Manifest
+    API->>Ledger: Append Audit Record (Event: PIPELINE_COMPLETED)
+
+    Note over Inv,Rev: Phase III & IV: Triage, Notes & Dual-Control Sign-Off
+    Inv->>API: GET /api/console/alerts (Prioritized Alert Queue)
+    Inv->>API: POST /api/console/casework/{id}/notes (Evidence Citations)
+    Inv->>API: POST /api/console/investigations/{id}/submit (Submit for Review)
+    API->>Ledger: Case State -> SUBMITTED (Investigator Locked)
+    
+    Rev->>API: GET /api/console/investigations/{id} (Inspect Dossier)
+    Rev->>API: POST /api/console/investigations/{id}/review (Mandatory Rationale)
+    alt Reviewer Concurs
+        Rev->>API: Action: APPROVE
+        API->>Ledger: Case State -> APPROVED (Dual Sign-Off Sealed)
+    else Revision Required
+        Rev->>API: Action: RETURN (Feedback Attached)
+        API->>Ledger: Case State -> ACTIVE (Returned to Inv)
+    end
+
+    Note over Adm,Ledger: Phase V: Closure & Cryptographic Integrity Export
+    Adm->>API: POST /api/console/investigations/{id}/close
+    API->>Ledger: Compute Domain-Separated Merkle Tree over Events
+    API-->>Adm: Export Merkle Bundle (Root Hash + Inclusion Proofs)
+```
 
 ### 9.3. Append-Only Audit Ledger & Merkle Proofs
 Every casework action (logins, uploads, runs, notes, status changes, approvals) is recorded in an immutable, append-only SQLite audit table. When a case is closed:

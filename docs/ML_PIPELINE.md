@@ -24,14 +24,49 @@
 ObsidianChain employs a layered intelligence stack to prioritize investigative attention. Machine learning models in this system **do not establish legal guilt, prove criminal identity, or automate enforcement**. They generate calibrated risk signals and outlier indicators to assist human investigators in triaging high-volume Bitcoin transaction flows.
 
 ```mermaid
-flowchart LR
-    Raw[Raw Ingestion] --> Feat[30-Feature Extractor as-of-t]
-    Feat --> RF[Frozen Random Forest 120 Trees]
-    RF --> Cal[Isotonic Probability Calibration]
-    Feat --> MAD[Median Absolute Deviation Robust Z-Score]
-    Feat --> Struct[Peeling & Mixing Heuristics]
-    Cal & MAD & Struct --> Fusion[Evidence Fusion & Severity Banding]
-    Fusion --> Queue[Prioritized Alert Queue]
+flowchart TD
+    subgraph S_DATA ["1. Feature Extraction & Temporal Guard"]
+        direction LR
+        TX_DATA["<b>Canonical Ingestion Stream</b><br/>Transactions, UTXOs & Graph Edges"]
+        FEAT_ENG["<b>31-Feature Extraction Engine</b><br/>Strictly as-of-t (Zero Forward Leakage)"]
+        TX_DATA --> FEAT_ENG
+    end
+
+    subgraph S_MODELS ["2. Machine Learning & Anomaly Detection"]
+        direction TB
+        subgraph M_SUP ["Supervised Risk Modeling"]
+            direction LR
+            CHAMP["<b>Champion: LightGBM (ps_native_v5)</b><br/>300 Trees • Platt Scaling Calibration"]
+            FALLBACK["<b>Fallback: LightGBM (no Group G)</b><br/>26 Features • Truncated History Mode"]
+        end
+        subgraph M_UNSUP ["Outlier & Structural Profiling"]
+            direction LR
+            MAD_OUT["<b>MAD Robust Outlier Scorer</b><br/>Z-Score over Heavy-Tailed Satoshis"]
+            STRUCT_SCAN["<b>Structural Obfuscation Scanners</b><br/>Peel Chains & Equal-Output Mixers"]
+        end
+    end
+
+    subgraph S_EXPLAIN ["3. Explainability & Multi-Layer Evidence Fusion"]
+        direction TB
+        SHAP_EXP["<b>Local TreeSHAP Attributions</b><br/>Per-Address Marginal (+/-) Feature Contributions"]
+        FUSION_ENG["<b>Evidence Fusion Engine</b><br/>Weighted Signal Integration & Sanity Guards"]
+        SHAP_EXP --> FUSION_ENG
+    end
+
+    subgraph S_OUTPUT ["4. Operational Severity Queue"]
+        direction LR
+        QUEUE_CRIT["<b>CRITICAL Band</b><br/>P >= 0.67 • High-Precision Triage"]
+        QUEUE_HIGH["<b>HIGH Band</b><br/>P >= 0.21 • Investigative Queue"]
+        QUEUE_MED["<b>MEDIUM Band</b><br/>P >= 0.11 • Watchlist Queue"]
+    end
+
+    FEAT_ENG --> CHAMP & FALLBACK
+    FEAT_ENG --> MAD_OUT & STRUCT_SCAN
+
+    CHAMP --> SHAP_EXP
+    MAD_OUT & STRUCT_SCAN --> FUSION_ENG
+
+    FUSION_ENG --> QUEUE_CRIT & QUEUE_HIGH & QUEUE_MED
 ```
 
 ---
