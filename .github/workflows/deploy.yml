@@ -29,8 +29,19 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            echo "==> Preparing AMD64 vendor dependencies"
+
+            if ! make check-vendor PLATFORM=linux/amd64; then
+              echo "==> Vendor dependencies missing; generating them"
+              make vendor PLATFORM=linux/amd64
+            fi
+
             echo "==> Building Docker image"
-            docker build -t obsidianchain:${{ github.sha }} .
+            docker build \
+              --platform linux/amd64 \
+              --network none \
+              --build-arg VENDOR_PATH=vendor/linux-amd64 \
+              -t obsidianchain:${{ github.sha }} .
 
             echo "==> Detecting active deployment"
 
