@@ -6,7 +6,7 @@
 > **PROPRIETARY EVALUATION REPORT**  
 > **Smart India Hackathon (SIH) 2026 — Problem Statement 26146 (NTRO)**  
 > **Author & Repository:** Varun and the ObsidianChain Development Team (`Varun2526/ObsidianChain`)  
-> **Copyright © 2026. All Rights Reserved.** Submitted exclusively for official examination and scoring by the SIH Evaluation Committee. Plagiarism, unauthorized copying, or competing contest submission is prohibited under [`LICENSE`](../LICENSE).
+> **Copyright © 2026. All Rights Reserved.** Submitted exclusively for official examination and scoring by the SIH Evaluation Committee. Plagiarism, unauthorized copying, or competing contest submission is prohibited under [`LICENSE.md`](../LICENSE.md).
 
 ---
 
@@ -532,7 +532,7 @@ The codebase enforces rigorous software engineering discipline verified through 
 ObsidianChain is provided under a **Proprietary Source-Available Evaluation License**.  
 Copyright © 2026 Varun and the ObsidianChain Development Team. All Rights Reserved.
 
-This technical report, the 17-stage analytical pipeline, the 31-feature schema (`ps_native_features/5`), trained models, and forensic methodologies are submitted exclusively for evaluation by the Smart India Hackathon (SIH) Evaluation Committee. Unauthorized reproduction, forking, academic plagiarism, or competing contest submission is strictly prohibited. For complete legal provisions, refer to [`LICENSE`](../LICENSE).
+This technical report, the 17-stage analytical pipeline, the 31-feature schema (`ps_native_features/5`), trained models, and forensic methodologies are submitted exclusively for evaluation by the Smart India Hackathon (SIH) Evaluation Committee. Unauthorized reproduction, forking, academic plagiarism, or competing contest submission is strictly prohibited. For complete legal provisions, refer to [`LICENSE.md`](../LICENSE.md).
 
 ---
 
