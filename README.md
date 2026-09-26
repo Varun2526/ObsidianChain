@@ -5,7 +5,14 @@ Offline Bitcoin Transaction Forensics & Risk Intelligence
 **Smart India Hackathon (SIH) 2026 — Problem Statement 26146**  
 *National Technical Research Organisation (NTRO)*
 
-[Watch 5-Minute Demo](docs/demo/obsidianchain_walkthrough.mp4) • [Short Technical Write-Up](docs/TECHNICAL_WRITEUP.md) • [Documentation Index](docs/README.md)
+[Watch 5-Minute Demo](docs/demo/obsidianchain_walkthrough.mp4) • [Short Technical Write-Up](docs/TECHNICAL_WRITEUP.md) • [Documentation Index](docs/README.md) • [License](LICENSE)
+
+> [!IMPORTANT]
+> **SUBMISSION & EVALUATION NOTICE**  
+> **Smart India Hackathon (SIH) 2026 — Problem Statement 26146**  
+> *AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic (NTRO)*  
+> **Author & Repository:** Varun and the ObsidianChain Development Team (`Varun2526/ObsidianChain`)  
+> **License:** Proprietary — All Rights Reserved. This codebase and its architectural specifications are submitted exclusively for evaluation by the official SIH Evaluation Committee. Unauthorized copying, forking, commercial use, or competing re-submission is strictly prohibited under institutional plagiarism rules. See [`LICENSE`](LICENSE) for legal terms.
 
 ---
 
@@ -384,6 +391,15 @@ All project documentation is indexed in [`docs/README.md`](docs/README.md):
 | **Technical Documentation** | **CURRENT** | 13 synchronized documents in [`docs/`](docs/) |
 | **Automated Test Suite** | **PASSING** | 2,148 tests passed (0 failures) |
 | **Deployment Footprint** | **CONTAINERIZED** | Multi-stage Docker (AMD64 / ARM64, Air-Gapped) |
+
+---
+
+## 14. License & Submission Terms
+
+ObsidianChain is released under a **Proprietary Source-Available Evaluation License**.  
+Copyright © 2026 Varun and the ObsidianChain Development Team. All Rights Reserved.
+
+This software, its 17-stage analytical pipeline, the 31-feature schema (`ps_native_features/5`), trained model artifacts, and forensic methodologies are submitted exclusively for review by the Smart India Hackathon (SIH) Evaluation Committee. Unauthorized reproduction, forking, academic plagiarism, or competing contest submission is strictly prohibited. For full legal terms, refer to the root [`LICENSE`](LICENSE) file.
 
 ---
 *ObsidianChain — Smart India Hackathon 2026 • NTRO Problem Statement 26146*

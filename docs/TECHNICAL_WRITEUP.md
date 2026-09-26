@@ -2,6 +2,12 @@
 **Problem Statement 26146: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
 **Repository Document:** `docs/TECHNICAL_WRITEUP.md` (Authoritative System Technical Report)
 
+> [!IMPORTANT]
+> **PROPRIETARY EVALUATION REPORT**  
+> **Smart India Hackathon (SIH) 2026 — Problem Statement 26146 (NTRO)**  
+> **Author & Repository:** Varun and the ObsidianChain Development Team (`Varun2526/ObsidianChain`)  
+> **Copyright © 2026. All Rights Reserved.** Submitted exclusively for official examination and scoring by the SIH Evaluation Committee. Plagiarism, unauthorized copying, or competing contest submission is prohibited under [`LICENSE`](../LICENSE).
+
 ---
 
 ## 1. Problem Statement
@@ -518,6 +524,15 @@ The codebase enforces rigorous software engineering discipline verified through 
 2. **Offline Retrieval-Augmented Investigation Assistance:** Integrating quantized, local large language models (LLMs) running fully offline to summarize case evidence and cross-reference regulatory compendiums.
 3. **Cross-Chain Bridge Analytics:** Extending the 17-stage ingestion and clustering architecture to support Ethereum and EVM-compatible cross-chain bridge contracts.
 4. **Secure Multi-Party Computation (SMPC):** Developing privacy-preserving cryptographic protocols to enable cross-agency watchlist matching without revealing sensitive intelligence targets.
+
+---
+
+## 15. License & Submission Terms
+
+ObsidianChain is provided under a **Proprietary Source-Available Evaluation License**.  
+Copyright © 2026 Varun and the ObsidianChain Development Team. All Rights Reserved.
+
+This technical report, the 17-stage analytical pipeline, the 31-feature schema (`ps_native_features/5`), trained models, and forensic methodologies are submitted exclusively for evaluation by the Smart India Hackathon (SIH) Evaluation Committee. Unauthorized reproduction, forking, academic plagiarism, or competing contest submission is strictly prohibited. For complete legal provisions, refer to [`LICENSE`](../LICENSE).
 
 ---
 
