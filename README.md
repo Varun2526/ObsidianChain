@@ -399,4 +399,4 @@ Copyright © 2026 Varun and the ObsidianChain Development Team. All Rights Reser
 This software, its 17-stage analytical pipeline, the 31-feature schema (`ps_native_features/5`), trained model artifacts, and forensic methodologies are submitted exclusively for review by the Evaluation Committee. Unauthorized reproduction, forking, academic plagiarism, or competing contest submission is strictly prohibited. For full legal terms, refer to the root [`LICENSE.md`](LICENSE.md) file.
 
 ---
-*ObsidianChain — Smart India Hackathon 2026 • NTRO Problem Statement 26146*
+*ObsidianChain*
