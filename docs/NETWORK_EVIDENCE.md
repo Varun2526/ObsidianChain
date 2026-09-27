@@ -1,5 +1,5 @@
 # ObsidianChain — Network Telemetry & Evidentiary Boundaries
-**Problem Statement 26146: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
+**AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
 **Repository Layer:** `docs/NETWORK_EVIDENCE.md` (P2P Telemetry, Propagation Realities & Evidentiary Safeguards)
 
 ---
