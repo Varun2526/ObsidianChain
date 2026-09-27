@@ -1,5 +1,5 @@
 # Research → Production Decisions
-**Problem Statement 26146: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
+**AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
 **Repository Layer:** `docs/RESEARCH_DECISIONS.md` (The Empirical Journey from Experiment to Production Safeguard)
 
 ---
