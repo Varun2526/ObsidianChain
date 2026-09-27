@@ -1,6 +1,6 @@
 # Local Demonstration & Clean Environment Setup
 
-This document describes how to initialize a clean demonstration environment for **ObsidianChain** (SIH Problem Statement 26146).
+This document describes how to initialize a clean demonstration environment for **ObsidianChain** .
 
 ---
 
