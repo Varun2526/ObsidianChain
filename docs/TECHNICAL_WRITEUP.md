@@ -1,5 +1,5 @@
 # ObsidianChain — Technical Write-Up
-**Problem Statement 26146: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
+**Problem Statement: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
 **Repository Document:** `docs/TECHNICAL_WRITEUP.md` (Authoritative System Technical Report)
 
 > [!IMPORTANT]
@@ -29,7 +29,7 @@ defines the requirement: an AI-powered, offline forensic monitoring system capab
 
 ## 2. Proposed Solution
 
-**ObsidianChain** is an offline, air-gapped investigative platform and analytical engine built specifically to solve NTRO Problem Statement 26146. It bridges the gap between raw decentralized data and actionable, court-admissible forensic intelligence.
+**ObsidianChain** is an offline, air-gapped investigative platform and analytical engine built specifically to solve NTRO Problem Statement. It bridges the gap between raw decentralized data and actionable, court-admissible forensic intelligence.
 
 ```mermaid
 flowchart LR
