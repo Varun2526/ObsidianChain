@@ -1,5 +1,5 @@
 # ObsidianChain — End-to-End System Workflow
-**Problem Statement 26146: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
+**AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
 **Repository Layer:** `docs/SYSTEM_WORKFLOW.md` (Operational Casework, Analytical Lifecycle & Reviewer Sign-Off)
 
 ---
