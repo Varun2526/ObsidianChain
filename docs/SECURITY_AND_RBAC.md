@@ -1,5 +1,5 @@
 # ObsidianChain — Security, RBAC & Audit Integrity
-**Problem Statement 26146: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
+**AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
 **Repository Layer:** `docs/SECURITY_AND_RBAC.md` (Access Control, Cryptographic Integrity & Offline Assurance)
 
 ---
