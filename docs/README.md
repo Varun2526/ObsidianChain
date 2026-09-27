@@ -1,6 +1,6 @@
 # ObsidianChain Documentation
 
-Welcome to the technical documentation for **ObsidianChain**—an AI-powered monitoring, forensic analysis, and evidence-fusion platform for Bitcoin transaction traffic (SIH 2026 / NTRO Problem Statement 26146).
+Welcome to the technical documentation for **ObsidianChain**—an AI-powered monitoring, forensic analysis, and evidence-fusion platform for Bitcoin transaction traffic .
 
 ---
 
