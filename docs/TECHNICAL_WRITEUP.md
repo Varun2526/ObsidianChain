@@ -3,10 +3,9 @@
 **Repository Document:** `docs/TECHNICAL_WRITEUP.md` (Authoritative System Technical Report)
 
 > [!IMPORTANT]
-> **PROPRIETARY EVALUATION REPORT**  
-> **Smart India Hackathon (SIH) 2026 — Problem Statement 26146 (NTRO)**  
+> **PROPRIETARY EVALUATION REPORT**    
 > **Author & Repository:** Varun and the ObsidianChain Development Team (`Varun2526/ObsidianChain`)  
-> **Copyright © 2026. All Rights Reserved.** Submitted exclusively for official examination and scoring by the SIH Evaluation Committee. Plagiarism, unauthorized copying, or competing contest submission is prohibited under [`LICENSE.md`](../LICENSE.md).
+> **Copyright © 2026. All Rights Reserved.** Submitted exclusively for official examination and scoring by the Evaluation Committee. Plagiarism, unauthorized copying, or competing contest submission is prohibited under [`LICENSE.md`](../LICENSE.md).
 
 ---
 
@@ -24,7 +23,7 @@ Traditional transaction monitoring tools face severe technical limitations when 
 2. **Cloud and External API Dependencies:** Existing commercial forensic suites rely on external cloud APIs, centralized databases, and active web scraping. In high-security, air-gapped institutional environments, sending raw operational data or suspect identifiers to third-party endpoints violates operational security (OPSEC) and legal sovereignty.
 3. **Unsubstantiated Attribution and Conflation:** Simplistic network monitoring often makes the fatal error of conflating an IP address that announces or relays a transaction with the owner of the private key, creating severe legal risk and evidentiary vulnerabilities in court.
 
-**Smart India Hackathon (SIH) 2026 Problem Statement 26146**, issued by the **National Technical Research Organisation (NTRO)**, defines the requirement: an AI-powered, offline forensic monitoring system capable of ingesting bulk transaction records, identifying illicit patterns, correlating on-chain flows with P2P network telemetry, and presenting explainable, court-admissible evidence to human analysts.
+defines the requirement: an AI-powered, offline forensic monitoring system capable of ingesting bulk transaction records, identifying illicit patterns, correlating on-chain flows with P2P network telemetry, and presenting explainable, court-admissible evidence to human analysts.
 
 ---
 
