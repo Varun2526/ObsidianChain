@@ -14,7 +14,7 @@
 > rank-derived cutoff is applied as a value threshold under heavy score ties.
 
 
-**Problem Statement 26146: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
+**AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
 **Repository Layer:** `docs/ML_PIPELINE.md` (Supervised Risk Modeling, Probability Calibration & Anomaly Detection)
 
 ---
