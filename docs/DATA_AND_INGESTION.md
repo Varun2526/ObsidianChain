@@ -1,5 +1,5 @@
 # ObsidianChain — Data Ingestion & Validation
-**Problem Statement 26146: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
+**AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
 **Repository Layer:** `docs/DATA_AND_INGESTION.md` (Multi-Format Parsers, Schema Validation & Truth Isolation)
 
 ---
