@@ -1,5 +1,5 @@
 # ObsidianChain — System Architecture
-**Problem Statement 26146: AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
+**AI-Powered Monitoring & Analysis of Bitcoin Transaction Traffic**  
 **Repository Layer:** `docs/ARCHITECTURE.md` (System Topology, Analytical Pipeline & Package Boundaries)
 
 ---
