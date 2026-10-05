@@ -1,9 +1,13 @@
 name: Deploy ObsidianChain
 
+# Deploys only a commit whose ci run on main succeeded (workflow_run), or on
+# a manual dispatch. It used to deploy on every push, even when CI failed.
 "on":
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: production-deployment
@@ -11,23 +15,50 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    env:
+      # The commit CI actually tested, not whatever main points at now.
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
     steps:
+      # A stopped instance, a changed public IP or a closed security group
+      # used to surface only as a 30 s SSH timeout ending in "exit code 1".
+      # Check port 22 first, retry briefly, and fail with a readable reason.
+      - name: Check EC2 is reachable on port 22
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          for i in $(seq 1 6); do
+            if timeout 10 bash -c "</dev/tcp/${EC2_HOST}/22" 2>/dev/null; then
+              echo "EC2 host reachable on port 22 (attempt $i)"
+              exit 0
+            fi
+            echo "Attempt $i: port 22 not reachable, retrying in 10 s"
+            sleep 10
+          done
+          echo "::error title=EC2 unreachable::Port 22 on the EC2 host did not answer for about a minute. Check that the instance is running, that the EC2_HOST secret matches its current public IP (it changes after a stop/start unless an Elastic IP is attached), and that the security group allows SSH from GitHub Actions."
+          exit 1
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
+          # Connection timeout (default 30 s) and total script time (default
+          # 10 min, too short for a cold build that regenerates vendor wheels).
+          timeout: 60s
+          command_timeout: 30m
+          envs: DEPLOY_SHA
           script: |
             set -e
 
             cd ~/ObsidianChain
 
-            echo "==> Pulling latest main"
+            echo "==> Checking out ${DEPLOY_SHA}"
             git fetch origin main
-            git reset --hard origin/main
+            git reset --hard "${DEPLOY_SHA}"
 
             echo "==> Detecting host architecture"
             ARCH=$(uname -m)
@@ -60,7 +91,7 @@ jobs:
               --platform "$PLATFORM" \
               --network none \
               --build-arg VENDOR_PATH="$VENDOR_PATH" \
-              -t obsidianchain:${{ github.sha }} .
+              -t obsidianchain:${DEPLOY_SHA} .
 
             echo "==> Detecting active deployment from Nginx"
             if grep -E '^[[:space:]]*proxy_pass[[:space:]]+http://127\.0\.0\.1:8080;' /etc/nginx/nginx.conf > /dev/null 2>&1; then
@@ -98,7 +129,7 @@ jobs:
               --name "$NEW_CONTAINER" \
               --restart unless-stopped \
               -p "127.0.0.1:${NEW_PORT}:8000" \
-              obsidianchain:${{ github.sha }} \
+              obsidianchain:${DEPLOY_SHA} \
               serve --host 0.0.0.0 --port 8000
 
             echo "==> Waiting for health check"
