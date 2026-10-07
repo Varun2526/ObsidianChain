@@ -123,12 +123,37 @@ jobs:
               docker rm -f $CONFLICTING_CONTAINERS
             fi
 
+            # Persistent data on the host. Without it every container got a
+            # fresh anonymous /data volume: no model, no accounts, and all
+            # casework lost on each deploy. Seeded once from deploy-data/;
+            # the model registry and reference files are refreshed from the
+            # repository on every deploy, the database and uploads are kept.
+            DATA_DIR="$HOME/obsidianchain-data"
+            echo "==> Preparing persistent data in $DATA_DIR"
+            mkdir -p "$DATA_DIR"
+            if [ ! -f "$DATA_DIR/obsidianchain.sqlite3" ]; then
+              echo "First deploy with persistent data: seeding from deploy-data/"
+              cp -a deploy-data/. "$DATA_DIR/"
+            fi
+            for d in models reference samples demo; do
+              if [ -d "deploy-data/$d" ]; then
+                mkdir -p "$DATA_DIR/$d"
+                cp -a "deploy-data/$d/." "$DATA_DIR/$d/"
+              fi
+            done
+
             echo "==> Starting new container"
+            # OBSIDIANCHAIN_DEMO_LOGIN=1: the login screen offers one-click
+            # Investigator / Reviewer / Admin sign-in for evaluators
+            # (console/demo_access.py). Remove it for a real deployment.
             docker run -d \
               --platform "$PLATFORM" \
               --name "$NEW_CONTAINER" \
               --restart unless-stopped \
               -p "127.0.0.1:${NEW_PORT}:8000" \
+              -v "$DATA_DIR:/data" \
+              -e OBSIDIANCHAIN_DATA=/data \
+              -e OBSIDIANCHAIN_DEMO_LOGIN=1 \
               obsidianchain:${DEPLOY_SHA} \
               serve --host 0.0.0.0 --port 8000
 
