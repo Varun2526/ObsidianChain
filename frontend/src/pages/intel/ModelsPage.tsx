@@ -14,6 +14,7 @@ import { ErrorState } from "../../components/ui/ErrorState";
 import { Metric, PageHeader, ResultTypeTag, fixed, int, pct } from "../../components/ui/intel";
 import { Skeleton } from "../../components/ui/primitives";
 import { useApi } from "../../lib/useApi";
+import { featureLabel, featureSetName, modelBlurb, modelName, modelRole, protocolLabel, statusLabel } from "../../lib/labels";
 
 export function ModelsPage() {
   const list = useApi((s) => listModels(s), []);
@@ -33,7 +34,7 @@ export function ModelsPage() {
       <div className="banner banner-model" role="note">
         <h4>A model score is a ranking signal, not a finding</h4>
         <p>
-          The champion ranks addresses by learned association with the Elliptic++ illicit class. A high score is a reason to look,
+          The model in service ranks addresses by learned association with the Elliptic++ illicit class. A high score is a reason to look,
           never evidence on its own. Performance on live traffic is unknown until delayed labels arrive.
         </p>
       </div>
@@ -55,29 +56,33 @@ function Registry({ list, selected, onSelect }: { list: ModelList; selected: str
       <div className="panel-head">
         <h2>Registry</h2>
         {Object.entries(list.roles).map(([role, v]) => (
-          <span key={role} className="chip">{role}: <span className="mono" style={{ textTransform: "none", letterSpacing: 0 }}>{v ?? "none"}</span></span>
+          <span key={role} className="chip" title={v ?? undefined}>{modelRole(role)}: <span style={{ textTransform: "none", letterSpacing: 0 }}>{v ? modelName(v) : "none"}</span></span>
         ))}
       </div>
       <div className="panel-body flush table-wrap">
         <table>
-          <thead><tr><th>Version</th><th>Role</th><th>Feature schema</th><th>Attested commit</th><th className="num">Holdout nAP</th><th className="num">Holdout P@100</th><th>Status</th></tr></thead>
+          <thead><tr><th>Model</th><th>Role</th><th>Features</th><th>Attested commit</th><th className="num">Holdout nAP</th><th className="num">Holdout P@100</th><th>Status</th></tr></thead>
           <tbody>
             {[...list.models].reverse().map((m) => (
               <tr key={m.version} className="clickable" aria-selected={m.version === selected} tabIndex={0}
                   onClick={() => onSelect(m.version)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(m.version); } }}>
-                <td className="mono">{m.version}</td>
-                <td>{m.role ? <span className={`chip ${m.role === "champion" ? "" : ""}`} style={m.role === "champion" ? { color: "var(--oc-accent)", borderColor: "var(--oc-accent-line)" } : undefined}>{m.role}</span> : <span className="faint">—</span>}</td>
-                <td className="mono small">{m.feature_schema_version ?? "n/a"}</td>
+                <td title={m.version}><strong style={{ fontWeight: 600 }}>{modelName(m.version)}</strong></td>
+                <td>{m.role ? <span className="chip" style={m.role === "champion" ? { color: "var(--oc-accent)", borderColor: "var(--oc-accent-line)" } : undefined}>{modelRole(m.role)}</span> : <span className="faint">—</span>}</td>
+                <td className="small" title={m.feature_schema_version ?? undefined}>{featureSetName(m.feature_schema_version)}</td>
                 <td className="mono small">{m.attested_source_commit ? m.attested_source_commit.slice(0, 10) : <span className="faint">not attested</span>}</td>
                 <td className="num">{m.holdout?.nap != null ? fixed(m.holdout.nap) : <span className="faint">not opened</span>}</td>
                 <td className="num">{m.holdout?.["P@100"] != null ? fixed(m.holdout["P@100"], 2) : ""}</td>
-                <td className="small">{m.withdrawn ? <span style={{ color: "var(--oc-danger)" }}>Withdrawn</span> : ((m.notes ?? "").split(".")[0] ?? "").slice(0, 60)}</td>
+                <td className="small">{m.withdrawn ? <span style={{ color: "var(--oc-danger)" }}>Withdrawn</span> : statusLabel(((m.notes ?? "").split(".")[0] ?? "").trim() || null)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="panel-foot">{list.meaning} Select a version to see its record.</div>
+      <div className="panel-foot">
+        Only the model marked <strong>In service</strong> scores uploaded data. A model <strong>under evaluation</strong> is scored
+        alongside it but never shown as a result, and the <strong>backup</strong> takes over only if the main model fails its
+        integrity check. Select a model to see its record.
+      </div>
     </section>
   );
 }
@@ -97,9 +102,9 @@ function ModelView({ m }: { m: ModelDetail }) {
   return (
     <>
       <div className="section-title">
-        <span className="mono" style={{ textTransform: "none", letterSpacing: 0, color: "var(--oc-text)", fontSize: 13 }}>{m.version}</span>
-        {m.roles.map((r) => <span key={r} className="chip">{r}</span>)}
-        <span>{String(m.manifest.model_type ?? "")} · {String(m.manifest.evaluation_protocol ?? ev?.protocol ?? "")}</span>
+        <span title={m.version} style={{ textTransform: "none", letterSpacing: 0, color: "var(--oc-text)", fontSize: 14, fontWeight: 600 }}>{modelName(m.version)}</span>
+        {m.roles.map((r) => <span key={r} className="chip">{modelRole(r)}</span>)}
+        <span style={{ textTransform: "none", letterSpacing: 0 }}>{String(m.manifest.model_type ?? "")} · {protocolLabel(String(m.manifest.evaluation_protocol ?? ev?.protocol ?? ""))}</span>
       </div>
 
       <div className="grid-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", marginBottom: 16 }}>
@@ -250,14 +255,16 @@ function ModelView({ m }: { m: ModelDetail }) {
           <div className="panel-head"><h2>Model record</h2></div>
           <div className="panel-body">
             <dl className="kv">
-              <dt>Type</dt><dd>{String(m.manifest.model_type ?? "n/a")}</dd>
-              <dt>Status</dt><dd>{String(m.manifest.status ?? "n/a")}</dd>
-              <dt>Protocol</dt><dd className="mono small">{String(m.manifest.evaluation_protocol ?? "n/a")}</dd>
-              <dt>Final training set</dt><dd>{String(m.manifest.final_training_set ?? "n/a")}</dd>
-              <dt>Features</dt><dd>{features.length} ({m.feature_schema_version})</dd>
-              <dt>Ranking score</dt><dd>{String(m.manifest.ranking_score ?? "n/a")}</dd>
-              <dt>Displayed probability</dt><dd>{String(m.manifest.display_probability ?? "n/a")}</dd>
-              <dt>Explanations</dt><dd>{String(m.manifest.explanation_method ?? "n/a")}</dd>
+              <dt>Model</dt><dd>{modelName(m.version)} <span className="mono small faint">{m.version}</span></dd>
+              <dt>What it is</dt><dd>{modelBlurb(m.version)}</dd>
+              <dt>Algorithm</dt><dd>{String(m.manifest.model_type ?? "n/a")}</dd>
+              <dt>Status</dt><dd>{statusLabel(m.manifest.status as string | undefined)}</dd>
+              <dt>How it was tested</dt><dd>{protocolLabel(m.manifest.evaluation_protocol as string | undefined)}</dd>
+              <dt>Trained on</dt><dd>{String(m.manifest.final_training_set ?? "n/a")}</dd>
+              <dt>Features</dt><dd>{features.length} ({featureSetName(m.feature_schema_version)})</dd>
+              <dt>Ranking score</dt><dd>The model's probability, used to order addresses</dd>
+              <dt>Displayed probability</dt><dd>Calibrated so that 0.30 means about 30% were illicit in testing</dd>
+              <dt>Explanations</dt><dd>Per-feature contributions (TreeSHAP) for every score</dd>
               <dt>Artifact SHA-256</dt><dd className="mono small">{String(m.manifest.model_sha256 ?? "n/a")}</dd>
               <dt>Attested commit</dt><dd className="mono small">{m.attested_source_commit ?? "not attested"}</dd>
               <dt>Holdout record</dt><dd className="mono small">{ho?.sha256 ?? "n/a"}</dd>
@@ -267,7 +274,7 @@ function ModelView({ m }: { m: ModelDetail }) {
         <section className="panel">
           <div className="panel-head"><h2>Features</h2><span className="small faint">{features.length}</span></div>
           <div className="panel-body">
-            <div className="chips">{features.map((f) => <span key={f} className="chip chip-mono">{f}</span>)}</div>
+            <div className="chips">{features.map((f) => <span key={f} className="chip" title={f}>{featureLabel(f)}</span>)}</div>
             {m.evaluation?.performance && (
               <p className="note" style={{ marginTop: 12 }}>
                 Scoring latency p50 {String((m.evaluation.performance.single_row_latency_ms as Record<string, number> | undefined)?.p50 ?? "n/a")} ms per row;

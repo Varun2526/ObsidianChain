@@ -27,6 +27,7 @@ import { ErrorState } from "../components/ui/ErrorState";
 import { NetworkContextPanel } from "../components/forensics/NetworkContextPanel";
 import { buildGraphModel } from "../components/forensics/InvestigationGraph";
 import { Value } from "../components/ui/primitives";
+import { featureLabel } from "../lib/labels";
 
 const list = listFixture as unknown as AlertListResponse;
 const detail = detailFixture as unknown as AlertDetail;
@@ -220,7 +221,9 @@ describe("AlertDetailPage", () => {
     // are intentional, so multiplicity is the expected state.
     expect(screen.getAllByText(/log-odds/).length).toBeGreaterThan(0);
     const top = detail.why_flagged.per_member[0]!.contributions[0]!;
-    expect(screen.getAllByText(top.feature).length).toBeGreaterThan(0);
+    // shown by its plain name; the raw column id stays in the tooltip
+    expect(screen.getAllByText(featureLabel(top.feature)).length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle(top.feature).length).toBeGreaterThan(0);
     expect(
       screen.getAllByText(top.value_category.replace(/_/g, " ")).length,
     ).toBeGreaterThan(0);

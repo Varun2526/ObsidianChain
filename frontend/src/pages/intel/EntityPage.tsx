@@ -198,7 +198,7 @@ function ModelSection({ p }: { p: AddressProfile }) {
       <section className="panel">
         <div className="panel-body">
           {p.model.alerts.length === 0 ? (
-            <p className="muted small">This address is not a member of any alert in the Phase 7 reference run. That is not a clearance: the run scores only addresses in scope.</p>
+            <p className="muted small">This address is not a member of any alert in the reference run. That is not a clearance: the run scores only addresses in scope.</p>
           ) : (
             <>
               <div className="banner banner-model" style={{ marginBottom: 12 }}>

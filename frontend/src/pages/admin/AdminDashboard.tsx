@@ -16,6 +16,7 @@ import { ErrorState } from "../../components/ui/ErrorState";
 import { Metric, PageHeader } from "../../components/ui/intel";
 import { Skeleton } from "../../components/ui/primitives";
 import { useApi } from "../../lib/useApi";
+import { modelName } from "../../lib/labels";
 
 const LIFECYCLE = ["DRAFT", "VALIDATING", "ANALYZING", "ACTIVE", "SUBMITTED", "IN_REVIEW", "RETURNED", "APPROVED", "CLOSED", "ARCHIVED"];
 const SECURITY_ACTIONS = new Set(["LOGIN_FAILED", "USER_CREATED", "USER_DEACTIVATED", "USER_ACTIVATED", "USER_ROLE_CHANGED",
@@ -159,9 +160,9 @@ function DeploymentFacts() {
       <div className="panel-head"><h2>Deployment</h2><span className="small faint">read from the model registry and the alert artifact</span></div>
       <div className="panel-body">
         <dl className="kv">
-          <dt>Champion model</dt><dd className="mono">{registry.data?.roles.champion ?? (registry.error ? "registry unavailable" : "…")}</dd>
-          <dt>Fallback model</dt><dd className="mono">{registry.data?.roles.fallback ?? (registry.data ? "none" : "…")}</dd>
-          <dt>Candidate (shadow)</dt><dd className="mono">{registry.data?.roles.candidate ?? (registry.data ? "none" : "…")}</dd>
+          <dt>Model in service</dt><dd title={registry.data?.roles.champion ?? undefined}>{registry.data?.roles.champion ? modelName(registry.data.roles.champion) : (registry.error ? "registry unavailable" : "…")}</dd>
+          <dt>Backup model</dt><dd title={registry.data?.roles.fallback ?? undefined}>{registry.data?.roles.fallback ? modelName(registry.data.roles.fallback) : (registry.data ? "none" : "…")}</dd>
+          <dt>Under evaluation</dt><dd title={registry.data?.roles.candidate ?? undefined}>{registry.data?.roles.candidate ? modelName(registry.data.roles.candidate) : (registry.data ? "none" : "…")}</dd>
           <dt>Reference alert run</dt><dd className="mono">{run.data ? `${run.data.run_fingerprint.slice(0, 16)} · ${run.data.alert_count_total.toLocaleString()} alerts` : run.error ? "not available" : "…"}</dd>
           <dt>Alert artifact provenance</dt><dd>{run.data?.provenance.provenance_type ?? "…"}{run.data?.provenance.synthetic_network ? " · network layer synthetic" : ""}</dd>
         </dl>

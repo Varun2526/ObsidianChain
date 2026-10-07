@@ -15,6 +15,7 @@ import type { FlowGraphHandle, GraphFilters, GraphLayout } from "../../component
 import { KIND_LABEL, countKinds, matchNodes, mergeGraph, timestepRange } from "../../components/graph/graphModel";
 import type { GraphData } from "../../components/graph/graphModel";
 import { NodeInspector } from "../../components/graph/NodeInspector";
+import { WorkspaceResizer, usePanelLayout } from "../../components/graph/WorkspaceResizer";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { Icon } from "../../components/ui/Icon";
 import { EvidenceTag, short } from "../../components/ui/intel";
@@ -72,6 +73,7 @@ export function GraphExplorer() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [seedDraft, setSeedDraft] = useState("");
   const canvas = useRef<FlowGraphHandle>(null);
+  const panels = usePanelLayout();
 
   const load = useCallback((signal?: AbortSignal) => {
     if (!hasSeed) { setGraph({ nodes: [], edges: [] }); setMeta(null); return; }
@@ -212,7 +214,8 @@ export function GraphExplorer() {
   });
 
   return (
-    <div className={`workspace${isFullscreen ? " workspace-fullscreen" : ""}`} aria-busy={loading}>
+    <div className={`workspace${isFullscreen ? " workspace-fullscreen" : ""}${panels.state.leftHidden ? " ws-left-hidden" : ""}${panels.state.rightHidden ? " ws-right-hidden" : ""}`}
+         style={panels.style} ref={panels.container} aria-busy={loading}>
       {/* ---- left: seeds, trace, filters ---- */}
       <aside className="ws-panel ws-panel-left" aria-label="Trace settings">
         <div className="ws-head"><Icon name="graph" /><h2>Graph explorer</h2></div>
@@ -336,6 +339,9 @@ export function GraphExplorer() {
         </section>
       </aside>
 
+      <WorkspaceResizer side="left" width={panels.state.left} hidden={panels.state.leftHidden}
+                        onResize={panels.setWidth} onReset={panels.reset} onToggle={panels.toggle} />
+
       {/* ---- center: canvas ---- */}
       <section className="ws-center" aria-label="Graph">
         <div className="graph-host">
@@ -350,6 +356,7 @@ export function GraphExplorer() {
             onSelect={setSelected}
             onExpand={runMode ? undefined : (id) => expand(id, "both")}
             onHiddenCount={setHidden}
+            hideEmptyMessage={!hasSeed}
           />
           {!hasSeed && (
             <div className="graph-empty">
@@ -407,6 +414,9 @@ export function GraphExplorer() {
         {error != null && <div style={{ position: "absolute", inset: "auto 12px 48px 12px" }}><ErrorState error={error} onRetry={() => load()} /></div>}
       </section>
 
+      <WorkspaceResizer side="right" width={panels.state.right} hidden={panels.state.rightHidden}
+                        onResize={panels.setWidth} onReset={panels.reset} onToggle={panels.toggle} />
+
       {/* ---- right: inspector ---- */}
       <aside className="ws-panel ws-panel-right" aria-label="Inspector">
         <div className="ws-head">
@@ -441,7 +451,7 @@ export function GraphExplorer() {
               ) : (
               <ul className="node-list small" style={{ display: "grid", gap: 6 }}>
                 <li><EvidenceTag kind="chain" /> Addresses, transactions and flow edges from the Elliptic++ chain index.</li>
-                <li><EvidenceTag kind="model" /> Severity rings: the Phase 7 reference model's association. A lead, not proof.</li>
+                <li><EvidenceTag kind="model" /> Severity rings: the reference model's risk band. A lead, not proof.</li>
                 <li><EvidenceTag kind="watchlist" /> Halos: OFAC SDN or analyst watchlist attribution.</li>
                 <li><EvidenceTag kind="heuristic" /> Clusters: common-input ownership. Can merge owners.</li>
                 {meta?.layers && <li><EvidenceTag kind="network" /> Relay peers: synthetic network overlay. Never the sender.</li>}

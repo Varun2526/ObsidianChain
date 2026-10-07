@@ -7,6 +7,8 @@
  * same cluster. Flattening it into "something went wrong" would hide the one
  * error this system was built to make visible.
  */
+import { Link } from "react-router-dom";
+
 import { ApiError } from "../../api/client";
 
 export function ErrorState({ error, onRetry }:
@@ -28,6 +30,27 @@ export function ErrorState({ error, onRetry }:
           <span className="mono small faint" style={{ display: "block", marginTop: 10 }}>
             {api.detail}
           </span>
+        </div>
+      </div>
+    );
+  }
+
+  // The reference analysis is optional on a deployment. Say so plainly and
+  // point at what does work, instead of a missing-file message.
+  if (api?.kind === "artifact_not_generated" || api?.kind === "artifact_missing") {
+    return (
+      <div className="state">
+        <div className="banner" style={{ textAlign: "left" }}>
+          <h4>Reference data is not installed on this server</h4>
+          <p>
+            This view reads the Elliptic++ reference analysis, which this
+            deployment does not include. Investigations work fully: create one,
+            upload a capture, and it is validated, analysed and scored here.
+          </p>
+          <div className="row" style={{ marginTop: 10, gap: 8 }}>
+            <Link className="btn btn-sm btn-primary" to="/investigations/new">New investigation</Link>
+            <Link className="btn btn-sm" to="/investigations">Your investigations</Link>
+          </div>
         </div>
       </div>
     );

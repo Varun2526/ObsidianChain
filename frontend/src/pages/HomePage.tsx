@@ -19,9 +19,12 @@ import { Icon } from "../components/ui/Icon";
 import { Metric, PageHeader, ResultTypeTag, fixed, int } from "../components/ui/intel";
 import { Skeleton } from "../components/ui/primitives";
 import { useApi } from "../lib/useApi";
+import { useReferenceData } from "../lib/useReferenceData";
+import { featureSetName, modelName } from "../lib/labels";
 
 export function HomePage() {
   const { identity, can } = useAuth();
+  const referenceData = useReferenceData();
   const [guideOpen, setGuideOpen] = useState(false);
   const cases = useApi((s) => api.listInvestigations(s), []);
   const activity = useApi((s) => api.recentActivity(10, s), []);
@@ -118,7 +121,7 @@ export function HomePage() {
             <div className="panel-body" style={{ display: "grid", gap: 8 }}>
               {canCreate && <Link className="btn" style={{ justifyContent: "flex-start" }} to="/investigations/new"><Icon name="upload" />New investigation from a capture</Link>}
               <Link className="btn" style={{ justifyContent: "flex-start" }} to="/investigations"><Icon name="folder" />Your investigations</Link>
-              <Link className="btn btn-ghost" style={{ justifyContent: "flex-start" }} to="/alerts"><Icon name="alert" />Reference run (Elliptic++)</Link>
+              {referenceData !== false && <Link className="btn btn-ghost" style={{ justifyContent: "flex-start" }} to="/alerts"><Icon name="alert" />Reference run (Elliptic++)</Link>}
               <p className="note">Press <kbd>/</kbd> or <kbd>⌘K</kbd> anywhere to search addresses, transactions, alerts and cases.</p>
             </div>
           </section>
@@ -135,10 +138,10 @@ export function HomePage() {
               ) : (
                 <>
                   <dl className="kv">
-                    <dt>Champion</dt><dd className="mono">{model.data.version}</dd>
-                    <dt>Type</dt><dd>{String(model.data.manifest.model_type ?? "n/a")}</dd>
-                    <dt>Features</dt><dd className="mono small">{model.data.feature_schema_version}</dd>
-                    <dt>Fallback</dt><dd className="mono small">{registry.data?.roles.fallback ?? "none"}</dd>
+                    <dt>In service</dt><dd title={model.data.version}>{modelName(model.data.version)}</dd>
+                    <dt>Algorithm</dt><dd>{String(model.data.manifest.model_type ?? "n/a")}</dd>
+                    <dt>Features</dt><dd title={model.data.feature_schema_version ?? undefined}>{featureSetName(model.data.feature_schema_version)}</dd>
+                    <dt>Backup</dt><dd title={registry.data?.roles.fallback ?? undefined}>{registry.data?.roles.fallback ? modelName(registry.data.roles.fallback) : "none"}</dd>
                   </dl>
                   <div style={{ display: "grid", gap: 6, marginTop: 12 }}>
                     <div className="row"><ResultTypeTag type="CONFIRMATION" /><span className="num small">nAP {fixed(model.data.evaluation?.summary.confirm?.address.nap?.mean)}</span></div>

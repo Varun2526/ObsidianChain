@@ -114,7 +114,7 @@ export function NodeInspector({ node, edges, actions }: { node: GraphNode; edges
           <AnnotationChips model={d.model} cluster={d.cluster} watchlist={d.watchlist} />
           {d.model && (
             <p className="note" style={{ marginTop: 8 }}>
-              Model risk {pct(d.model.risk_score)} from the Phase 7 reference run
+              Model risk {pct(d.model.risk_score)} from the reference run
               (alert <Link to={`/alerts/${encodeURIComponent(d.model.alert_id)}`}>{d.model.alert_id.split(":")[1]}</Link>).
               A learned association, not proof of illicit activity.
             </p>

@@ -14,13 +14,14 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../store/auth";
 import { useInvestigation } from "../../store/investigation";
+import { useReferenceData } from "../../lib/useReferenceData";
 import { CommandPalette } from "../modals/CommandPalette";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
 import { Icon } from "../ui/Icon";
 import type { IconName } from "../ui/Icon";
 import { PersistentCaseHeader } from "./CaseChrome";
 
-interface NavItem { to: string; icon: IconName; label: string; end?: boolean }
+interface NavItem { to: string; icon: IconName; label: string; end?: boolean; needsReference?: boolean }
 interface NavGroup { heading: string; items: NavItem[]; roles?: string[] }
 
 const NAV: NavGroup[] = [
@@ -28,7 +29,7 @@ const NAV: NavGroup[] = [
     heading: "Investigate",
     items: [
       { to: "/", icon: "overview", label: "Overview", end: true },
-      { to: "/alerts", icon: "alert", label: "Reference alerts" },
+      { to: "/alerts", icon: "alert", label: "Reference alerts", needsReference: true },
       { to: "/investigations", icon: "folder", label: "Investigations" },
       { to: "/graph", icon: "graph", label: "Graph explorer" },
     ],
@@ -93,6 +94,7 @@ export function AppShell() {
   const [railOpen, setRailOpen] = useState(false);
   const role = identity?.user.role ?? "INVESTIGATOR";
   const flush = FLUSH_ROUTES.some((r) => r.test(location.pathname));
+  const referenceData = useReferenceData();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -138,7 +140,7 @@ export function AppShell() {
             {NAV.filter((g) => !g.roles || g.roles.includes(role)).map((g) => (
               <div className="rail-section" key={g.heading}>
                 <div className="rail-heading">{g.heading}</div>
-                {g.items.map((item) => (
+                {g.items.filter((item) => !item.needsReference || referenceData !== false).map((item) => (
                   <NavLink key={item.to} to={item.to} end={item.end}
                            className={({ isActive }) => `rail-link${isActive ? " active" : ""}`}>
                     <Icon name={item.icon} />

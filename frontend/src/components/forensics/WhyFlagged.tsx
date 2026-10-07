@@ -14,6 +14,7 @@
 import { useState } from "react";
 import type { NetworkContext, WhyFlagged as WhyFlaggedData } from "../../api/types";
 import { CategoryChip, Value } from "../ui/primitives";
+import { featureLabel } from "../../lib/labels";
 
 export function WhyFlagged({
   data,
@@ -77,7 +78,7 @@ export function WhyFlagged({
             return (
               <div className="contrib" key={c.feature} style={{ gridTemplateColumns: "minmax(140px, 34%) minmax(0, 1fr) auto" }}>
                 <span className="contrib-label" title={c.feature}>
-                  {c.feature} <span className="faint">[{c.feature_group}]</span>
+                  {featureLabel(c.feature)}
                 </span>
                 <span className="contrib-bar" aria-hidden="true">
                   <span className={`fill ${positive ? "pos" : "neg"}`} style={{ width: `${share / 2}%` }} />

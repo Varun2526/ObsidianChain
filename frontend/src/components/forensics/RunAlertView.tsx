@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 
 import type { CrossLayerView, RunAlertView as View, RunEvidence } from "../../api/types";
 import { FlowPreview } from "../graph/FlowPreview";
+import { featureLabel, humanizeFeatures, modelName } from "../../lib/labels";
 import { CopyButton, EvidenceTag, Metric, fixed, int, pct, short } from "../ui/intel";
 import type { EvidenceKind } from "../ui/intel";
 
@@ -58,7 +59,7 @@ export function RunAlertAnalytical({ invId, view, actions }: { invId: string; vi
         </div>
         <div className="metric-strip" style={{ border: 0, borderRadius: 0, margin: 0 }}>
           <Metric k="Fused risk" v={fixed(a.fused_risk_score, 3)} d={`rank ${a.rank} of this run`} />
-          <Metric k="Model score" v={topModel == null ? "n/a" : pct(topModel, 1)} d={`highest member · ${view.model_version ?? "model"}`} />
+          <Metric k="Model score" v={topModel == null ? "n/a" : pct(topModel, 1)} d={`highest member · ${modelName(view.model_version)}`} />
           <Metric k="Members" v={int(a.member_count)} d="co-spend cluster" />
           <Metric k="Transactions" v={int(view.transactions.length)} d="spent from or paid to members" />
           <Metric k="Agreeing evidence" v={int(Number(a.summary.corroborating_evidence_lines ?? 0))} d="independent lines present" />
@@ -136,13 +137,13 @@ function EvidenceBlock({ e }: { e: RunEvidence }) {
         <span className="spacer" />
         <span className="mono small faint">{fixed(e.score, 3)}</span>
       </div>
-      <p className="small" style={{ margin: 0 }}>{e.explanation}</p>
+      <p className="small" style={{ margin: 0 }}>{humanizeFeatures(e.explanation)}</p>
       {top?.ml_explanations && top.ml_explanations.length > 0 && (
         <table style={{ marginTop: 8 }}>
-          <thead><tr><th>Feature ({short(top.address, 8, 4)})</th><th className="num">Value</th><th>Contribution (TreeSHAP)</th></tr></thead>
+          <thead><tr><th>What the model looked at ({short(top.address, 8, 4)})</th><th className="num">Value</th><th>Contribution (TreeSHAP)</th></tr></thead>
           <tbody>{top.ml_explanations.map((x) => (
             <tr key={x.feature_name}>
-              <td className="mono small">{x.feature_name}</td>
+              <td className="small" title={x.feature_name}>{featureLabel(x.feature_name)}</td>
               <td className="num small">{fixed(x.feature_value, 4)}</td>
               <td>
                 <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>

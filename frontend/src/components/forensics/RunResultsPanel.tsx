@@ -18,6 +18,7 @@ import { DispositionBadge } from "../layout/CaseChrome";
 import { ErrorState } from "../ui/ErrorState";
 import { Address, Skeleton } from "../ui/primitives";
 import { RunGraphPanel, RunNetworkPanel } from "./RunNetworkPanel";
+import { humanizeFeatures, modelName } from "../../lib/labels";
 
 const CLASS_LABEL: Record<EvidenceClass, string> = {
   MODEL: "Model (learned association)",
@@ -59,8 +60,8 @@ export function RunResultsPanel({ investigationId, runId, showNetwork = true, de
       <div className="panel-body">
         <div className="card-grid-4" style={{ marginBottom: 14 }}>
           <div className="stat-mini">
-            <span className="stat-mini-v mono" style={{ fontSize: "0.9rem" }}>{data.model.version ?? "none"}</span>
-            <span className="stat-mini-k">Model served ({data.ml_status})</span>
+            <span className="stat-mini-v" style={{ fontSize: "0.9rem" }} title={data.model.version ?? undefined}>{data.model.version ? modelName(data.model.version) : "none"}</span>
+            <span className="stat-mini-k" title={data.ml_status}>Model that scored this run</span>
           </div>
           <div className="stat-mini">
             <span className="stat-mini-v">{data.total_alerts.toLocaleString()}</span>
@@ -83,7 +84,7 @@ export function RunResultsPanel({ investigationId, runId, showNetwork = true, de
         {data.monitoring_alerts.length > 0 && (
           <ul className="small" style={{ margin: "0 0 14px", paddingLeft: 18 }} aria-label="Monitoring notices">
             {data.monitoring_alerts.map((a) => (
-              <li key={a.code}><strong>{a.severity} {a.code.replace(/_/g, " ").toLowerCase()}:</strong> {a.detail}</li>
+              <li key={a.code}><strong>{a.severity} {a.code.replace(/_/g, " ").toLowerCase()}:</strong> {humanizeFeatures(a.detail)}</li>
             ))}
           </ul>
         )}

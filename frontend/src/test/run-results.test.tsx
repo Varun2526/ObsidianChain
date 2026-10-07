@@ -39,7 +39,7 @@ describe("RunResultsPanel", () => {
   it("labels the holdout result as the model's, not this run's", async () => {
     vi.spyOn(api, "getRunResults").mockResolvedValue(RESULTS);
     render(<RunResultsPanel investigationId="inv" runId="run_1" />);
-    await waitFor(() => expect(screen.getByText("ps_native_v5")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Risk Model 5")).toBeInTheDocument());
     expect(screen.getByText(/not this run/)).toBeInTheDocument();
     expect(screen.getByText(/unverified until labels arrive/)).toBeInTheDocument();
     expect(screen.getByText("0.548")).toBeInTheDocument();

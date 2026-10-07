@@ -116,6 +116,10 @@ export const login = (username: string, password: string) =>
 
 export const logout = () => post<{ ok: boolean }>("/auth/logout");
 
+/** Liveness, and whether the Elliptic++ reference artifacts are installed. */
+export const health = (signal?: AbortSignal) =>
+  call<{ status: string; version: string; artifacts_present: boolean }>("/health", {}, signal);
+
 /** One-click demo sign-in, offered only when the server enables it. */
 export interface DemoRole { role: Role; username: string; display_name: string; description: string }
 export const demoStatus = (signal?: AbortSignal) =>

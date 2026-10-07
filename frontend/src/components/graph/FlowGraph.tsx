@@ -66,6 +66,8 @@ export interface FlowGraphProps {
   onExpand?: (id: string) => void;
   onHiddenCount?: (hidden: number) => void;
   label?: string;
+  /** Set when the parent draws its own empty state, so the two never overlap. */
+  hideEmptyMessage?: boolean;
 }
 
 /** jsdom has no canvas and no layout engine; the text alternative is what renders there. */
@@ -313,7 +315,7 @@ function applyFilters(cy: Core, f: GraphFilters): number {
 
 export const FlowGraph = forwardRef<FlowGraphHandle, FlowGraphProps>(function FlowGraph(props, ref) {
   const { nodes, edges, layout, filters = NO_FILTERS, selectedId, highlightIds,
-          onSelect, onExpand, onHiddenCount, label = "Money-flow graph" } = props;
+          onSelect, onExpand, onHiddenCount, label = "Money-flow graph", hideEmptyMessage = false } = props;
   const host = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -503,7 +505,7 @@ export const FlowGraph = forwardRef<FlowGraphHandle, FlowGraphProps>(function Fl
       <div ref={host} className="graph-canvas" role="img"
            aria-label={`${label}: ${nodes.length} nodes and ${edges.length} edges. The element list beside the graph is the text alternative.`} />
       {failed && <div className="graph-empty">The graph renderer could not start: {failed}</div>}
-      {!failed && nodes.length === 0 && ready && <div className="graph-empty">Nothing to draw yet.</div>}
+      {!failed && nodes.length === 0 && ready && !hideEmptyMessage && <div className="graph-empty">Nothing to draw yet.</div>}
     </>
   );
 });

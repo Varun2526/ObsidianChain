@@ -69,6 +69,12 @@ API_PREFIX = "/api"
 #: meant the authenticated console could be bypassed entirely by querying
 #: the artifacts directly - the alerts, the SHAP explanations and the
 #: separation evidence were all readable with one unauthenticated GET.
+def _without_paths(text: str) -> str:
+    """Reduce every absolute filesystem path in an error message to its last part."""
+    import re
+    return re.sub(r"(?:/[^\s/'\"]+)+/([^\s/'\"]+)", r"\1", text)
+
+
 PUBLIC_ROUTES: dict[tuple[str, str], str] = {
     ("POST", f"{API_PREFIX}/auth/login"): (
         "The endpoint that establishes a session. It cannot require one. It "
@@ -144,7 +150,9 @@ def create_app(data_root=None) -> FastAPI:
             status_code=503,
             content={
                 "error": "artifact_not_generated",
-                "detail": str(exc),
+                # The server's directory layout is not the caller's business:
+                # absolute paths are reduced to the file name.
+                "detail": _without_paths(str(exc)),
                 "hint": "The API reads precomputed artifacts and never "
                         "builds them on request.",
             },

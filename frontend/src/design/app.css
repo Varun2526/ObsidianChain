@@ -866,9 +866,35 @@ td .row-link:hover { color: var(--oc-accent-strong); }
 
 .workspace {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) var(--oc-inspector-w);
+  /* left panel | handle | canvas | handle | inspector; widths are set by
+     WorkspaceResizer through --ws-left / --ws-right */
+  grid-template-columns: var(--ws-left, 280px) 8px minmax(0, 1fr) 8px var(--ws-right, var(--oc-inspector-w));
   flex: 1; min-height: 0;
 }
+.ws-left-hidden > .ws-panel-left, .ws-right-hidden > .ws-panel-right { display: none; }
+/* A hidden panel leaves the grid entirely, so its column is dropped too. */
+.ws-left-hidden { grid-template-columns: 8px minmax(0, 1fr) 8px var(--ws-right, var(--oc-inspector-w)); }
+.ws-right-hidden { grid-template-columns: var(--ws-left, 280px) 8px minmax(0, 1fr) 8px; }
+.ws-left-hidden.ws-right-hidden { grid-template-columns: 8px minmax(0, 1fr) 8px; }
+.ws-resizer {
+  position: relative; cursor: col-resize; touch-action: none; user-select: none;
+  background: var(--oc-surface-1); border-left: 1px solid var(--oc-hairline); border-right: 1px solid var(--oc-hairline);
+}
+.ws-resizer:hover, .ws-resizer:focus-visible, .ws-resizer.dragging { background: var(--oc-accent-wash); outline: none; }
+.ws-resizer.dragging, .ws-resizer:focus-visible { border-color: var(--oc-accent); }
+.ws-resizer.is-hidden { cursor: default; }
+.ws-resizer-toggle {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;
+  width: 18px; height: 40px; padding: 0; border-radius: 4px; cursor: pointer;
+  border: 1px solid var(--oc-hairline-strong); background: var(--oc-surface-2); color: var(--oc-text-2);
+  font-size: 14px; line-height: 1;
+}
+.ws-resizer-toggle:hover { color: var(--oc-accent); border-color: var(--oc-accent); }
+/* Each toggle sits on the canvas side of its handle, so it is never clipped
+   by the screen edge when its panel is hidden. */
+.ws-resizer-left .ws-resizer-toggle { left: 0; transform: translateY(-50%); }
+.ws-resizer-right .ws-resizer-toggle { left: auto; right: 0; transform: translateY(-50%); }
+body:has(.ws-resizer.dragging) { cursor: col-resize; user-select: none; }
 .workspace-fullscreen {
   position: fixed;
   z-index: 80;
@@ -1011,7 +1037,6 @@ td .row-link:hover { color: var(--oc-accent-strong); }
  * ===================================================================== */
 
 @media (max-width: 1280px) {
-  .workspace { grid-template-columns: 248px minmax(0, 1fr) 320px; }
   .grid-main-side { grid-template-columns: minmax(0, 1fr) 320px; }
 }
 
@@ -1021,6 +1046,8 @@ td .row-link:hover { color: var(--oc-accent-strong); }
   .workspace { display: flex; flex-direction: column; overflow-y: auto; }
   .workspace > * { flex: none; min-height: auto; }
   .ws-center { height: min(72vh, 600px); order: -1; }
+  .ws-resizer { display: none; }
+  .ws-left-hidden > .ws-panel-left, .ws-right-hidden > .ws-panel-right { display: block; }
   .ws-panel-left, .ws-panel-right { border: 0; border-bottom: 1px solid var(--oc-hairline); overflow: visible; }
   .ws-panel-right { border-top: 1px solid var(--oc-hairline); }
   .content.content-flush { overflow-y: auto; }

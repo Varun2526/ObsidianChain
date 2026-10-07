@@ -309,6 +309,7 @@ export type ApiErrorKind =
   | "alert_filter_invalid"
   | "provenance_refused"
   | "artifact_missing"
+  | "artifact_not_generated"
   | "separation_basis_mismatch"
   // ---- investigation read path (api/investigation.py, api/models.py) ----
   | "address_not_found"

@@ -18,7 +18,7 @@ export function ProvenancePanel({ provenance }: { provenance: Provenance }) {
           <dt>Dataset</dt><dd>{p.dataset_id ?? "—"}</dd>
           <dt>Dataset SHA-256</dt><dd>{p.dataset_sha256 ?? "—"}</dd>
           <dt>Run fingerprint</dt><dd>{p.run_fingerprint ?? "—"}</dd>
-          <dt>Phase 6 dataset</dt><dd>{p.phase6_dataset_fingerprint ?? "—"}</dd>
+          <dt>Training dataset</dt><dd>{p.phase6_dataset_fingerprint ?? "—"}</dd>
           <dt>Artifact schema</dt><dd>{p.artifact_schema ?? "—"}</dd>
           {p.git_revision ? (<><dt>Git revision</dt><dd>{p.git_revision}</dd></>) : null}
         </dl>
