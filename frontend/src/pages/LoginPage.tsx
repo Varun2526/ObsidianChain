@@ -1,6 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../store/auth";
 import { ApiError } from "../api/client";
+import * as console_api from "../api/console";
+import type { Role } from "../api/types";
 
 /**
  * The password is sent to the backend and verified there.
@@ -12,7 +14,28 @@ import { ApiError } from "../api/client";
  * be used to find out which accounts exist.
  */
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
+  // Offered only when the server runs with OBSIDIANCHAIN_DEMO_LOGIN=1.
+  const [demoRoles, setDemoRoles] = useState<console_api.DemoRole[]>([]);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    console_api.demoStatus(ctrl.signal)
+      .then((r) => { if (r.enabled) setDemoRoles(r.roles); })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, []);
+
+  const enterAs = async (role: Role) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await demoLogin(role);
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.detail : "Could not reach the ObsidianChain API.");
+    } finally {
+      setBusy(false);
+    }
+  };
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -57,12 +80,34 @@ export function LoginPage() {
             <p>Blockchain investigation and risk intelligence</p>
           </div>
 
+          {demoRoles.length > 0 && (
+            <section className="demo-access" aria-label="Demo access">
+              <div className="demo-access-head">
+                <strong>Demo access</strong>
+                <span className="small faint">Choose a role to enter without a password</span>
+              </div>
+              <div className="demo-access-roles">
+                {demoRoles.map((r) => (
+                  <button key={r.role} type="button" className="demo-role" disabled={busy}
+                          onClick={() => enterAs(r.role)}>
+                    <span className="demo-role-name">{r.display_name}</span>
+                    <span className="demo-role-tag">{r.role.toLowerCase()}</span>
+                    <span className="demo-role-desc">{r.description}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="small faint" style={{ margin: 0 }}>
+                Every action is still audited under the chosen role. Or sign in with an account below.
+              </p>
+            </section>
+          )}
+
           <div className="login-fields">
             <label htmlFor="inv-id">Username
               <input
                 id="inv-id"
                 type="text"
-                autoFocus
+                autoFocus={demoRoles.length === 0}
                 autoComplete="username"
                 value={username}
                 onChange={(e) => { setUsername(e.target.value); setError(null); }}

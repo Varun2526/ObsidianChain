@@ -33,6 +33,7 @@ import type {
   TransactionDrilldown,
   UploadedDataset,
   RunProgressResponse,
+  Role,
   UserAccount,
 } from "./types";
 
@@ -114,6 +115,12 @@ export const login = (username: string, password: string) =>
   post<Identity>("/auth/login", { username, password });
 
 export const logout = () => post<{ ok: boolean }>("/auth/logout");
+
+/** One-click demo sign-in, offered only when the server enables it. */
+export interface DemoRole { role: Role; username: string; display_name: string; description: string }
+export const demoStatus = (signal?: AbortSignal) =>
+  call<{ enabled: boolean; roles: DemoRole[] }>("/auth/demo", {}, signal);
+export const demoLogin = (role: Role) => post<Identity>("/auth/demo-login", { role });
 
 export const me = (signal?: AbortSignal) =>
   call<Identity>("/auth/me", {}, signal);

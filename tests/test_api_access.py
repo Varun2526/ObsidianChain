@@ -159,7 +159,9 @@ def test_every_public_route_carries_a_written_reason() -> None:
 
 def test_the_allowlist_is_small_and_contains_no_analytical_route() -> None:
     """The point of the remediation, asserted directly."""
-    assert len(PUBLIC_ROUTES) == 3
+    # login, logout, health, and the two demo sign-in routes (404 unless
+    # OBSIDIANCHAIN_DEMO_LOGIN=1)
+    assert len(PUBLIC_ROUTES) == 5
     for _method, path in PUBLIC_ROUTES:
         assert "alert" not in path
         assert "evidence" not in path

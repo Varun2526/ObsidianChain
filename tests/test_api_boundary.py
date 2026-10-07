@@ -259,6 +259,7 @@ EXPECTED_IMPORT_GRAPH = {
     "obsidianchain.console.casework",
     "obsidianchain.console.datasets",
     "obsidianchain.console.db",
+    "obsidianchain.console.demo_access",
     "obsidianchain.console.deps",
     "obsidianchain.console.errors",
     "obsidianchain.console.integrity",

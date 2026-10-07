@@ -80,6 +80,16 @@ PUBLIC_ROUTES: dict[tuple[str, str], str] = {
         "fail, which is the one moment a user most wants it to work. It "
         "reads nothing and returns nothing but {'ok': true}."
     ),
+    ("GET", f"{API_PREFIX}/auth/demo"): (
+        "Tells the login screen whether one-click demo sign-in is offered. "
+        "Returns only the three role names and descriptions when "
+        "OBSIDIANCHAIN_DEMO_LOGIN=1, and {'enabled': false} otherwise."
+    ),
+    ("POST", f"{API_PREFIX}/auth/demo-login"): (
+        "Establishes a session like /auth/login, so it cannot require one. "
+        "Answers 404 unless OBSIDIANCHAIN_DEMO_LOGIN=1; when enabled it opens "
+        "an ordinary, audited session for a demo role (console/demo_access.py)."
+    ),
     ("GET", f"{API_PREFIX}/health"): (
         "Liveness only: the application version and whether the analytical "
         "artifacts are present. No alert, no case, no identity, no count."

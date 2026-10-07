@@ -953,6 +953,20 @@ td .row-link:hover { color: var(--oc-accent-strong); }
 .institutional-monogram, .login-logo { display: none; }
 .institutional-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: var(--oc-3); }
 .login-fields { display: flex; flex-direction: column; gap: var(--oc-3); }
+/* One-click demo sign-in (shown only when the server enables it) */
+.login-box:has(.demo-access) { max-width: 420px; }
+.demo-access { display: flex; flex-direction: column; gap: var(--oc-3); margin-bottom: var(--oc-6);
+  padding: var(--oc-4); border: 1px solid var(--oc-accent); border-radius: 6px; background: var(--oc-accent-wash); }
+.demo-access-head { display: flex; flex-direction: column; gap: 2px; }
+.demo-access-roles { display: grid; gap: var(--oc-2); }
+.demo-role { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; text-align: left; cursor: pointer;
+  padding: 10px 12px; border: 1px solid var(--oc-hairline); border-radius: var(--oc-r-ctl);
+  background: var(--oc-surface-2); color: inherit; font: inherit; }
+.demo-role:hover:not(:disabled), .demo-role:focus-visible { border-color: var(--oc-accent); background: var(--oc-surface-3); outline: none; }
+.demo-role:disabled { opacity: .6; cursor: progress; }
+.demo-role-name { font-weight: 600; }
+.demo-role-tag { font-size: var(--oc-fs-sm); color: var(--oc-accent); text-transform: uppercase; letter-spacing: .06em; align-self: center; }
+.demo-role-desc { grid-column: 1 / -1; font-size: var(--oc-fs-sm); color: var(--oc-text-2); }
 .login-fields label { display: flex; flex-direction: column; gap: 6px; font-size: var(--oc-fs-sm); font-weight: 500; color: var(--oc-text-2); }
 .login-fields input { height: 36px; font-size: var(--oc-fs-base); }
 .login-btn { height: 36px; width: 100%; margin-top: var(--oc-2); }

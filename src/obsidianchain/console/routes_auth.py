@@ -13,7 +13,7 @@ import sqlite3
 
 from fastapi import APIRouter, Body, Depends, Request, Response
 
-from obsidianchain.console import audit, deps, errors, sessions, users
+from obsidianchain.console import audit, demo_access, deps, errors, sessions, users
 from obsidianchain.console.rbac import CAPABILITIES, Capability, Role, parse_role
 from obsidianchain.console.users import User
 
@@ -140,6 +140,46 @@ def login(
         conn, actor_id=user.id, action=audit.LOGIN,
         object_type="session", object_id=None,
         detail={"role": user.role.value},
+    )
+    _set_cookie(response, token)
+    return _identity(user, conn=conn)
+
+
+@router.get("/auth/demo", summary="Whether one-click demo sign-in is offered")
+def demo_status() -> dict:
+    """Public: the login screen asks this to decide whether to show the role
+    buttons. Off unless OBSIDIANCHAIN_DEMO_LOGIN=1 (console/demo_access.py)."""
+    if not demo_access.enabled():
+        return {"enabled": False, "roles": []}
+    return {"enabled": True, "roles": demo_access.roles()}
+
+
+@router.post("/auth/demo-login", summary="Sign in as a demo role (demo deployments only)")
+def demo_login(
+    response: Response,
+    payload: dict = Body(...),
+    conn: sqlite3.Connection = Depends(deps.get_connection),
+) -> dict:
+    """Open a session for the demo account of one role, without a password.
+
+    Refused with 404 unless demo sign-in is enabled, so a normal deployment
+    exposes nothing here. The session is an ordinary one: same expiry, same
+    RBAC, same audit trail; the sign-in is recorded as method DEMO_LOGIN.
+    """
+    if not demo_access.enabled():
+        raise errors.NotFound("demo sign-in is not enabled on this deployment")
+    try:
+        role = parse_role(str(payload.get("role") or ""))
+    except ValueError as exc:
+        raise errors.ValidationFailed(str(exc)) from exc
+    if role not in demo_access.DEMO_ACCOUNTS:
+        raise errors.ValidationFailed(f"{role.value} has no demo account")
+    user = demo_access.account_for(conn, role)
+    token = sessions.create(conn, user)
+    audit.record_standalone(
+        conn, actor_id=user.id, action=audit.LOGIN,
+        object_type="session", object_id=None,
+        detail={"role": user.role.value, "method": "DEMO_LOGIN"},
     )
     _set_cookie(response, token)
     return _identity(user, conn=conn)

@@ -38,6 +38,8 @@ interface AuthContextValue {
   /** True until the first /api/auth/me settles. Routes must not decide before. */
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
+  /** Demo deployments only: sign in as a role's demo account. */
+  demoLogin: (role: Role) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   /** Rendering convenience. Never an authorisation decision. */
@@ -91,6 +93,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIdentity(await console_api.login(username, password));
   }, []);
 
+  const demoLogin = useCallback(async (role: Role) => {
+    setIdentity(await console_api.demoLogin(role));
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await console_api.logout();
@@ -113,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         identity,
         loading,
         login,
+        demoLogin,
         logout,
         refresh: () => bootstrap(),
         can,
